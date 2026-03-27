@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Downloader</title>
+  <link rel="stylesheet" href="/src/styles/app.css">
+</head>
+<body>
+  <div id="app" class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="title">YouTube Downloader</h1>
+      <p class="subtitle">Descarga videos de membresía con tu cuenta</p>
+    </header>
+
+    <!-- Cookie Panel -->
+    <section id="cookie-panel" class="card">
+      <div class="card-header">
+        <span class="step-badge">PASO 1</span>
+        <span class="card-title">Configura tus cookies (para membresías)</span>
+      </div>
+      <div id="cookies-status" class="status-badge status-error">
+        Sin cookies configuradas
+      </div>
+      <div class="instructions">
+        <ol>
+          <li>Instala la extensión <strong>"Get cookies.txt LOCALLY"</strong> en tu navegador:</li>
+        </ol>
+      </div>
+      <div class="browser-buttons">
+        <button class="btn btn-secondary" data-browser="chrome">Chrome</button>
+        <button class="btn btn-secondary" data-browser="edge">Edge</button>
+        <button class="btn btn-secondary" data-browser="firefox">Firefox</button>
+      </div>
+      <div class="instructions">
+        <ol start="2">
+          <li>Ve a <strong>youtube.com</strong> con tu cuenta de membresía</li>
+          <li>Clic en la extensión → <strong>"Export"</strong> → guarda el archivo</li>
+          <li>Carga el archivo aquí:</li>
+        </ol>
+      </div>
+      <button class="btn btn-accent" id="btn-load-cookies">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Cargar cookies.txt
+      </button>
+    </section>
+
+    <!-- Download Panel -->
+    <section id="download-panel" class="card">
+      <div class="card-header">
+        <span class="step-badge">PASO 2</span>
+        <span class="card-title">Pega las URLs y descarga</span>
+        <span id="url-count" class="url-count"></span>
+      </div>
+      <label class="input-label" for="url-input">URLs de YouTube (una por línea)</label>
+      <textarea
+        id="url-input"
+        class="text-input url-textarea"
+        placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=..."
+        spellcheck="false"
+        autocomplete="off"
+        rows="4"
+      ></textarea>
+      <div class="folder-row">
+        <div class="folder-row-info">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span id="folder-path" class="folder-path" title="">...</span>
+        </div>
+        <div class="folder-row-actions">
+          <a href="#" id="open-folder" class="link">Abrir</a>
+          <span class="link-separator">|</span>
+          <a href="#" id="change-folder" class="link">Cambiar carpeta</a>
+        </div>
+      </div>
+      <div class="download-row">
+        <div class="concurrency-selector">
+          <label for="concurrent-select" class="concurrency-label">Simultáneos:</label>
+          <select id="concurrent-select" class="concurrency-select">
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="0">Todos</option>
+          </select>
+        </div>
+        <button class="btn btn-download" id="btn-download">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          DESCARGAR VIDEOS
+        </button>
+      </div>
+    </section>
+
+    <!-- Download Queue -->
+    <section id="download-queue" class="card queue-card" style="display: none;">
+      <div class="queue-header">
+        <span class="queue-title">Cola de descargas</span>
+        <span id="queue-stats" class="queue-stats"></span>
+      </div>
+      <div class="queue-overall">
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="queue-bar"></div>
+        </div>
+        <div class="queue-overall-info">
+          <span id="queue-status"></span>
+          <span id="queue-percent"></span>
+        </div>
+      </div>
+      <div id="queue-list" class="queue-list"></div>
+      <button class="btn btn-retry" id="btn-retry" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Reintentar fallidos
+      </button>
+    </section>
+
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <h3 class="modal-title" id="modal-title"></h3>
+      <p class="modal-message" id="modal-message"></p>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" id="modal-cancel">Cancelar</button>
+        <button class="btn btn-accent" id="modal-ok">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
