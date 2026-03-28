@@ -1,5 +1,5 @@
-import { startDownload, cancelDownload, onProgress } from '../services/tauri-api';
-import { getCookieMode } from './cookie-panel';
+import { startDownload, cancelDownload, onProgress, loadCookies } from '../services/tauri-api';
+import { getCookieMode, updateCookieStatus } from './cookie-panel';
 import { showModal } from './modal';
 import type { ProgressData } from '../types';
 
@@ -13,6 +13,9 @@ const queueBar = document.getElementById('queue-bar') as HTMLElement;
 const queueStatus = document.getElementById('queue-status') as HTMLElement;
 const queuePercent = document.getElementById('queue-percent') as HTMLElement;
 const retryBtn = document.getElementById('btn-retry') as HTMLButtonElement;
+const queueActionsAlways = document.getElementById('queue-actions-always') as HTMLElement;
+const reloadCookiesBtn = document.getElementById('btn-reload-cookies') as HTMLButtonElement;
+const retryCountEl = document.getElementById('retry-count') as HTMLSpanElement;
 
 const DOWNLOAD_ICON = `
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -177,6 +180,15 @@ function updateOverall(): void {
   queuePercent.textContent = `${finished}/${total}`;
   queueStatus.textContent = finished < total ? 'Descargando...' : 'Finalizado';
 
+  // Always show the actions bar (reload cookies always visible), retry only when errors
+  queueActionsAlways.style.display = '';
+  const hasErrors = errors > 0;
+  retryBtn.style.display = hasErrors ? '' : 'none';
+  retryBtn.disabled = false;
+  if (hasErrors) {
+    retryCountEl.textContent = String(errors);
+  }
+
   if (isDownloading) {
     downloadBtn.innerHTML = `
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -321,8 +333,70 @@ async function handleDownload(): Promise<void> {
   }
 }
 
+async function handleRetry(): Promise<void> {
+  const failed = items.filter((i) => i.status === 'error' || i.status === 'cancelled');
+  if (failed.length === 0) return;
+
+  // Reset failed items to pending
+  for (const item of failed) {
+    item.status = 'pending';
+    item.percent = 0;
+    item.speed = '';
+    item.eta = '';
+    item.error = undefined;
+    // Reset the name element (remove error message)
+    const nameEl = item.el.querySelector('.qi-name')!;
+    nameEl.innerHTML = item.label;
+    renderItem(item);
+  }
+
+  if (isDownloading) {
+    // Downloads already in progress — feed items back into existing queue
+    updateOverall();
+    tryNextFn?.();
+    return;
+  }
+
+  const cookieMode = getCookieMode();
+
+  isDownloading = true;
+  downloadBtn.disabled = true;
+  concurrentSelect.disabled = true;
+  updateOverall();
+
+  await processQueue(cookieMode);
+
+  isDownloading = false;
+  downloadBtn.disabled = false;
+  concurrentSelect.disabled = false;
+  downloadBtn.innerHTML = `${DOWNLOAD_ICON} DESCARGAR VIDEOS`;
+  updateOverall();
+
+  const visible = items.filter((i) => i.status !== 'removed');
+  const errors = visible.filter((i) => i.status === 'error' || i.status === 'cancelled');
+  const done = visible.filter((i) => i.status === 'done');
+
+  if (errors.length === 0) {
+    await showModal('Reintento completado', `${done.length} videos descargados correctamente.`);
+  } else if (errors.length < failed.length) {
+    await showModal(
+      'Reintento parcial',
+      `${failed.length - errors.length} de ${failed.length} recuperados.\n${errors.length} siguen con error.`,
+    );
+  } else {
+    await showModal('Error', `Los ${errors.length} videos siguen fallando.`);
+  }
+}
+
 export function initDownloadPanel(): void {
   downloadBtn.addEventListener('click', handleDownload);
+  retryBtn.addEventListener('click', handleRetry);
+  reloadCookiesBtn.addEventListener('click', async () => {
+    const result = await loadCookies();
+    if (result.status !== 'cancelled') {
+      updateCookieStatus(result);
+    }
+  });
   urlInput.addEventListener('input', updateUrlCount);
   onProgress(handleProgress);
 }

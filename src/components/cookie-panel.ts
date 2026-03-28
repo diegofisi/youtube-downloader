@@ -10,7 +10,7 @@ export function getCookieMode(): string {
   return _hasCookies ? 'file' : 'none';
 }
 
-function updateStatus(result: CookieResult): void {
+export function updateCookieStatus(result: CookieResult): void {
   statusEl.className = 'status-badge';
 
   switch (result.status) {
@@ -49,10 +49,10 @@ export function initCookiePanel(): void {
   loadBtn.addEventListener('click', async () => {
     const result = await loadCookies();
     if (result.status !== 'cancelled') {
-      updateStatus(result);
+      updateCookieStatus(result);
     }
   });
 
   // Auto-check on init
-  checkCookies().then(updateStatus);
+  checkCookies().then(updateCookieStatus);
 }

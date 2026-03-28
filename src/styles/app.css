@@ -324,6 +324,36 @@ body {
   font-size: 12px;
 }
 
+.queue-actions-always {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-queue-action {
+  flex: 1;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 6px;
+}
+
+.btn-retry {
+  background: var(--warning);
+  color: #1a1a1a;
+}
+
+.btn-retry:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.btn-retry:disabled {
+  background: var(--border);
+  color: var(--text-dim);
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Queue */
 .queue-card {
   padding-bottom: 14px;
