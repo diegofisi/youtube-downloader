@@ -17,6 +17,8 @@ fn main() {
             commands::cookies::set_download_folder,
             commands::download::start_download,
             commands::download::cancel_download,
+            commands::setup::check_dependencies,
+            commands::setup::download_dependencies,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar la aplicación");

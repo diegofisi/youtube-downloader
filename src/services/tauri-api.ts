@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { open as shellOpen } from '@tauri-apps/plugin-shell';
-import type { CookieResult, DownloadResult, ProgressData } from '../types';
+import type { CookieResult, DependencyStatus, DownloadResult, ProgressData, SetupProgress } from '../types';
 
 export async function checkCookies(): Promise<CookieResult> {
   return invoke<CookieResult>('check_cookies');
@@ -21,7 +21,7 @@ export async function loadCookies(): Promise<CookieResult> {
     return { status: 'cancelled' };
   }
 
-  const filePath = typeof selected === 'string' ? selected : selected.path;
+  const filePath = typeof selected === 'string' ? selected : (selected as any).path;
   return invoke<CookieResult>('load_cookies', { path: filePath });
 }
 
@@ -49,7 +49,7 @@ export async function changeDownloadFolder(): Promise<string | null> {
 
   if (!selected) return null;
 
-  const folderPath = typeof selected === 'string' ? selected : selected.path;
+  const folderPath = typeof selected === 'string' ? selected : (selected as any).path;
   return invoke<string>('set_download_folder', { folder: folderPath });
 }
 
@@ -59,6 +59,21 @@ export async function openUrl(url: string): Promise<void> {
 
 export function onProgress(callback: (data: ProgressData) => void): Promise<UnlistenFn> {
   return listen<ProgressData>('download-progress', (event) => {
+    callback(event.payload);
+  });
+}
+
+// Setup / Dependencies
+export async function checkDependencies(): Promise<DependencyStatus> {
+  return invoke<DependencyStatus>('check_dependencies');
+}
+
+export async function downloadDependencies(): Promise<void> {
+  return invoke('download_dependencies');
+}
+
+export function onSetupProgress(callback: (data: SetupProgress) => void): Promise<UnlistenFn> {
+  return listen<SetupProgress>('setup-progress', (event) => {
     callback(event.payload);
   });
 }

@@ -7,6 +7,37 @@
   <link rel="stylesheet" href="/src/styles/app.css">
 </head>
 <body>
+
+  <!-- Setup Screen (first run) -->
+  <div id="setup-screen" class="setup-screen" style="display: none;">
+    <div class="setup-content">
+      <div class="setup-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </div>
+      <h1 class="setup-title">YouTube Downloader</h1>
+      <p id="setup-message" class="setup-message">Verificando componentes...</p>
+      <div class="setup-progress">
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="setup-bar"></div>
+        </div>
+        <p id="setup-detail" class="setup-detail">Preparando...</p>
+      </div>
+      <p id="setup-error" class="setup-error" style="display: none;"></p>
+      <button id="setup-retry" class="btn btn-accent" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Reintentar
+      </button>
+    </div>
+  </div>
+
+  <!-- Main App -->
   <div id="app" class="container">
     <!-- Header -->
     <header class="header">

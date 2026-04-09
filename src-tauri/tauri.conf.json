@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegram/nicegram-schemas/main/tauri/tauri.conf.json",
   "productName": "YouTube Downloader",
   "version": "1.0.0",
   "identifier": "com.youtube.downloader",
@@ -21,6 +20,23 @@
     ],
     "security": {
       "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "targets": ["nsis", "dmg"],
+    "windows": {
+      "nsis": {
+        "installMode": "both",
+        "displayLanguageSelector": false,
+        "languages": ["Spanish", "English"]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
     }
   },
   "plugins": {

@@ -27,15 +27,24 @@ fn unregister_process(url: &str) {
     }
 }
 
+fn binary_name(name: &str) -> String {
+    if cfg!(target_os = "windows") {
+        format!("{}.exe", name)
+    } else {
+        name.to_string()
+    }
+}
+
 fn find_executable(app_dir: &Path, name: &str) -> Option<PathBuf> {
-    let local = app_dir.join(name);
+    let bin = binary_name(name);
+    let local = app_dir.join(&bin);
     if local.exists() {
         return Some(local);
     }
 
     // Check parent directory (development)
     if let Some(parent) = app_dir.parent() {
-        let parent_path = parent.join(name);
+        let parent_path = parent.join(&bin);
         if parent_path.exists() {
             return Some(parent_path);
         }
@@ -48,6 +57,24 @@ fn get_output_dir(app_dir: &Path) -> PathBuf {
     let dir = config_service::get_download_folder(app_dir);
     std::fs::create_dir_all(&dir).ok();
     dir
+}
+
+fn kill_process(pid: u32) {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = Command::new("taskkill");
+        cmd.args(["/F", "/PID", &pid.to_string()]);
+        cmd.creation_flags(0x08000000);
+        cmd.spawn().ok();
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new("kill")
+            .args(["-9", &pid.to_string()])
+            .spawn()
+            .ok();
+    }
 }
 
 pub fn start(
@@ -73,20 +100,20 @@ pub fn start(
     ];
 
     // ffmpeg location
-    if let Some(ffmpeg) = find_executable(app_dir, "ffmpeg.exe") {
+    if let Some(ffmpeg) = find_executable(app_dir, "ffmpeg") {
         if let Some(dir) = ffmpeg.parent() {
             args.push("--ffmpeg-location".into());
             args.push(dir.to_string_lossy().into());
         }
     }
 
-    // deno for YouTube JS challenges
-    if let Some(deno) = find_executable(app_dir, "deno.exe") {
+    // deno for YouTube JS extraction (required)
+    if let Some(deno) = find_executable(app_dir, "deno") {
         args.push("--extractor-args".into());
         args.push(format!("youtube:js_runtimes=deno:{}", deno.to_string_lossy()));
     }
 
-    // cookies — always use file-based cookies if available
+    // cookies
     match cookie_mode {
         "file" | "cookies" => {
             let cookies_path = cookie_service::get_cookies_path(app_dir);
@@ -95,30 +122,32 @@ pub fn start(
                 args.push(cookies_path.to_string_lossy().into());
             }
         }
-        _ => {} // "none" — no cookies
+        _ => {}
     }
 
     args.push(url.into());
 
     // Find yt-dlp: check local directory first, then PATH
-    let ytdlp = find_executable(app_dir, "yt-dlp.exe")
+    let ytdlp = find_executable(app_dir, "yt-dlp")
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_else(|| "yt-dlp".into());
 
     // Spawn yt-dlp process
-    let child = match Command::new(&ytdlp)
-        .args(&args)
+    let mut cmd = Command::new(&ytdlp);
+    cmd.args(&args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .creation_flags(0x08000000) // CREATE_NO_WINDOW on Windows
-        .spawn()
-    {
+        .stderr(Stdio::piped());
+
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+    let child = match cmd.spawn() {
         Ok(child) => child,
         Err(e) => {
             return DownloadResult {
                 success: false,
                 error: Some(format!(
-                    "No se pudo ejecutar yt-dlp. Asegúrate de tenerlo instalado (pip install yt-dlp).\n{}",
+                    "No se pudo ejecutar yt-dlp. Verifica que la configuración inicial se completó correctamente.\n{}",
                     e
                 )),
             };
@@ -132,7 +161,6 @@ pub fn start(
     let last_error = Arc::new(Mutex::new(String::new()));
     let last_error_clone = Arc::clone(&last_error);
 
-    // Read stdout in thread
     let stdout = child.stdout.unwrap();
     let stderr = child.stderr.unwrap();
 
@@ -147,7 +175,6 @@ pub fn start(
                 continue;
             }
 
-            // Parse progress: "[download]  45.2% of ~50.00MiB at  5.2MiB/s ETA 00:12"
             if let Some(pct) = parse_percent(&trimmed) {
                 let speed = parse_field(&trimmed, "at ", " ETA").unwrap_or_default();
                 let eta = parse_field(&trimmed, "ETA ", "").unwrap_or_default();
@@ -186,7 +213,6 @@ pub fn start(
             if trimmed.is_empty() {
                 continue;
             }
-            // Prioritize lines starting with "ERROR:" — they have the real message
             if trimmed.starts_with("ERROR:") {
                 let clean = trimmed
                     .trim_start_matches("ERROR:")
@@ -205,7 +231,6 @@ pub fn start(
 
     unregister_process(url);
 
-    // Check if the download was successful by looking at output dir
     let error_text = last_error.lock().unwrap().clone();
 
     if error_text.is_empty()
@@ -228,11 +253,7 @@ pub fn cancel_by_url(url: &str) -> bool {
     let guard = ACTIVE_PROCESSES.lock().unwrap();
     if let Some(map) = guard.as_ref() {
         if let Some(&pid) = map.get(url) {
-            Command::new("taskkill")
-                .args(["/F", "/PID", &pid.to_string()])
-                .creation_flags(0x08000000)
-                .spawn()
-                .ok();
+            kill_process(pid);
             return true;
         }
     }
@@ -243,11 +264,7 @@ pub fn cancel() -> bool {
     let guard = ACTIVE_PROCESSES.lock().unwrap();
     if let Some(map) = guard.as_ref() {
         for &pid in map.values() {
-            Command::new("taskkill")
-                .args(["/F", "/PID", &pid.to_string()])
-                .creation_flags(0x08000000)
-                .spawn()
-                .ok();
+            kill_process(pid);
         }
         return !map.is_empty();
     }
@@ -255,7 +272,6 @@ pub fn cancel() -> bool {
 }
 
 fn parse_percent(s: &str) -> Option<f64> {
-    // Match patterns like "45.2%" in the string
     let re_like = s.find('%')?;
     let before = &s[..re_like];
     let num_start = before.rfind(|c: char| !c.is_ascii_digit() && c != '.')? + 1;

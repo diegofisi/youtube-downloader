@@ -4,16 +4,13 @@ use crate::models::CookieResult;
 use crate::services::{config_service, cookie_service};
 
 fn get_app_dir(app: &AppHandle) -> std::path::PathBuf {
-    let exe_path = std::env::current_exe().unwrap();
-    let exe_dir = exe_path.parent().unwrap();
-
-    // In development, use the project root (two levels up from src-tauri/target/debug)
     if cfg!(debug_assertions) {
-        // Try to find the project root by looking for tauri.conf.json
+        // In development, use the project root
+        let exe_path = std::env::current_exe().unwrap();
+        let exe_dir = exe_path.parent().unwrap();
         let mut dir = exe_dir.to_path_buf();
         for _ in 0..5 {
             if dir.join("tauri.conf.json").exists() {
-                // We're in src-tauri, go up one level
                 return dir.parent().unwrap().to_path_buf();
             }
             if dir.join("src-tauri").exists() {
@@ -25,10 +22,15 @@ fn get_app_dir(app: &AppHandle) -> std::path::PathBuf {
                 break;
             }
         }
-        // Fallback: use resource dir
         app.path().resource_dir().unwrap_or(exe_dir.to_path_buf())
     } else {
-        exe_dir.to_path_buf()
+        // In production, use AppData/Local (writable without admin)
+        // Windows: C:\Users\USER\AppData\Local\com.youtube.downloader\
+        // macOS:   ~/Library/Application Support/com.youtube.downloader/
+        let data_dir = app.path().app_local_data_dir()
+            .expect("No se pudo obtener directorio de datos de la app");
+        std::fs::create_dir_all(&data_dir).ok();
+        data_dir
     }
 }
 
@@ -50,10 +52,28 @@ pub fn open_downloads_folder(app: AppHandle) {
     let downloads = config_service::get_download_folder(&app_dir);
     std::fs::create_dir_all(&downloads).ok();
 
+    let path = downloads.to_string_lossy().to_string();
+
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("explorer")
-            .arg(downloads.to_string_lossy().to_string())
+            .arg(&path)
+            .spawn()
+            .ok();
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .ok();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
             .spawn()
             .ok();
     }
