@@ -102,55 +102,73 @@ async fn extract_and_save_cookies(
     webview_window: &tauri::webview::WebviewWindow,
     app: &AppHandle,
 ) -> Result<usize, String> {
-    let youtube_url: Url = "https://www.youtube.com".parse().unwrap();
-    let google_url: Url = "https://www.google.com".parse().unwrap();
-
-    // Get cookies for YouTube and Google domains (includes HttpOnly!)
-    let yt_cookies = webview_window
-        .cookies_for_url(youtube_url)
-        .map_err(|e| format!("Error obteniendo cookies de YouTube: {}", e))?;
-
-    let google_cookies = webview_window
-        .cookies_for_url(google_url)
-        .unwrap_or_default();
+    // Consultar varios dominios para capturar TODAS las cookies de sesion
+    // (incluidas las HttpOnly como LOGIN_INFO, SID, __Secure-3PSID...).
+    let urls = [
+        "https://www.youtube.com",
+        "https://youtube.com",
+        "https://accounts.google.com",
+        "https://www.google.com",
+    ];
 
     let mut output = String::from("# Netscape HTTP Cookie File\n");
     output.push_str("# Generado por YouTube Downloader (WebView login)\n\n");
 
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut count = 0;
 
-    for cookie in yt_cookies.iter().chain(google_cookies.iter()) {
-        let domain = cookie.domain().unwrap_or(".youtube.com");
-        let flag = if domain.starts_with('.') {
-            "TRUE"
-        } else {
-            "FALSE"
+    for raw in urls {
+        let url: Url = match raw.parse() {
+            Ok(u) => u,
+            Err(_) => continue,
         };
-        let path = cookie.path().unwrap_or("/");
-        let secure = if cookie.secure().unwrap_or(false) {
-            "TRUE"
-        } else {
-            "FALSE"
-        };
-        let expiry = match cookie.expires() {
-            Some(exp) => match exp {
-                cookie::Expiration::DateTime(dt) => dt.unix_timestamp().to_string(),
-                cookie::Expiration::Session => "0".to_string(),
-            },
-            None => "0".to_string(),
-        };
+        let cookies = webview_window.cookies_for_url(url).unwrap_or_default();
 
-        output.push_str(&format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
-            domain,
-            flag,
-            path,
-            secure,
-            expiry,
-            cookie.name(),
-            cookie.value()
-        ));
-        count += 1;
+        for cookie in cookies.iter() {
+            let domain = cookie.domain().unwrap_or(".youtube.com");
+            let path = cookie.path().unwrap_or("/");
+
+            // Deduplicar por dominio + nombre + path
+            let key = format!("{}|{}|{}", domain, path, cookie.name());
+            if !seen.insert(key) {
+                continue;
+            }
+
+            let include_subdomains = if domain.starts_with('.') {
+                "TRUE"
+            } else {
+                "FALSE"
+            };
+            let secure = if cookie.secure().unwrap_or(false) {
+                "TRUE"
+            } else {
+                "FALSE"
+            };
+            let expiry = match cookie.expires() {
+                Some(cookie::Expiration::DateTime(dt)) => dt.unix_timestamp().to_string(),
+                _ => "0".to_string(),
+            };
+
+            // Las cookies HttpOnly llevan el prefijo #HttpOnly_ en el dominio
+            // (formato que yt-dlp entiende).
+            let domain_field = if cookie.http_only().unwrap_or(false) {
+                format!("#HttpOnly_{}", domain)
+            } else {
+                domain.to_string()
+            };
+
+            output.push_str(&format!(
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                domain_field,
+                include_subdomains,
+                path,
+                secure,
+                expiry,
+                cookie.name(),
+                cookie.value()
+            ));
+            count += 1;
+        }
     }
 
     // Save to cookies.txt

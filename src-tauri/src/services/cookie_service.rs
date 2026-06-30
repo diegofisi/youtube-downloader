@@ -8,11 +8,17 @@ pub fn get_cookies_path(app_dir: &Path) -> PathBuf {
 }
 
 pub fn validate_cookie_content(content: &str) -> &'static str {
-    if content.contains(".youtube.com") {
+    let has_header = content.contains("# Netscape HTTP Cookie File")
+        || content.contains("# HTTP Cookie File");
+
+    // Cookies que indican una sesion iniciada en YouTube/Google.
+    let has_auth = ["LOGIN_INFO", "SAPISID", "__Secure-3PSID", "__Secure-1PSID"]
+        .iter()
+        .any(|name| content.contains(name));
+
+    if content.contains("youtube.com") || has_auth {
         "youtube"
-    } else if content.contains("# Netscape HTTP Cookie File")
-        || content.contains("# HTTP Cookie File")
-    {
+    } else if has_header {
         "generic"
     } else {
         "invalid"
@@ -28,8 +34,7 @@ pub fn check(app_dir: &Path) -> CookieResult {
 
     match fs::read_to_string(&cookies_path) {
         Ok(content) => {
-            let preview = &content[..content.len().min(2000)];
-            let status = validate_cookie_content(preview);
+            let status = validate_cookie_content(&content);
             CookieResult::new(status).with_path(&cookies_path.to_string_lossy())
         }
         Err(_) => CookieResult::new("error"),
@@ -62,8 +67,7 @@ pub fn load(app_dir: &Path, source_path: &str) -> CookieResult {
     // Validate
     match fs::read_to_string(&cookies_path) {
         Ok(content) => {
-            let preview = &content[..content.len().min(2000)];
-            let status = validate_cookie_content(preview);
+            let status = validate_cookie_content(&content);
             CookieResult::new(status).with_path(&cookies_path.to_string_lossy())
         }
         Err(_) => CookieResult::new("error"),

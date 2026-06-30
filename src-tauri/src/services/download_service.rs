@@ -97,6 +97,9 @@ pub fn start(
             .into(),
         "--newline".into(),
         "--progress".into(),
+        // Evita que yt-dlp imprima la advertencia de actualizacion en stderr,
+        // que antes se confundia con un error real.
+        "--no-update".into(),
     ];
 
     // ffmpeg location
@@ -141,7 +144,7 @@ pub fn start(
     #[cfg(target_os = "windows")]
     cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
-    let child = match cmd.spawn() {
+    let mut child = match cmd.spawn() {
         Ok(child) => child,
         Err(e) => {
             return DownloadResult {
@@ -161,8 +164,8 @@ pub fn start(
     let last_error = Arc::new(Mutex::new(String::new()));
     let last_error_clone = Arc::clone(&last_error);
 
-    let stdout = child.stdout.unwrap();
-    let stderr = child.stderr.unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
 
     let app_for_stdout = app_handle.clone();
     let url_for_progress = url.to_string();
@@ -206,22 +209,16 @@ pub fn start(
 
     let stderr_thread = std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
-        let mut has_error_line = false;
         for line in reader.lines() {
             let Ok(line) = line else { continue };
-            let trimmed = line.trim().to_string();
+            let trimmed = line.trim();
             if trimmed.is_empty() {
                 continue;
             }
-            if trimmed.starts_with("ERROR:") {
-                let clean = trimmed
-                    .trim_start_matches("ERROR:")
-                    .trim()
-                    .to_string();
-                *last_error_clone.lock().unwrap() = clean;
-                has_error_line = true;
-            } else if !has_error_line {
-                *last_error_clone.lock().unwrap() = trimmed;
+            // Solo las lineas "ERROR:" cuentan como error real. Las advertencias
+            // (WARNING:, avisos de actualizacion, etc.) se ignoran.
+            if let Some(rest) = trimmed.strip_prefix("ERROR:") {
+                *last_error_clone.lock().unwrap() = rest.trim().to_string();
             }
         }
     });
@@ -229,22 +226,27 @@ pub fn start(
     stdout_thread.join().ok();
     stderr_thread.join().ok();
 
+    // El codigo de salida del proceso es la senal real de exito/fallo.
+    let exit_ok = child.wait().map(|s| s.success()).unwrap_or(false);
+
     unregister_process(url);
 
     let error_text = last_error.lock().unwrap().clone();
 
-    if error_text.is_empty()
-        || error_text.contains("Deleting original file")
-        || error_text.contains("has already been downloaded")
-    {
+    if exit_ok {
         DownloadResult {
             success: true,
             error: None,
         }
     } else {
+        let message = if error_text.is_empty() {
+            "La descarga fallo. Revisa la URL o vuelve a cargar las cookies.".to_string()
+        } else {
+            error_text
+        };
         DownloadResult {
             success: false,
-            error: Some(error_text),
+            error: Some(message),
         }
     }
 }
