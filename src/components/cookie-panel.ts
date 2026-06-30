@@ -1,8 +1,9 @@
-import { checkCookies, loadCookies, openUrl } from '../services/tauri-api';
+import { checkCookies, loadCookies, openUrl, openYouTubeLogin, onCookiesExtracted } from '../services/tauri-api';
 import { EXTENSION_URLS, type CookieResult } from '../types';
 
 const statusEl = document.getElementById('cookies-status')!;
 const loadBtn = document.getElementById('btn-load-cookies')!;
+const loginBtn = document.getElementById('btn-youtube-login')!;
 
 let _hasCookies = false;
 
@@ -37,7 +38,7 @@ export function updateCookieStatus(result: CookieResult): void {
 }
 
 export function initCookiePanel(): void {
-  // Browser extension buttons — open extension install page
+  // Browser extension buttons
   document.querySelectorAll<HTMLButtonElement>('[data-browser]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const browser = btn.dataset.browser!;
@@ -45,11 +46,34 @@ export function initCookiePanel(): void {
     });
   });
 
-  // Load cookies button
+  // Load cookies from file
   loadBtn.addEventListener('click', async () => {
     const result = await loadCookies();
     if (result.status !== 'cancelled') {
       updateCookieStatus(result);
+    }
+  });
+
+  // YouTube WebView login button
+  loginBtn.addEventListener('click', async () => {
+    loginBtn.textContent = 'Abriendo YouTube...';
+    (loginBtn as HTMLButtonElement).disabled = true;
+    try {
+      await openYouTubeLogin();
+    } catch (e) {
+      console.error('Error opening login:', e);
+      loginBtn.textContent = 'Iniciar sesion en YouTube';
+      (loginBtn as HTMLButtonElement).disabled = false;
+    }
+  });
+
+  // Listen for cookies extracted from WebView
+  onCookiesExtracted((success) => {
+    loginBtn.textContent = 'Iniciar sesion en YouTube';
+    (loginBtn as HTMLButtonElement).disabled = false;
+    if (success) {
+      // Re-check cookies to update status
+      checkCookies().then(updateCookieStatus);
     }
   });
 

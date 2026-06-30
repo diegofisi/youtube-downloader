@@ -12,6 +12,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::cookies::check_cookies,
             commands::cookies::load_cookies,
+            commands::cookies::open_youtube_login,
             commands::cookies::open_downloads_folder,
             commands::cookies::get_download_folder,
             commands::cookies::set_download_folder,

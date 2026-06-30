@@ -54,31 +54,53 @@
       <div id="cookies-status" class="status-badge status-error">
         Sin cookies configuradas
       </div>
+
+      <!-- Option A: YouTube Login (recommended) -->
       <div class="instructions">
-        <ol>
-          <li>Instala la extensión <strong>"Get cookies.txt LOCALLY"</strong> en tu navegador:</li>
-        </ol>
+        <p>Inicia sesion con tu cuenta de YouTube directamente:</p>
       </div>
-      <div class="browser-buttons">
-        <button class="btn btn-secondary" data-browser="chrome">Chrome</button>
-        <button class="btn btn-secondary" data-browser="edge">Edge</button>
-        <button class="btn btn-secondary" data-browser="firefox">Firefox</button>
-      </div>
-      <div class="instructions">
-        <ol start="2">
-          <li>Ve a <strong>youtube.com</strong> con tu cuenta de membresía</li>
-          <li>Clic en la extensión → <strong>"Export"</strong> → guarda el archivo</li>
-          <li>Carga el archivo aquí:</li>
-        </ol>
-      </div>
-      <button class="btn btn-accent" id="btn-load-cookies">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
+      <button class="btn btn-youtube" id="btn-youtube-login">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
         </svg>
-        Cargar cookies.txt
+        Iniciar sesion en YouTube
       </button>
+
+      <div class="cookie-divider">
+        <span>o carga cookies manualmente</span>
+      </div>
+
+      <!-- Option B: Manual cookie file -->
+      <details class="cookie-manual">
+        <summary>Cargar archivo cookies.txt</summary>
+        <div class="cookie-manual-content">
+          <div class="instructions">
+            <ol>
+              <li>Instala <strong>"Get cookies.txt LOCALLY"</strong>:</li>
+            </ol>
+          </div>
+          <div class="browser-buttons">
+            <button class="btn btn-secondary" data-browser="chrome">Chrome</button>
+            <button class="btn btn-secondary" data-browser="edge">Edge</button>
+            <button class="btn btn-secondary" data-browser="firefox">Firefox</button>
+          </div>
+          <div class="instructions">
+            <ol start="2">
+              <li>Ve a <strong>youtube.com</strong> con tu cuenta</li>
+              <li>Clic en la extension → <strong>"Export"</strong></li>
+              <li>Carga el archivo:</li>
+            </ol>
+          </div>
+          <button class="btn btn-accent" id="btn-load-cookies">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Cargar cookies.txt
+          </button>
+        </div>
+      </details>
     </section>
 
     <!-- Download Panel -->

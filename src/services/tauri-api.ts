@@ -63,6 +63,17 @@ export function onProgress(callback: (data: ProgressData) => void): Promise<Unli
   });
 }
 
+// YouTube WebView login
+export async function openYouTubeLogin(): Promise<void> {
+  return invoke('open_youtube_login');
+}
+
+export function onCookiesExtracted(callback: (success: boolean) => void): Promise<UnlistenFn> {
+  return listen<boolean>('cookies-extracted', (event) => {
+    callback(event.payload);
+  });
+}
+
 // Setup / Dependencies
 export async function checkDependencies(): Promise<DependencyStatus> {
   return invoke<DependencyStatus>('check_dependencies');

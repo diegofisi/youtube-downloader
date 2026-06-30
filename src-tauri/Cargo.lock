@@ -5639,6 +5639,7 @@ dependencies = [
 name = "youtube-downloader"
 version = "1.0.0"
 dependencies = [
+ "cookie",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
