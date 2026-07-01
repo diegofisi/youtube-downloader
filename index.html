@@ -357,9 +357,14 @@
           <div class="view-wrap">
             <h1 class="view-title">Biblioteca</h1>
             <p class="view-subtitle">Tu historial de descargas.</p>
-            <div class="empty-state">
-              <div class="empty-state__title">Próximamente</div>
-              <div class="empty-state__hint">Aquí verás lo que has descargado, con búsqueda y accesos rápidos. (Fase 4)</div>
+            <div class="lib-toolbar">
+              <input type="text" id="library-search" class="lib-search" placeholder="Buscar por título o URL..." spellcheck="false">
+              <button class="btn btn-secondary" id="btn-clear-history">Vaciar</button>
+            </div>
+            <div id="library-list" class="lib-list"></div>
+            <div id="library-empty" class="empty-state" style="display: none;">
+              <div class="empty-state__title">Sin descargas todavía</div>
+              <div class="empty-state__hint">Lo que descargues aparecerá aquí.</div>
             </div>
           </div>
         </section>

@@ -3,7 +3,7 @@
 mod core;
 mod features;
 
-use features::{download, preview, session, settings, setup};
+use features::{download, library, preview, session, settings, setup};
 
 fn main() {
     tauri::Builder::default()
@@ -21,6 +21,11 @@ fn main() {
             download::commands::cancel_download,
             preview::commands::analyze_urls,
             preview::commands::get_video_metadata,
+            library::commands::get_history,
+            library::commands::add_history,
+            library::commands::remove_history_item,
+            library::commands::clear_history,
+            library::commands::open_history_folder,
             setup::commands::check_dependencies,
             setup::commands::download_dependencies,
         ])

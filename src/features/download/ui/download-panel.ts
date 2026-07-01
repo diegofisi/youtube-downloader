@@ -40,6 +40,14 @@ function getMaxConcurrent(): number {
   return val === 0 ? Infinity : val;
 }
 
+function describeFormat(o: DownloadOptions): string {
+  if (o.mode === 'audio') {
+    return `${o.audioFormat.toUpperCase()}${o.audioBitrate ? ` ${o.audioBitrate}k` : ''}`;
+  }
+  const q = o.quality === 'auto' ? 'Auto' : o.quality === 'max' ? 'Máx' : `${o.quality}p`;
+  return `${q} ${o.container.toUpperCase()}`;
+}
+
 interface QueueItem {
   url: string;
   label: string;
@@ -227,6 +235,11 @@ function processQueue(options: DownloadOptions): Promise<void> {
             next.status = 'done';
             next.percent = 100;
             showToast(`${next.label} descargado`, 'success');
+            bus.emit('download:completed', {
+              url: next.url,
+              title: next.label,
+              format: describeFormat(options),
+            });
           } else {
             next.status = 'error';
             next.error = result.error ?? 'Error desconocido';
