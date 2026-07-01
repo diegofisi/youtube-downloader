@@ -1,1 +1,1 @@
-export { initDownloadPanel } from './ui/download-panel';
+export { initDownloadPanel, enqueueUrls } from './ui/download-panel';

@@ -1,7 +1,7 @@
 /** Monta el chrome del shell: iconos del sidebar, titlebar, tema y controles de ventana. */
 import { icon } from './icons';
 import { initThemeToggle } from './theme';
-import { initRouter, router } from './router';
+import { initRouter } from './router';
 import { minimizeWindow, toggleMaximizeWindow, closeWindow } from '../core/tauri/window';
 
 export function initShell(): void {
@@ -31,12 +31,4 @@ export function initShell(): void {
   // Router
   const sectionTitle = document.getElementById('titlebar-section')!;
   initRouter(sectionTitle);
-
-  // Al iniciar una descarga, saltar a la sección Cola
-  const dlBtn = document.getElementById('btn-download');
-  const colaEmpty = document.getElementById('cola-empty');
-  dlBtn?.addEventListener('click', () => {
-    if (colaEmpty) colaEmpty.style.display = 'none';
-    router.navigate('cola');
-  });
 }

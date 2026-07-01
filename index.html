@@ -193,6 +193,13 @@
                     <option value="0">Todos</option>
                   </select>
                 </div>
+                <button class="btn btn-secondary" id="btn-preview">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  Previsualizar
+                </button>
                 <button class="btn btn-download" id="btn-download">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -200,6 +207,21 @@
                     <line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>
                   DESCARGAR VIDEOS
+                </button>
+              </div>
+            </section>
+
+            <!-- Preview Panel -->
+            <section id="preview-panel" class="card" style="display: none;">
+              <div class="card-header">
+                <span class="card-title">Vista previa</span>
+                <span id="preview-count" class="url-count"></span>
+              </div>
+              <div id="preview-list" class="preview-list"></div>
+              <div class="preview-actions">
+                <span id="preview-selected" class="preview-selected">0 seleccionados</span>
+                <button class="btn btn-download btn-preview-download" id="btn-download-selected">
+                  Descargar seleccionados
                 </button>
               </div>
             </section>

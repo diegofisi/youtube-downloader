@@ -41,5 +41,7 @@ export function initRouter(sectionTitleEl: HTMLElement): void {
 
   // Exponer para navegación programática
   router.navigate = navigate;
+  // Navegación desde otros slices sin acoplarse a app/ (event bus)
+  bus.on('nav:goto', ({ view }) => navigate(view as ViewId));
   navigate('descargar');
 }

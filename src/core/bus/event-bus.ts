@@ -8,6 +8,7 @@ export interface AppEvents {
   'session:expired': void;
   'session:connected': { channel?: string };
   'nav:changed': { view: string };
+  'nav:goto': { view: string };
 }
 
 type Handler<K extends keyof AppEvents> = (payload: AppEvents[K]) => void;

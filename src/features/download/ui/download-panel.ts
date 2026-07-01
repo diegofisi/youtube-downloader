@@ -3,6 +3,7 @@ import type { ProgressData } from '../download.types';
 import { getCookieMode, updateCookieStatus, loadCookies } from '../../session';
 import { showModal } from '../../../shared/ui/modal';
 import { showToast } from '../../../shared/ui/toast';
+import { bus } from '../../../core/bus/event-bus';
 
 const urlInput = document.getElementById('url-input') as HTMLTextAreaElement;
 const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
@@ -253,10 +254,9 @@ function handleProgress(data: ProgressData): void {
   renderItem(item);
 }
 
-async function handleDownload(): Promise<void> {
+async function runDownloadForUrls(urls: string[]): Promise<void> {
   if (isDownloading) return;
 
-  const urls = getUrls();
   if (urls.length === 0) {
     await showModal('Sin URLs', 'Ingresa al menos una URL válida de YouTube.');
     return;
@@ -292,6 +292,8 @@ async function handleDownload(): Promise<void> {
   });
 
   queueSection.style.display = '';
+  document.getElementById('cola-empty')?.style.setProperty('display', 'none');
+  bus.emit('nav:goto', { view: 'cola' });
   queueBar.style.width = '0%';
   updateOverall();
 
@@ -323,6 +325,15 @@ async function handleDownload(): Promise<void> {
   } else {
     await showModal('Error', `Todos los ${errors.length} videos fallaron.`);
   }
+}
+
+function handleDownload(): void {
+  void runDownloadForUrls(getUrls());
+}
+
+/** Encola una lista concreta de URLs (usado por el preview). */
+export function enqueueUrls(urls: string[]): void {
+  void runDownloadForUrls(urls);
 }
 
 async function handleRetry(): Promise<void> {
