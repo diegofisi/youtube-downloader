@@ -1,7 +1,8 @@
-import { startDownload, cancelDownload, onProgress, loadCookies } from '../services/tauri-api';
-import { getCookieMode, updateCookieStatus } from './cookie-panel';
-import { showModal } from './modal';
-import type { ProgressData } from '../types';
+import { startDownload, cancelDownload, onProgress } from '../download.api';
+import type { ProgressData } from '../download.types';
+import { getCookieMode, updateCookieStatus, loadCookies } from '../../session';
+import { showModal } from '../../../shared/ui/modal';
+import { showToast } from '../../../shared/ui/toast';
 
 const urlInput = document.getElementById('url-input') as HTMLTextAreaElement;
 const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
@@ -80,21 +81,17 @@ function updateUrlCount(): void {
 
 function handleItemAction(item: QueueItem): void {
   if (item.status === 'pending') {
-    // Remove from queue
     item.status = 'removed';
     item.el.remove();
     updateOverall();
-    // Try to fill slots if any
     tryNextFn?.();
   } else if (item.status === 'downloading') {
-    // Cancel active download
     cancelDownload(item.url);
     item.status = 'cancelled';
     item.error = 'Cancelado por el usuario';
     renderItem(item);
     updateOverall();
   } else if (item.status === 'error' || item.status === 'cancelled') {
-    // Remove from list
     item.status = 'removed';
     item.el.remove();
     updateOverall();
@@ -180,7 +177,6 @@ function updateOverall(): void {
   queuePercent.textContent = `${finished}/${total}`;
   queueStatus.textContent = finished < total ? 'Descargando...' : 'Finalizado';
 
-  // Always show the actions bar (reload cookies always visible), retry only when errors
   queueActionsAlways.style.display = '';
   const hasErrors = errors > 0;
   retryBtn.style.display = hasErrors ? '' : 'none';
@@ -219,7 +215,6 @@ function processQueue(cookieMode: string): Promise<void> {
         updateOverall();
 
         startDownload(next.url, cookieMode).then((result) => {
-          // Check if it was cancelled while downloading
           if (next.status === 'cancelled' || next.status === 'removed') {
             updateOverall();
             tryNext();
@@ -229,6 +224,7 @@ function processQueue(cookieMode: string): Promise<void> {
           if (result.success) {
             next.status = 'done';
             next.percent = 100;
+            showToast(`${next.label} descargado`, 'success');
           } else {
             next.status = 'error';
             next.error = result.error ?? 'Error desconocido';
@@ -238,7 +234,6 @@ function processQueue(cookieMode: string): Promise<void> {
           tryNext();
         });
 
-        // Fill remaining slots
         tryNext();
       }
     }
@@ -277,7 +272,6 @@ async function handleDownload(): Promise<void> {
     if (!proceed) return;
   }
 
-  // Build queue
   isDownloading = true;
   downloadBtn.disabled = true;
   concurrentSelect.disabled = true;
@@ -301,10 +295,8 @@ async function handleDownload(): Promise<void> {
   queueBar.style.width = '0%';
   updateOverall();
 
-  // Process with sliding window of 5
   await processQueue(cookieMode);
 
-  // Done
   isDownloading = false;
   downloadBtn.disabled = false;
   concurrentSelect.disabled = false;
@@ -337,21 +329,18 @@ async function handleRetry(): Promise<void> {
   const failed = items.filter((i) => i.status === 'error' || i.status === 'cancelled');
   if (failed.length === 0) return;
 
-  // Reset failed items to pending
   for (const item of failed) {
     item.status = 'pending';
     item.percent = 0;
     item.speed = '';
     item.eta = '';
     item.error = undefined;
-    // Reset the name element (remove error message)
     const nameEl = item.el.querySelector('.qi-name')!;
     nameEl.innerHTML = item.label;
     renderItem(item);
   }
 
   if (isDownloading) {
-    // Downloads already in progress — feed items back into existing queue
     updateOverall();
     tryNextFn?.();
     return;

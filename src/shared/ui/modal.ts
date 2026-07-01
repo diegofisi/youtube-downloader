@@ -17,8 +17,14 @@ export function showModal(title: string, message: string, showCancel = false): P
       cancelBtn.removeEventListener('click', onCancel);
     };
 
-    const onOk = () => { cleanup(); resolve(true); };
-    const onCancel = () => { cleanup(); resolve(false); };
+    const onOk = () => {
+      cleanup();
+      resolve(true);
+    };
+    const onCancel = () => {
+      cleanup();
+      resolve(false);
+    };
 
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);

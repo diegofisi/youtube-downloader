@@ -1,10 +1,18 @@
-import { checkCookies, loadCookies, openUrl, openYouTubeLogin, onCookiesExtracted } from '../services/tauri-api';
-import { EXTENSION_URLS, type CookieResult } from '../types';
+import {
+  checkCookies,
+  loadCookies,
+  openUrl,
+  openYouTubeLogin,
+  onCookiesExtracted,
+} from '../session.api';
+import { EXTENSION_URLS, type CookieResult } from '../session.types';
+import { showToast } from '../../../shared/ui/toast';
 
 const statusEl = document.getElementById('cookies-status')!;
 const loadBtn = document.getElementById('btn-load-cookies')!;
-const loginBtn = document.getElementById('btn-youtube-login')!;
+const loginBtn = document.getElementById('btn-youtube-login') as HTMLButtonElement;
 
+const LOGIN_LABEL = 'Iniciar sesion en YouTube';
 let _hasCookies = false;
 
 export function getCookieMode(): string {
@@ -37,8 +45,14 @@ export function updateCookieStatus(result: CookieResult): void {
   }
 }
 
+function resetLoginButton(): void {
+  loginBtn.disabled = false;
+  // Mantener el SVG del logo, solo restaurar el texto del nodo final.
+  loginBtn.lastChild!.textContent = ` ${LOGIN_LABEL}`;
+}
+
 export function initCookiePanel(): void {
-  // Browser extension buttons
+  // Botones de extensiones por navegador
   document.querySelectorAll<HTMLButtonElement>('[data-browser]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const browser = btn.dataset.browser!;
@@ -46,7 +60,7 @@ export function initCookiePanel(): void {
     });
   });
 
-  // Load cookies from file
+  // Cargar cookies desde archivo
   loadBtn.addEventListener('click', async () => {
     const result = await loadCookies();
     if (result.status !== 'cancelled') {
@@ -54,29 +68,34 @@ export function initCookiePanel(): void {
     }
   });
 
-  // YouTube WebView login button
+  // Login por WebView de YouTube
   loginBtn.addEventListener('click', async () => {
-    loginBtn.textContent = 'Abriendo YouTube...';
-    (loginBtn as HTMLButtonElement).disabled = true;
+    loginBtn.disabled = true;
+    loginBtn.lastChild!.textContent = ' Abriendo YouTube...';
     try {
       await openYouTubeLogin();
+      // FIX login colgado: rehabilitar el botón tras abrir la ventana, así nunca
+      // queda bloqueado si el usuario cierra el login sin completar.
+      loginBtn.disabled = false;
+      loginBtn.lastChild!.textContent = ' Esperando inicio de sesion...';
     } catch (e) {
       console.error('Error opening login:', e);
-      loginBtn.textContent = 'Iniciar sesion en YouTube';
-      (loginBtn as HTMLButtonElement).disabled = false;
+      resetLoginButton();
+      showToast('No se pudo abrir el login de YouTube', 'error');
     }
   });
 
-  // Listen for cookies extracted from WebView
+  // Cookies extraídas desde el WebView
   onCookiesExtracted((success) => {
-    loginBtn.textContent = 'Iniciar sesion en YouTube';
-    (loginBtn as HTMLButtonElement).disabled = false;
+    resetLoginButton();
     if (success) {
-      // Re-check cookies to update status
-      checkCookies().then(updateCookieStatus);
+      checkCookies().then((r) => {
+        updateCookieStatus(r);
+        showToast('Sesión de YouTube conectada', 'success');
+      });
     }
   });
 
-  // Auto-check on init
+  // Auto-verificar al iniciar
   checkCookies().then(updateCookieStatus);
 }
