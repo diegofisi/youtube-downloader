@@ -1,17 +1,6 @@
-/** Tema claro/oscuro: fuente de verdad = [data-theme] en <html>, persistido. */
+/** Toggle de tema en la titlebar (usa los helpers de core/theme). */
 import { icon } from './icons';
-
-export type Theme = 'dark' | 'light';
-const KEY = 'stash-theme';
-
-export function getTheme(): Theme {
-  return (localStorage.getItem(KEY) as Theme) || 'dark';
-}
-
-export function applyTheme(theme: Theme): void {
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem(KEY, theme);
-}
+import { getTheme, applyTheme } from '../core/theme';
 
 /** Conecta el botón de toggle de la titlebar. */
 export function initThemeToggle(btn: HTMLElement): void {

@@ -401,10 +401,63 @@
           <div class="view-wrap">
             <h1 class="view-title">Ajustes</h1>
             <p class="view-subtitle">Preferencias de la aplicación.</p>
-            <div class="empty-state">
-              <div class="empty-state__title">Próximamente</div>
-              <div class="empty-state__hint">Defaults de calidad/formato, carpeta, plantilla y más. Por ahora el tema se cambia arriba a la derecha. (Fase 7)</div>
-            </div>
+
+            <section class="card">
+              <div class="card-header"><span class="card-title">Apariencia</span></div>
+              <div class="opt-row">
+                <span class="opt-label">Tema</span>
+                <div class="opt-chips" id="set-theme">
+                  <button class="chip" data-theme="dark">Oscuro</button>
+                  <button class="chip" data-theme="light">Claro</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header"><span class="card-title">Descarga por defecto</span></div>
+              <div class="opt-row">
+                <span class="opt-label">Calidad</span>
+                <div class="opt-chips" id="set-quality">
+                  <button class="chip" data-val="auto">Auto</button>
+                  <button class="chip" data-val="1080">1080p</button>
+                  <button class="chip" data-val="720">720p</button>
+                  <button class="chip" data-val="480">480p</button>
+                  <button class="chip" data-val="360">360p</button>
+                  <button class="chip" data-val="max">Máx</button>
+                </div>
+              </div>
+              <div class="opt-row">
+                <span class="opt-label">Formato</span>
+                <div class="opt-chips" id="set-container">
+                  <button class="chip" data-val="mp4">MP4</button>
+                  <button class="chip" data-val="mkv">MKV</button>
+                  <button class="chip" data-val="webm">WebM</button>
+                </div>
+              </div>
+              <div class="opt-row">
+                <span class="opt-label">Audio</span>
+                <div class="opt-chips" id="set-audio">
+                  <button class="chip" data-val="mp3">MP3</button>
+                  <button class="chip" data-val="m4a">M4A</button>
+                  <button class="chip" data-val="opus">Opus</button>
+                </div>
+              </div>
+              <div class="opt-row">
+                <span class="opt-label">Simultáneos</span>
+                <select id="set-concurrency" class="concurrency-select">
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="0">Todos</option>
+                </select>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header"><span class="card-title">Componentes</span></div>
+              <div id="set-components" class="set-components"></div>
+            </section>
           </div>
         </section>
 

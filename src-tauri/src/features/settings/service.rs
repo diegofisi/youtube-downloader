@@ -5,17 +5,58 @@ use serde::{Deserialize, Serialize};
 
 const CONFIG_FILE: &str = "config.json";
 
+fn default_quality() -> String {
+    "auto".into()
+}
+fn default_container() -> String {
+    "mp4".into()
+}
+fn default_audio_format() -> String {
+    "mp3".into()
+}
+fn default_concurrency() -> u32 {
+    5
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
+    #[serde(default)]
     pub download_folder: String,
+    #[serde(default = "default_quality")]
+    pub default_quality: String,
+    #[serde(default = "default_container")]
+    pub default_container: String,
+    #[serde(default = "default_audio_format")]
+    pub default_audio_format: String,
+    #[serde(default = "default_concurrency")]
+    pub default_concurrency: u32,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             download_folder: String::new(),
+            default_quality: default_quality(),
+            default_container: default_container(),
+            default_audio_format: default_audio_format(),
+            default_concurrency: default_concurrency(),
         }
     }
+}
+
+pub fn set_defaults(
+    app_dir: &Path,
+    quality: String,
+    container: String,
+    audio_format: String,
+    concurrency: u32,
+) -> Result<(), String> {
+    let mut config = load(app_dir);
+    config.default_quality = quality;
+    config.default_container = container;
+    config.default_audio_format = audio_format;
+    config.default_concurrency = concurrency;
+    save(app_dir, &config)
 }
 
 fn config_path(app_dir: &Path) -> PathBuf {

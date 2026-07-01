@@ -1,7 +1,32 @@
 use tauri::AppHandle;
 
 use super::service;
+use super::service::AppConfig;
 use crate::core::paths;
+
+#[tauri::command]
+pub fn get_settings(app: AppHandle) -> AppConfig {
+    let app_dir = paths::app_dir(&app);
+    service::load(&app_dir)
+}
+
+#[tauri::command]
+pub fn set_settings(
+    app: AppHandle,
+    default_quality: String,
+    default_container: String,
+    default_audio_format: String,
+    default_concurrency: u32,
+) -> Result<(), String> {
+    let app_dir = paths::app_dir(&app);
+    service::set_defaults(
+        &app_dir,
+        default_quality,
+        default_container,
+        default_audio_format,
+        default_concurrency,
+    )
+}
 
 #[tauri::command]
 pub fn open_downloads_folder(app: AppHandle) {

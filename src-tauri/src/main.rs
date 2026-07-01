@@ -17,6 +17,8 @@ fn main() {
             settings::commands::open_downloads_folder,
             settings::commands::get_download_folder,
             settings::commands::set_download_folder,
+            settings::commands::get_settings,
+            settings::commands::set_settings,
             download::commands::start_download,
             download::commands::cancel_download,
             preview::commands::analyze_urls,

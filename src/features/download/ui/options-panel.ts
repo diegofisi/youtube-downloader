@@ -24,6 +24,20 @@ function selectChip(group: HTMLElement, val: string): void {
   });
 }
 
+/** Aplica defaults (desde Ajustes) al estado y a los chips activos. */
+export function setDownloadDefaults(quality: string, container: string, audioFormat: string): void {
+  opts.quality = quality;
+  opts.container = container as DownloadOptions['container'];
+  opts.audioFormat = audioFormat as DownloadOptions['audioFormat'];
+  const setGroup = (g: string, v: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-group="${g}"]`);
+    if (el) selectChip(el, v);
+  };
+  setGroup('quality', quality);
+  setGroup('container', container);
+  setGroup('audioFormat', audioFormat);
+}
+
 export function initOptionsPanel(): void {
   const videoOpts = document.getElementById('video-opts') as HTMLElement;
   const audioOpts = document.getElementById('audio-opts') as HTMLElement;
