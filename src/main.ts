@@ -4,6 +4,7 @@ import { initCookiePanel } from './features/session';
 import { initDownloadPanel, initOptionsPanel } from './features/download';
 import { initPreviewPanel } from './features/preview';
 import { initLibrary } from './features/library';
+import { initAccount } from './features/youtube-account';
 import { initFolderSettings } from './features/settings';
 
 // El shell (titlebar, sidebar, router, tema) se monta de inmediato;
@@ -16,5 +17,6 @@ initSetup().then(() => {
   initDownloadPanel();
   initPreviewPanel();
   initLibrary();
+  initAccount();
   initFolderSettings();
 });

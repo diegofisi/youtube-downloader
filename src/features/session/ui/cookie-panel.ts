@@ -7,6 +7,7 @@ import {
 } from '../session.api';
 import { EXTENSION_URLS, type CookieResult } from '../session.types';
 import { showToast } from '../../../shared/ui/toast';
+import { bus } from '../../../core/bus/event-bus';
 
 const statusEl = document.getElementById('cookies-status')!;
 const loadBtn = document.getElementById('btn-load-cookies')!;
@@ -91,6 +92,7 @@ export function initCookiePanel(): void {
     if (success) {
       checkCookies().then((r) => {
         updateCookieStatus(r);
+        bus.emit('session:connected', {});
         showToast('Sesión de YouTube conectada', 'success');
       });
     }
