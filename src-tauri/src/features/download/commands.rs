@@ -1,6 +1,6 @@
 use tauri::AppHandle;
 
-use super::models::DownloadResult;
+use super::models::{DownloadOptions, DownloadResult};
 use super::service;
 use crate::core::{paths, process};
 
@@ -8,12 +8,12 @@ use crate::core::{paths, process};
 pub async fn start_download(
     app: AppHandle,
     url: String,
-    cookie_mode: String,
+    options: DownloadOptions,
 ) -> Result<DownloadResult, String> {
     let app_dir = paths::app_dir(&app);
 
     // Ejecutar en un hilo bloqueante para no bloquear el runtime async.
-    let handle = std::thread::spawn(move || service::start(&app, &app_dir, &url, &cookie_mode));
+    let handle = std::thread::spawn(move || service::start(&app, &app_dir, &url, &options));
 
     match handle.join() {
         Ok(result) => Ok(result),

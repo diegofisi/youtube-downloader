@@ -8,7 +8,7 @@ use std::os::windows::process::CommandExt;
 
 use tauri::{AppHandle, Emitter};
 
-use super::models::DownloadResult;
+use super::models::{DownloadOptions, DownloadResult};
 use crate::core::models::ProgressData;
 use crate::core::{paths, process, ytdlp};
 use crate::features::session::service as session;
@@ -20,24 +20,21 @@ fn get_output_dir(app_dir: &Path) -> PathBuf {
     dir
 }
 
-pub fn start(app: &AppHandle, app_dir: &Path, url: &str, cookie_mode: &str) -> DownloadResult {
+pub fn start(
+    app: &AppHandle,
+    app_dir: &Path,
+    url: &str,
+    options: &DownloadOptions,
+) -> DownloadResult {
     let output_dir = get_output_dir(app_dir);
 
-    let mut args: Vec<String> = vec![
-        "-f".into(),
-        "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best".into(),
-        "--merge-output-format".into(),
-        "mp4".into(),
-        "-o".into(),
-        output_dir
-            .join("%(title)s [%(id)s].%(ext)s")
-            .to_string_lossy()
-            .into(),
-        "--newline".into(),
-        "--progress".into(),
-        // Evita la advertencia de actualizacion de yt-dlp en stderr.
-        "--no-update".into(),
-    ];
+    // Args derivados de las opciones (formato/calidad/audio/subs/plantilla)
+    let mut args: Vec<String> = options.to_ytdlp_args(&output_dir);
+
+    // Args comunes
+    args.push("--newline".into());
+    args.push("--progress".into());
+    args.push("--no-update".into());
 
     if let Some(ffmpeg) = paths::find_executable(app_dir, "ffmpeg") {
         if let Some(dir) = ffmpeg.parent() {
@@ -51,7 +48,7 @@ pub fn start(app: &AppHandle, app_dir: &Path, url: &str, cookie_mode: &str) -> D
         args.push(format!("youtube:js_runtimes=deno:{}", deno.to_string_lossy()));
     }
 
-    match cookie_mode {
+    match options.cookie_mode.as_str() {
         "file" | "cookies" => {
             let cookies_path = session::get_cookies_path(app_dir);
             if cookies_path.exists() {

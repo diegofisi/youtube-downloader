@@ -1,5 +1,6 @@
 import { startDownload, cancelDownload, onProgress } from '../download.api';
-import type { ProgressData } from '../download.types';
+import type { ProgressData, DownloadOptions } from '../download.types';
+import { getDownloadOptions } from './options-panel';
 import { getCookieMode, updateCookieStatus, loadCookies } from '../../session';
 import { showModal } from '../../../shared/ui/modal';
 import { showToast } from '../../../shared/ui/toast';
@@ -197,7 +198,7 @@ function updateOverall(): void {
   }
 }
 
-function processQueue(cookieMode: string): Promise<void> {
+function processQueue(options: DownloadOptions): Promise<void> {
   return new Promise((resolve) => {
     function tryNext(): void {
       const active = items.filter((i) => i.status === 'downloading').length;
@@ -215,7 +216,7 @@ function processQueue(cookieMode: string): Promise<void> {
         renderItem(next);
         updateOverall();
 
-        startDownload(next.url, cookieMode).then((result) => {
+        startDownload(next.url, options).then((result) => {
           if (next.status === 'cancelled' || next.status === 'removed') {
             updateOverall();
             tryNext();
@@ -262,8 +263,8 @@ async function runDownloadForUrls(urls: string[]): Promise<void> {
     return;
   }
 
-  const cookieMode = getCookieMode();
-  if (cookieMode === 'none') {
+  const options: DownloadOptions = { ...getDownloadOptions(), cookieMode: getCookieMode() };
+  if (options.cookieMode === 'none') {
     const proceed = await showModal(
       'Sin cookies',
       'No has seleccionado un navegador ni cargado cookies.\n\nSin cookies solo puedes descargar videos públicos.\nPara videos de membresía, selecciona tu navegador (Chrome/Edge/Firefox) o carga un archivo cookies.txt.\n\n¿Continuar sin cookies?',
@@ -297,7 +298,7 @@ async function runDownloadForUrls(urls: string[]): Promise<void> {
   queueBar.style.width = '0%';
   updateOverall();
 
-  await processQueue(cookieMode);
+  await processQueue(options);
 
   isDownloading = false;
   downloadBtn.disabled = false;
@@ -357,14 +358,14 @@ async function handleRetry(): Promise<void> {
     return;
   }
 
-  const cookieMode = getCookieMode();
+  const options: DownloadOptions = { ...getDownloadOptions(), cookieMode: getCookieMode() };
 
   isDownloading = true;
   downloadBtn.disabled = true;
   concurrentSelect.disabled = true;
   updateOverall();
 
-  await processQueue(cookieMode);
+  await processQueue(options);
 
   isDownloading = false;
   downloadBtn.disabled = false;

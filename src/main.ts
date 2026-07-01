@@ -1,7 +1,7 @@
 import { initShell } from './app/shell';
 import { initSetup } from './features/setup';
 import { initCookiePanel } from './features/session';
-import { initDownloadPanel } from './features/download';
+import { initDownloadPanel, initOptionsPanel } from './features/download';
 import { initPreviewPanel } from './features/preview';
 import { initFolderSettings } from './features/settings';
 
@@ -11,6 +11,7 @@ initShell();
 
 initSetup().then(() => {
   initCookiePanel();
+  initOptionsPanel();
   initDownloadPanel();
   initPreviewPanel();
   initFolderSettings();

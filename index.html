@@ -153,6 +153,70 @@
               </details>
             </section>
 
+            <!-- Options Panel -->
+            <section id="options-panel" class="card">
+              <div class="card-header">
+                <span class="card-title">Opciones de descarga</span>
+              </div>
+              <div class="opt-segmented" data-group="mode">
+                <button class="seg is-active" data-val="video">Video</button>
+                <button class="seg" data-val="audio">Solo audio</button>
+              </div>
+
+              <div id="video-opts">
+                <div class="opt-row">
+                  <span class="opt-label">Calidad</span>
+                  <div class="opt-chips" data-group="quality">
+                    <button class="chip is-active" data-val="auto">Auto</button>
+                    <button class="chip" data-val="1080">1080p</button>
+                    <button class="chip" data-val="720">720p</button>
+                    <button class="chip" data-val="480">480p</button>
+                    <button class="chip" data-val="360">360p</button>
+                    <button class="chip" data-val="max">Máx</button>
+                  </div>
+                </div>
+                <div class="opt-row">
+                  <span class="opt-label">Formato</span>
+                  <div class="opt-chips" data-group="container">
+                    <button class="chip is-active" data-val="mp4">MP4</button>
+                    <button class="chip" data-val="mkv">MKV</button>
+                    <button class="chip" data-val="webm">WebM</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="audio-opts" style="display: none;">
+                <div class="opt-row">
+                  <span class="opt-label">Audio</span>
+                  <div class="opt-chips" data-group="audioFormat">
+                    <button class="chip is-active" data-val="mp3">MP3</button>
+                    <button class="chip" data-val="m4a">M4A</button>
+                    <button class="chip" data-val="opus">Opus</button>
+                  </div>
+                </div>
+                <div class="opt-row">
+                  <span class="opt-label">Bitrate</span>
+                  <div class="opt-chips" data-group="audioBitrate">
+                    <button class="chip is-active" data-val="0">Auto</button>
+                    <button class="chip" data-val="128">128k</button>
+                    <button class="chip" data-val="192">192k</button>
+                    <button class="chip" data-val="256">256k</button>
+                    <button class="chip" data-val="320">320k</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="opt-toggles">
+                <label class="opt-toggle"><input type="checkbox" id="opt-subs"> Subtítulos</label>
+                <label class="opt-toggle"><input type="checkbox" id="opt-thumb"> Incrustar miniatura</label>
+              </div>
+              <div class="opt-row">
+                <span class="opt-label">Nombre</span>
+                <input type="text" id="opt-template" class="opt-input" spellcheck="false"
+                  placeholder="%(title)s [%(id)s].%(ext)s">
+              </div>
+            </section>
+
             <!-- Download Panel -->
             <section id="download-panel" class="card">
               <div class="card-header">
