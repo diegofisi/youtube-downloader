@@ -1,23 +1,17 @@
 import { initShell } from './app/shell';
-import { initSetup } from './features/setup';
-import { initCookiePanel } from './features/session';
-import { initDownloadPanel, initOptionsPanel } from './features/download';
-import { initPreviewPanel } from './features/preview';
-import { initLibrary } from './features/library';
+import { initSession } from './features/session';
+import { initOnboarding } from './features/setup/ui/onboarding';
+import { initDescargar } from './features/download/ui/descargar';
+import { initQueueView } from './features/queue';
 import { initAccount } from './features/youtube-account';
-import { initFolderSettings, initSettings } from './features/settings';
+import { initLibrary } from './features/library';
+import { initSettings } from './features/settings/ui/settings-view';
 
-// El shell (titlebar, sidebar, router, tema) se monta de inmediato;
-// el setup corre por encima como overlay hasta que las dependencias están listas.
 initShell();
-
-initSetup().then(() => {
-  initCookiePanel();
-  initOptionsPanel();
-  initDownloadPanel();
-  initPreviewPanel();
-  initLibrary();
-  initAccount();
-  initFolderSettings();
-  initSettings();
-});
+initSession();
+initQueueView();
+initDescargar();
+initAccount();
+initLibrary();
+initSettings();
+initOnboarding();

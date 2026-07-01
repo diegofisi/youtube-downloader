@@ -4,482 +4,391 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stash</title>
-  <link rel="stylesheet" href="/src/styles/app.css">
-  <link rel="stylesheet" href="/src/shared/styles/index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles/stash.css">
+  <style>
+    .hov:hover { background: var(--hover); color: var(--text); }
+    .acc-btn:hover { filter: brightness(1.08); }
+    .brd-hov:hover { border-color: var(--accent) !important; }
+    input::placeholder, textarea::placeholder { color: var(--text3); }
+  </style>
 </head>
 <body>
+<div id="root" style="height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden">
 
-  <!-- Setup Screen (first run) -->
-  <div id="setup-screen" class="setup-screen" style="display: none;">
-    <div class="setup-content">
-      <div class="setup-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-      </div>
-      <h1 class="setup-title">Stash</h1>
-      <p id="setup-message" class="setup-message">Verificando componentes...</p>
-      <div class="setup-progress">
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="setup-bar"></div>
-        </div>
-        <p id="setup-detail" class="setup-detail">Preparando...</p>
-      </div>
-      <p id="setup-error" class="setup-error" style="display: none;"></p>
-      <button id="setup-retry" class="btn btn-accent" style="display: none;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-        Reintentar
-      </button>
+  <!-- TITLEBAR -->
+  <div data-tauri-drag-region style="height:46px;flex:none;display:flex;align-items:center;gap:14px;padding:0 10px 0 14px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:5">
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="win-close" style="width:12px;height:12px;border-radius:50%;background:#FF5F57"></button>
+      <button id="win-min" style="width:12px;height:12px;border-radius:50%;background:#FEBC2E"></button>
+      <button id="win-max" style="width:12px;height:12px;border-radius:50%;background:#28C840"></button>
     </div>
+    <div data-tauri-drag-region style="display:flex;align-items:center;gap:9px;margin-left:6px">
+      <div style="width:25px;height:25px;border-radius:8px;background:linear-gradient(150deg,#9385F4,#6B58E8);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(124,107,240,.4)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3v11m0 0 4.2-4.2M12 14l-4.2-4.2M5 17v2.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V17" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span style="font-family:'SF Pro Display',system-ui,sans-serif;font-weight:700;font-size:15px;letter-spacing:-.2px">Stash</span>
+    </div>
+    <div data-tauri-drag-region style="flex:1;display:flex;align-items:center;justify-content:center;min-width:0">
+      <span id="section-title" style="font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap">Descargar</span>
+    </div>
+    <button id="theme-toggle" class="hov" title="Cambiar tema" style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--text2)"></button>
+    <button id="win-min-2" class="hov" title="Minimizar" style="width:32px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text2)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    <button id="win-close-2" class="hov" title="Cerrar" style="width:32px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text2)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   </div>
 
-  <!-- App Shell -->
-  <div class="app-root">
+  <!-- SESSION BANNER -->
+  <div id="session-banner" hidden style="flex:none;display:flex;align-items:center;gap:11px;padding:9px 16px;background:var(--warnSoft);border-bottom:1px solid color-mix(in srgb,var(--warn) 32%,transparent);z-index:4">
+    <span style="display:flex;color:var(--warn);flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 8v5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16.5" r="1.2" fill="currentColor"/><path d="M12 3 2.5 20h19z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></span>
+    <span style="font-size:12.5px;flex:1;min-width:0;color:var(--text)">Tu sesión de YouTube caducó. Vuelve a conectarte para el contenido de miembros.</span>
+    <button id="banner-reconnect" class="acc-btn" style="height:30px;padding:0 14px;flex:none;border-radius:8px;background:var(--warn);color:#241600;font-weight:700;font-size:12px;white-space:nowrap">Reconectar</button>
+    <button id="banner-dismiss" class="hov" title="Descartar" style="width:28px;height:28px;flex:none;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--text2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
 
-    <!-- Titlebar -->
-    <div class="titlebar" data-tauri-drag-region>
-      <div class="titlebar__brand" data-tauri-drag-region>
-        <span class="titlebar__logo"></span>
-        <span class="titlebar__name">Stash</span>
-      </div>
-      <div class="titlebar__spacer" data-tauri-drag-region></div>
-      <span class="titlebar__section" id="titlebar-section" data-tauri-drag-region>Descargar</span>
-      <div class="titlebar__spacer" data-tauri-drag-region></div>
-      <button class="theme-toggle" id="theme-toggle" title="Cambiar tema"></button>
-      <div class="titlebar__controls">
-        <button class="tb-btn" id="win-min" title="Minimizar"></button>
-        <button class="tb-btn" id="win-max" title="Maximizar"></button>
-        <button class="tb-btn tb-btn--close" id="win-close" title="Cerrar"></button>
-      </div>
-    </div>
+  <!-- BODY -->
+  <div style="flex:1;display:flex;min-height:0">
 
-    <div class="app-body">
+    <!-- SIDEBAR -->
+    <nav style="width:208px;flex:none;display:flex;flex-direction:column;padding:14px 12px;background:var(--side);border-right:1px solid var(--border)">
+      <div style="font-size:10.5px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--text3);padding:4px 10px 9px">Navegación</div>
+      <div id="nav" style="display:flex;flex-direction:column;gap:3px"></div>
+      <div style="flex:1"></div>
+      <div style="padding:10px 10px 2px;color:var(--text3);font-size:11px;font-family:'JetBrains Mono',monospace">Stash · v2.4.0</div>
+    </nav>
 
-      <!-- Sidebar -->
-      <nav class="sidebar">
-        <div class="sidebar__label">Navegación</div>
-        <div class="sidebar__nav">
-          <button class="nav-item" data-nav="descargar">
-            <span class="nav-item__icon" data-icon="download"></span>
-            <span class="nav-item__label">Descargar</span>
-          </button>
-          <button class="nav-item" data-nav="cola">
-            <span class="nav-item__icon" data-icon="queue"></span>
-            <span class="nav-item__label">Cola</span>
-          </button>
-          <button class="nav-item" data-nav="youtube">
-            <span class="nav-item__icon" data-icon="youtube"></span>
-            <span class="nav-item__label">Mi YouTube</span>
-          </button>
-          <button class="nav-item" data-nav="biblioteca">
-            <span class="nav-item__icon" data-icon="library"></span>
-            <span class="nav-item__label">Biblioteca</span>
-          </button>
-          <button class="nav-item" data-nav="ajustes">
-            <span class="nav-item__icon" data-icon="settings"></span>
-            <span class="nav-item__label">Ajustes</span>
-          </button>
-        </div>
-        <div class="sidebar__foot">Stash · v2.0.0</div>
-      </nav>
+    <!-- MAIN -->
+    <main style="flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)">
+      <div class="main-scroll">
 
-      <!-- Main outlet -->
-      <main class="app-main">
+        <!-- ============ DESCARGAR ============ -->
+        <section class="view is-active" data-view="descargar">
+          <div style="max-width:1180px;margin:0 auto;padding:26px 30px 60px">
+            <div style="margin-bottom:22px">
+              <h1 style="margin:0;font-family:'SF Pro Display',system-ui,sans-serif;font-size:25px;font-weight:700;letter-spacing:-.5px">Descargar</h1>
+              <p style="margin:5px 0 0;color:var(--text2);font-size:13.5px">Pega enlaces de videos, playlists o canales — verás qué se va a descargar antes de empezar.</p>
+            </div>
 
-        <!-- ===== DESCARGAR ===== -->
-        <section class="view" data-view="descargar">
-          <div class="view-wrap">
-            <h1 class="view-title">Descargar</h1>
-            <p class="view-subtitle">Conecta tu cuenta y pega enlaces de YouTube para descargar.</p>
+            <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
 
-            <!-- Cookie Panel -->
-            <section id="cookie-panel" class="card">
-              <div class="card-header">
-                <span class="step-badge">PASO 1</span>
-                <span class="card-title">Configura tus cookies (para membresías)</span>
-              </div>
-              <div id="cookies-status" class="status-badge status-error">
-                Sin cookies configuradas
-              </div>
-
-              <div class="instructions">
-                <p>Inicia sesion con tu cuenta de YouTube directamente:</p>
-              </div>
-              <button class="btn btn-youtube" id="btn-youtube-login">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                </svg>
-                Iniciar sesion en YouTube
-              </button>
-
-              <div class="cookie-divider">
-                <span>o carga cookies manualmente</span>
-              </div>
-
-              <details class="cookie-manual">
-                <summary>Cargar archivo cookies.txt</summary>
-                <div class="cookie-manual-content">
-                  <div class="instructions">
-                    <ol>
-                      <li>Instala <strong>"Get cookies.txt LOCALLY"</strong>:</li>
-                    </ol>
+              <!-- LEFT -->
+              <div style="flex:1;min-width:380px;display:flex;flex-direction:column;gap:18px">
+                <!-- paste card -->
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow)">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--accent)"><path d="M9 6h6m-6 4h6m-6 4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="3" width="15" height="18" rx="2.5" stroke="currentColor" stroke-width="1.8"/></svg>
+                    <span style="font-weight:600;font-size:13.5px">Pega tus enlaces</span>
+                    <span id="link-count" style="margin-left:auto;font-size:11.5px;color:var(--text3);font-family:'JetBrains Mono',monospace">0 líneas</span>
                   </div>
-                  <div class="browser-buttons">
-                    <button class="btn btn-secondary" data-browser="chrome">Chrome</button>
-                    <button class="btn btn-secondary" data-browser="edge">Edge</button>
-                    <button class="btn btn-secondary" data-browser="firefox">Firefox</button>
+                  <textarea id="url-input" spellcheck="false" placeholder="https://youtube.com/watch?v=…&#10;https://youtube.com/playlist?list=…&#10;https://youtube.com/@canal" style="width:100%;height:88px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 13px;font-size:13px;line-height:1.7;font-family:'JetBrains Mono',monospace;outline:none"></textarea>
+                  <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+                    <button id="btn-analyze" class="acc-btn" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 18px;border-radius:10px;background:var(--accent);color:var(--accentText);font-weight:600;font-size:13.5px;white-space:nowrap;flex:none;box-shadow:0 4px 14px rgba(124,107,240,.28)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="2"/></svg>
+                      Previsualizar videos
+                    </button>
+                    <div style="flex:1"></div>
+                    <button id="btn-go-youtube" style="display:flex;align-items:center;gap:7px;height:38px;padding:0 6px;color:var(--text2);font-size:13px;font-weight:500">
+                      o explora tu YouTube
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                   </div>
-                  <div class="instructions">
-                    <ol start="2">
-                      <li>Ve a <strong>youtube.com</strong> con tu cuenta</li>
-                      <li>Clic en la extension → <strong>"Export"</strong></li>
-                      <li>Carga el archivo:</li>
-                    </ol>
+                </div>
+
+                <!-- preview toolbar -->
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                  <h2 style="margin:0;font-size:15px;font-weight:700;font-family:'SF Pro Display',system-ui,sans-serif">Vista previa</h2>
+                  <span id="preview-count-label" style="font-size:12px;color:var(--text2)"></span>
+                  <div style="flex:1"></div>
+                  <button id="btn-filter-dl" hidden style="font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;border:1.5px solid var(--border);color:var(--text2)">Solo descargables</button>
+                  <button id="btn-select-all" hidden style="font-size:12.5px;font-weight:500;color:var(--accent);padding:6px 8px;border-radius:8px">Seleccionar todo</button>
+                </div>
+
+                <!-- preview list -->
+                <div id="preview-list"></div>
+                <div id="preview-empty" style="text-align:center;padding:52px 20px;border:1.5px dashed var(--border2);border-radius:16px;color:var(--text3)">
+                  <div style="font-size:14px;font-weight:600;color:var(--text2)">Pega enlaces para empezar</div>
+                  <div style="font-size:12.5px;margin-top:5px">Verás aquí qué se va a descargar, antes de bajar nada.</div>
+                </div>
+              </div>
+
+              <!-- RIGHT: options panel -->
+              <div style="width:312px;flex:none;position:sticky;top:0;display:flex;flex-direction:column;gap:14px">
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow)">
+                  <div style="font-weight:700;font-size:14px;font-family:'SF Pro Display',system-ui,sans-serif;margin-bottom:3px">Opciones de descarga</div>
+                  <div style="font-size:11.5px;color:var(--text2);margin-bottom:14px">Por defecto: video + audio en MP4, mejor calidad disponible.</div>
+
+                  <div id="mode-cards" style="display:flex;flex-direction:column;gap:8px"></div>
+
+                  <div id="video-opts" style="display:flex;flex-direction:column;gap:14px;padding-top:14px;margin-top:14px;border-top:1px solid var(--border)">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Calidad</div>
+                      <div class="chips" data-group="quality" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Formato del archivo</div>
+                      <div class="chips" data-group="container" style="display:flex;gap:6px"></div>
+                    </div>
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                      <button id="toggle-subs" data-on="0"></button>
+                      <span style="font-size:13px;color:var(--text)">Descargar subtítulos</span>
+                      <span style="margin-left:auto;font-size:11.5px;color:var(--text3);font-family:'JetBrains Mono',monospace">ES</span>
+                    </label>
                   </div>
-                  <button class="btn btn-accent" id="btn-load-cookies">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Cargar cookies.txt
+
+                  <div id="audio-opts" hidden style="display:flex;flex-direction:column;gap:14px;padding-top:14px;margin-top:14px;border-top:1px solid var(--border)">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Formato de audio</div>
+                      <div class="chips" data-group="audioFmt" style="display:flex;gap:6px"></div>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Calidad de audio</div>
+                      <div class="chips" data-group="bitrate" style="display:flex;gap:6px"></div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:13px;padding-top:14px;margin-top:14px;border-top:1px solid var(--border)">
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                      <button id="toggle-thumb" data-on="1"></button>
+                      <span style="font-size:13px;color:var(--text)">Guardar miniatura del video</span>
+                    </label>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Plantilla de nombre</div>
+                      <input id="opt-template" spellcheck="false" value="%(title)s [%(id)s]" style="width:100%;height:34px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0 10px;font-size:12px;font-family:'JetBrains Mono',monospace;outline:none"/>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Carpeta destino</div>
+                      <div style="display:flex;gap:6px">
+                        <div id="folder-path" style="flex:1;height:34px;display:flex;align-items:center;padding:0 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11.5px;color:var(--text2);font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">…</div>
+                        <button id="btn-change-folder" class="hov" style="width:36px;height:34px;flex:none;border-radius:8px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;color:var(--text2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- action bar -->
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow)">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+                    <span id="sel-count" style="font-size:12px;color:var(--text2)">0 seleccionados</span>
+                    <span id="options-summary" style="font-size:11.5px;color:var(--text3)"></span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px">
+                    <span style="font-size:12px;color:var(--text2)">Tamaño estimado</span>
+                    <span id="est-total" style="font-size:15px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">—</span>
+                  </div>
+                  <button id="btn-download" class="acc-btn" style="display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:44px;border-radius:11px;background:var(--accent);color:var(--accentText);font-weight:700;font-size:14px;box-shadow:0 6px 18px rgba(124,107,240,.32)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M5 18v1.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span id="download-label">Descargar</span>
                   </button>
                 </div>
-              </details>
-            </section>
-
-            <!-- Options Panel -->
-            <section id="options-panel" class="card">
-              <div class="card-header">
-                <span class="card-title">Opciones de descarga</span>
               </div>
-              <div class="opt-segmented" data-group="mode">
-                <button class="seg is-active" data-val="video">Video</button>
-                <button class="seg" data-val="audio">Solo audio</button>
-              </div>
-
-              <div id="video-opts">
-                <div class="opt-row">
-                  <span class="opt-label">Calidad</span>
-                  <div class="opt-chips" data-group="quality">
-                    <button class="chip is-active" data-val="auto">Auto</button>
-                    <button class="chip" data-val="1080">1080p</button>
-                    <button class="chip" data-val="720">720p</button>
-                    <button class="chip" data-val="480">480p</button>
-                    <button class="chip" data-val="360">360p</button>
-                    <button class="chip" data-val="max">Máx</button>
-                  </div>
-                </div>
-                <div class="opt-row">
-                  <span class="opt-label">Formato</span>
-                  <div class="opt-chips" data-group="container">
-                    <button class="chip is-active" data-val="mp4">MP4</button>
-                    <button class="chip" data-val="mkv">MKV</button>
-                    <button class="chip" data-val="webm">WebM</button>
-                  </div>
-                </div>
-              </div>
-
-              <div id="audio-opts" style="display: none;">
-                <div class="opt-row">
-                  <span class="opt-label">Audio</span>
-                  <div class="opt-chips" data-group="audioFormat">
-                    <button class="chip is-active" data-val="mp3">MP3</button>
-                    <button class="chip" data-val="m4a">M4A</button>
-                    <button class="chip" data-val="opus">Opus</button>
-                  </div>
-                </div>
-                <div class="opt-row">
-                  <span class="opt-label">Bitrate</span>
-                  <div class="opt-chips" data-group="audioBitrate">
-                    <button class="chip is-active" data-val="0">Auto</button>
-                    <button class="chip" data-val="128">128k</button>
-                    <button class="chip" data-val="192">192k</button>
-                    <button class="chip" data-val="256">256k</button>
-                    <button class="chip" data-val="320">320k</button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="opt-toggles">
-                <label class="opt-toggle"><input type="checkbox" id="opt-subs"> Subtítulos</label>
-                <label class="opt-toggle"><input type="checkbox" id="opt-thumb"> Incrustar miniatura</label>
-              </div>
-              <div class="opt-row">
-                <span class="opt-label">Nombre</span>
-                <input type="text" id="opt-template" class="opt-input" spellcheck="false"
-                  placeholder="%(title)s [%(id)s].%(ext)s">
-              </div>
-            </section>
-
-            <!-- Download Panel -->
-            <section id="download-panel" class="card">
-              <div class="card-header">
-                <span class="step-badge">PASO 2</span>
-                <span class="card-title">Pega las URLs y descarga</span>
-                <span id="url-count" class="url-count"></span>
-              </div>
-              <label class="input-label" for="url-input">URLs de YouTube (una por línea)</label>
-              <textarea
-                id="url-input"
-                class="text-input url-textarea"
-                placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=..."
-                spellcheck="false"
-                autocomplete="off"
-                rows="4"
-              ></textarea>
-              <div class="folder-row">
-                <div class="folder-row-info">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                  </svg>
-                  <span id="folder-path" class="folder-path" title="">...</span>
-                </div>
-                <div class="folder-row-actions">
-                  <a href="#" id="open-folder" class="link">Abrir</a>
-                  <span class="link-separator">|</span>
-                  <a href="#" id="change-folder" class="link">Cambiar carpeta</a>
-                </div>
-              </div>
-              <div class="download-row">
-                <div class="concurrency-selector">
-                  <label for="concurrent-select" class="concurrency-label">Simultáneos:</label>
-                  <select id="concurrent-select" class="concurrency-select">
-                    <option value="5" selected>5</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="0">Todos</option>
-                  </select>
-                </div>
-                <button class="btn btn-secondary" id="btn-preview">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  Previsualizar
-                </button>
-                <button class="btn btn-download" id="btn-download">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  DESCARGAR VIDEOS
-                </button>
-              </div>
-            </section>
-
-            <!-- Preview Panel -->
-            <section id="preview-panel" class="card" style="display: none;">
-              <div class="card-header">
-                <span class="card-title">Vista previa</span>
-                <span id="preview-count" class="url-count"></span>
-              </div>
-              <div id="preview-list" class="preview-list"></div>
-              <div class="preview-actions">
-                <span id="preview-selected" class="preview-selected">0 seleccionados</span>
-                <button class="btn btn-download btn-preview-download" id="btn-download-selected">
-                  Descargar seleccionados
-                </button>
-              </div>
-            </section>
+            </div>
           </div>
         </section>
 
-        <!-- ===== COLA ===== -->
+        <!-- ============ COLA ============ -->
         <section class="view" data-view="cola">
-          <div class="view-wrap">
-            <h1 class="view-title">Cola de descargas</h1>
-            <p class="view-subtitle">Progreso en vivo de lo que estás descargando.</p>
-
-            <div class="empty-state" id="cola-empty">
-              <div class="empty-state__title">La cola está vacía</div>
-              <div class="empty-state__hint">Lo que descargues aparecerá aquí con su progreso.</div>
+          <div style="max-width:1020px;margin:0 auto;padding:26px 30px 60px">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px">
+              <div>
+                <h1 style="margin:0;font-family:'SF Pro Display',system-ui,sans-serif;font-size:25px;font-weight:700;letter-spacing:-.5px">Cola de descargas</h1>
+                <p id="queue-subtitle" style="margin:5px 0 0;color:var(--text2);font-size:13.5px">Nada en la cola.</p>
+              </div>
+              <button id="btn-retry-all" hidden style="display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:9px;border:1px solid var(--border2);color:var(--danger);font-weight:600;font-size:12.5px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 11a8 8 0 1 0-1 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 5v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Reintentar fallidos
+              </button>
             </div>
-
-            <!-- Download Queue -->
-            <section id="download-queue" class="card queue-card" style="display: none;">
-              <div class="queue-header">
-                <span class="queue-title">Cola de descargas</span>
-                <span id="queue-stats" class="queue-stats"></span>
-              </div>
-              <div class="queue-overall">
-                <div class="progress-bar-container">
-                  <div class="progress-bar" id="queue-bar"></div>
-                </div>
-                <div class="queue-overall-info">
-                  <span id="queue-status"></span>
-                  <span id="queue-percent"></span>
-                </div>
-              </div>
-              <div id="queue-list" class="queue-list"></div>
-              <div class="queue-actions-always" id="queue-actions-always" style="display: none;">
-                <button class="btn btn-secondary btn-queue-action" id="btn-pause-queue" style="display: none;">
-                  Pausar
-                </button>
-                <button class="btn btn-secondary btn-queue-action" id="btn-reload-cookies">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
-                  Recargar cookies
-                </button>
-                <button class="btn btn-retry btn-queue-action" id="btn-retry" style="display: none;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="23 4 23 10 17 10"/>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                  </svg>
-                  Reintentar fallidos (<span id="retry-count">0</span>)
-                </button>
-              </div>
-            </section>
+            <div id="queue-stats" style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap"></div>
+            <div id="queue-list" style="display:flex;flex-direction:column;gap:10px"></div>
+            <div id="queue-empty" style="text-align:center;padding:56px 20px;border:1.5px dashed var(--border2);border-radius:16px;color:var(--text3)">
+              <div style="font-size:14px;font-weight:600;color:var(--text2)">La cola está vacía</div>
+              <div style="font-size:12.5px;margin-top:5px">Lo que descargues aparecerá aquí con su progreso en vivo.</div>
+            </div>
           </div>
         </section>
 
-        <!-- ===== MI YOUTUBE ===== -->
+        <!-- ============ MI YOUTUBE ============ -->
         <section class="view" data-view="youtube">
-          <div class="view-wrap">
-            <h1 class="view-title">Mi YouTube</h1>
-            <p class="view-subtitle">Explora y descarga directamente desde tu cuenta.</p>
-
-            <div id="account-disconnected">
-              <div class="empty-state">
-                <div class="empty-state__title">Conecta tu cuenta de YouTube</div>
-                <div class="empty-state__hint">Inicia sesión para descargar desde "Ver más tarde", "Me gusta" y tus suscripciones.</div>
-                <button class="btn btn-youtube" id="btn-account-login" style="margin-top: 16px;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                  </svg>
-                  Iniciar sesion en YouTube
-                </button>
-              </div>
+          <div style="max-width:1020px;margin:0 auto;padding:26px 30px 60px">
+            <div style="margin-bottom:22px">
+              <h1 style="margin:0;font-family:'SF Pro Display',system-ui,sans-serif;font-size:25px;font-weight:700;letter-spacing:-.5px">Mi YouTube</h1>
+              <p style="margin:5px 0 0;color:var(--text2);font-size:13.5px">Explora y descarga directamente desde tu propia cuenta.</p>
             </div>
 
-            <div id="account-connected" style="display: none;">
-              <div class="acc-header">
-                <span class="acc-avatar">A</span>
-                <span class="acc-name">Sesión de YouTube conectada</span>
+            <div id="yt-logged-out" style="max-width:460px;margin:40px auto;text-align:center">
+              <div style="width:60px;height:60px;margin:0 auto 18px;border-radius:16px;background:var(--dangerSoft);display:flex;align-items:center;justify-content:center;color:var(--danger)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="13" rx="4" stroke="currentColor" stroke-width="1.9"/><path d="M10 9.2v5.6l5-2.8z" fill="currentColor"/></svg></div>
+              <h2 style="margin:0 0 8px;font-family:'SF Pro Display',system-ui,sans-serif;font-size:21px;font-weight:700">Conecta tu cuenta de YouTube</h2>
+              <p style="margin:0 0 20px;color:var(--text2);font-size:13.5px;line-height:1.55">Inicia sesión una vez para descargar desde tus suscripciones, playlists y contenido exclusivo de miembros.</p>
+              <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:22px" id="yt-benefits"></div>
+              <button id="btn-yt-login" class="acc-btn" style="display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:46px;border-radius:12px;background:var(--accent);color:var(--accentText);font-weight:700;font-size:14px;box-shadow:0 6px 18px rgba(124,107,240,.3)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="13" rx="4" stroke="currentColor" stroke-width="1.9"/><path d="M10 9.2v5.6l5-2.8z" fill="currentColor"/></svg>Iniciar sesión con YouTube
+              </button>
+              <p style="margin:13px 0 0;font-size:11.5px;color:var(--text3)">Solo se guardan las cookies de sesión, de forma local en este equipo.</p>
+            </div>
+
+            <div id="yt-logged-in" hidden>
+              <div style="display:flex;align-items:center;gap:14px;padding:15px 17px;background:var(--panel);border:1px solid var(--border);border-radius:15px;margin-bottom:20px">
+                <div style="width:48px;height:48px;flex:none;border-radius:50%;background:linear-gradient(140deg,#6D5BD0,#B36AE2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff">A</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <span style="font-weight:700;font-size:15.5px;font-family:'SF Pro Display',system-ui,sans-serif">Cuenta de YouTube</span>
+                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;color:var(--success);background:var(--successSoft)"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulsedot 2s infinite"></span>Conectada</span>
+                  </div>
+                  <div style="font-size:12.5px;color:var(--text2);margin-top:2px">Sesión activa con cookies</div>
+                </div>
+                <button id="btn-yt-logout" style="height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--border2);color:var(--danger);font-weight:500;font-size:12.5px">Cerrar sesión</button>
               </div>
-              <div class="acc-sources" id="acc-sources"></div>
-              <div id="acc-list" class="preview-list"></div>
-              <div class="preview-actions" id="acc-actions" style="display: none;">
-                <span id="acc-selected" class="preview-selected">0 seleccionados</span>
-                <button class="btn btn-download btn-preview-download" id="btn-acc-download">
-                  Descargar seleccionados
-                </button>
+              <div id="yt-tabs" style="display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap"></div>
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <h2 id="yt-title" style="margin:0;font-size:16px;font-weight:700;font-family:'SF Pro Display',system-ui,sans-serif">Suscripciones</h2>
+                <span id="yt-count" style="font-size:12px;color:var(--text2)"></span>
+                <div style="flex:1"></div>
+                <button id="btn-yt-download-sel" hidden class="acc-btn" style="height:34px;padding:0 15px;border-radius:9px;background:var(--accent);color:var(--accentText);font-weight:600;font-size:12.5px">Descargar seleccionados</button>
               </div>
+              <div id="yt-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(216px,1fr));gap:13px"></div>
             </div>
           </div>
         </section>
 
-        <!-- ===== BIBLIOTECA ===== -->
+        <!-- ============ BIBLIOTECA ============ -->
         <section class="view" data-view="biblioteca">
-          <div class="view-wrap">
-            <h1 class="view-title">Biblioteca</h1>
-            <p class="view-subtitle">Tu historial de descargas.</p>
-            <div class="lib-toolbar">
-              <input type="text" id="library-search" class="lib-search" placeholder="Buscar por título o URL..." spellcheck="false">
-              <button class="btn btn-secondary" id="btn-clear-history">Vaciar</button>
+          <div style="max-width:1020px;margin:0 auto;padding:26px 30px 60px">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px">
+              <div>
+                <h1 style="margin:0;font-family:'SF Pro Display',system-ui,sans-serif;font-size:25px;font-weight:700;letter-spacing:-.5px">Biblioteca</h1>
+                <p style="margin:5px 0 0;color:var(--text2);font-size:13.5px">Todo lo que has descargado, en un solo lugar.</p>
+              </div>
+              <button id="btn-open-downloads" class="hov" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 15px;border-radius:10px;border:1px solid var(--border2);color:var(--text2);font-weight:600;font-size:13px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Abrir carpeta de descargas
+              </button>
             </div>
-            <div id="library-list" class="lib-list"></div>
-            <div id="library-empty" class="empty-state" style="display: none;">
-              <div class="empty-state__title">Sin descargas todavía</div>
-              <div class="empty-state__hint">Lo que descargues aparecerá aquí.</div>
+            <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:220px;height:38px;padding:0 13px;background:var(--panel);border:1px solid var(--border);border-radius:10px;color:var(--text3)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <input id="library-search" placeholder="Buscar por título o canal…" style="flex:1;background:none;border:none;outline:none;color:var(--text);font-size:13px"/>
+              </div>
+              <button id="btn-clear-history" style="height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--border2);color:var(--text2);font-weight:600;font-size:12.5px">Vaciar</button>
+              <span id="library-count" style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace"></span>
+            </div>
+            <div id="library-list" style="display:flex;flex-direction:column;gap:9px"></div>
+            <div id="library-empty" style="text-align:center;padding:50px 20px;color:var(--text3)">
+              <div style="font-size:14px;font-weight:600;color:var(--text2)">Sin descargas todavía</div>
+              <div style="font-size:12.5px;margin-top:4px">Lo que descargues aparecerá aquí.</div>
             </div>
           </div>
         </section>
 
-        <!-- ===== AJUSTES ===== -->
+        <!-- ============ AJUSTES ============ -->
         <section class="view" data-view="ajustes">
-          <div class="view-wrap">
-            <h1 class="view-title">Ajustes</h1>
-            <p class="view-subtitle">Preferencias de la aplicación.</p>
+          <div style="max-width:780px;margin:0 auto;padding:26px 30px 60px">
+            <div style="margin-bottom:22px">
+              <h1 style="margin:0;font-family:'SF Pro Display',system-ui,sans-serif;font-size:25px;font-weight:700;letter-spacing:-.5px">Ajustes</h1>
+              <p style="margin:5px 0 0;color:var(--text2);font-size:13.5px">La calidad y el formato los eliges al momento de descargar. Aquí va lo demás.</p>
+            </div>
 
-            <section class="card">
-              <div class="card-header"><span class="card-title">Apariencia</span></div>
-              <div class="opt-row">
-                <span class="opt-label">Tema</span>
-                <div class="opt-chips" id="set-theme">
-                  <button class="chip" data-theme="dark">Oscuro</button>
-                  <button class="chip" data-theme="light">Claro</button>
-                </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:6px 17px;margin-bottom:16px">
+              <div style="font-weight:700;font-size:14px;font-family:'SF Pro Display',system-ui,sans-serif;padding:14px 0 4px">Apariencia</div>
+              <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:500">Tema</div><div style="font-size:12px;color:var(--text2)">Claro u oscuro</div></div>
+                <div id="set-theme" class="seg" style="display:flex;gap:5px;padding:3px;background:var(--bg);border-radius:9px"></div>
               </div>
-            </section>
+              <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:500">Descargas simultáneas</div><div style="font-size:12px;color:var(--text2)">Cuántos videos a la vez</div></div>
+                <div id="set-concurrency" class="seg" style="display:flex;gap:5px;padding:3px;background:var(--bg);border-radius:9px"></div>
+              </div>
+            </div>
 
-            <section class="card">
-              <div class="card-header"><span class="card-title">Descarga por defecto</span></div>
-              <div class="opt-row">
-                <span class="opt-label">Calidad</span>
-                <div class="opt-chips" id="set-quality">
-                  <button class="chip" data-val="auto">Auto</button>
-                  <button class="chip" data-val="1080">1080p</button>
-                  <button class="chip" data-val="720">720p</button>
-                  <button class="chip" data-val="480">480p</button>
-                  <button class="chip" data-val="360">360p</button>
-                  <button class="chip" data-val="max">Máx</button>
-                </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:6px 17px;margin-bottom:16px">
+              <div style="font-weight:700;font-size:14px;font-family:'SF Pro Display',system-ui,sans-serif;padding:14px 0 4px">Descarga por defecto</div>
+              <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:500">Calidad</div></div>
+                <div id="set-quality" class="chips" data-group="setQuality" style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:340px"></div>
               </div>
-              <div class="opt-row">
-                <span class="opt-label">Formato</span>
-                <div class="opt-chips" id="set-container">
-                  <button class="chip" data-val="mp4">MP4</button>
-                  <button class="chip" data-val="mkv">MKV</button>
-                  <button class="chip" data-val="webm">WebM</button>
-                </div>
+              <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:13.5px;font-weight:500">Formato</div></div>
+                <div id="set-container" class="chips" data-group="setContainer" style="display:flex;gap:5px"></div>
               </div>
-              <div class="opt-row">
-                <span class="opt-label">Audio</span>
-                <div class="opt-chips" id="set-audio">
-                  <button class="chip" data-val="mp3">MP3</button>
-                  <button class="chip" data-val="m4a">M4A</button>
-                  <button class="chip" data-val="opus">Opus</button>
-                </div>
-              </div>
-              <div class="opt-row">
-                <span class="opt-label">Simultáneos</span>
-                <select id="set-concurrency" class="concurrency-select">
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                  <option value="50">50</option>
-                  <option value="0">Todos</option>
-                </select>
-              </div>
-            </section>
+            </div>
 
-            <section class="card">
-              <div class="card-header"><span class="card-title">Componentes</span></div>
-              <div id="set-components" class="set-components"></div>
-            </section>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:15px;padding:6px 17px;margin-bottom:16px">
+              <div style="font-weight:700;font-size:14px;font-family:'SF Pro Display',system-ui,sans-serif;padding:14px 0 4px">Componentes</div>
+              <div id="set-components"></div>
+            </div>
           </div>
         </section>
 
-      </main>
+      </div>
+    </main>
+  </div>
+
+  <!-- ONBOARDING -->
+  <div id="onboarding" hidden style="position:absolute;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center">
+    <div style="position:absolute;inset:0;background:radial-gradient(900px 500px at 50% 0%,rgba(124,107,240,.12),transparent 70%)"></div>
+    <div style="position:relative;width:440px;text-align:center;padding:0 24px">
+      <div style="width:64px;height:64px;margin:0 auto 22px;border-radius:18px;background:linear-gradient(150deg,#9385F4,#6B58E8);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(124,107,240,.4)">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 3v11m0 0 4.2-4.2M12 14l-4.2-4.2M5 17v2.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V17" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1 style="margin:0;font-family:'SF Pro Display',system-ui,sans-serif;font-size:27px;font-weight:700;letter-spacing:-.5px">Bienvenido a Stash</h1>
+      <p style="margin:9px 0 28px;color:var(--text2);font-size:14px;line-height:1.55">Preparamos todo la primera vez. Tarda solo unos segundos.</p>
+      <div id="onb-steps" style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:26px"></div>
+      <button id="onb-finish" class="acc-btn" style="display:flex;align-items:center;justify-content:center;width:100%;height:48px;border-radius:12px;background:var(--accent);color:var(--accentText);font-weight:700;font-size:14.5px;box-shadow:0 8px 24px rgba(124,107,240,.35)">Empezar a usar Stash</button>
+      <div style="margin-top:14px"><button id="onb-skip" style="font-size:12.5px;color:var(--text3)">Omitir e ir a la app</button></div>
+      <p id="onb-detail" style="margin:10px 0 0;font-size:11.5px;color:var(--text3)"></p>
     </div>
   </div>
 
-  <!-- Toasts -->
-  <div class="toast-host" id="toast-host"></div>
-
-  <!-- Modal -->
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal">
-      <h3 class="modal-title" id="modal-title"></h3>
-      <p class="modal-message" id="modal-message"></p>
-      <div class="modal-buttons">
-        <button class="btn btn-secondary" id="modal-cancel">Cancelar</button>
-        <button class="btn btn-accent" id="modal-ok">Aceptar</button>
+  <!-- PER-VIDEO OPTIONS MODAL -->
+  <div id="ov-overlay" hidden style="position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="width:384px;max-height:86%;overflow-y:auto;background:var(--panel);border:1px solid var(--border2);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.6)">
+      <div style="display:flex;align-items:center;gap:10px;padding:15px 17px;border-bottom:1px solid var(--border)">
+        <span style="display:flex;color:var(--accent)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M10.3 4.3 9.8 7a7.5 7.5 0 0 0-1.7 1l-2.6-1-1.7 3 2.1 1.7a7.5 7.5 0 0 0 0 2l-2.1 1.7 1.7 3 2.6-1c.5.4 1.1.7 1.7 1l.5 2.7h3.4l.5-2.7c.6-.3 1.2-.6 1.7-1l2.6 1 1.7-3-2.1-1.7a7.5 7.5 0 0 0 0-2l2.1-1.7-1.7-3-2.6 1a7.5 7.5 0 0 0-1.7-1l-.5-2.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.5"/></svg></span>
+        <span style="font-weight:700;font-size:14.5px;font-family:'SF Pro Display',system-ui,sans-serif">Opciones de este video</span>
+        <div style="flex:1"></div>
+        <button id="ov-close" class="hov" style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text3)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      </div>
+      <div style="padding:15px 17px;display:flex;flex-direction:column;gap:16px">
+        <div id="ov-title" style="font-size:12.5px;color:var(--text2);padding:9px 11px;background:var(--bg);border-radius:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        <div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Qué descargar</div>
+          <div class="chips" data-group="ovMode" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <div id="ov-video-block">
+          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Calidad</div>
+          <div class="chips" data-group="ovQuality" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Formato del archivo</div>
+          <div class="chips" data-group="ovContainer" style="display:flex;gap:6px"></div>
+        </div>
+        <div id="ov-audio-block" hidden>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Formato de audio</div>
+          <div class="chips" data-group="ovAudioFmt" style="display:flex;gap:6px;margin-bottom:14px"></div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px">Calidad de audio</div>
+          <div class="chips" data-group="ovBitrate" style="display:flex;gap:6px"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;padding:14px 17px;border-top:1px solid var(--border)">
+        <button id="ov-clear" hidden style="height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--border2);color:var(--text2);font-weight:600;font-size:12.5px">Usar generales</button>
+        <div style="flex:1"></div>
+        <button id="ov-done" class="acc-btn" style="height:40px;padding:0 22px;border-radius:10px;background:var(--accent);color:var(--accentText);font-weight:700;font-size:13px">Listo</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="/src/main.ts"></script>
+  <!-- CONFIRM MODAL -->
+  <div id="modal-overlay" hidden style="position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="width:440px;background:var(--panel);border:1px solid var(--border2);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.6);padding:20px 22px">
+      <h3 id="modal-title" style="margin:0 0 8px;font-size:16px;font-weight:700;font-family:'SF Pro Display',system-ui,sans-serif"></h3>
+      <p id="modal-message" style="margin:0 0 18px;font-size:13px;color:var(--text2);line-height:1.55;white-space:pre-line"></p>
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button id="modal-cancel" style="height:38px;padding:0 16px;border-radius:9px;border:1px solid var(--border2);color:var(--text2);font-weight:600;font-size:13px">Cancelar</button>
+        <button id="modal-ok" class="acc-btn" style="height:38px;padding:0 18px;border-radius:9px;background:var(--accent);color:var(--accentText);font-weight:700;font-size:13px">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toast-host" style="position:absolute;bottom:18px;right:18px;z-index:60;display:flex;flex-direction:column;gap:10px;width:340px"></div>
+
+</div>
+<script type="module" src="/src/main.ts"></script>
 </body>
 </html>

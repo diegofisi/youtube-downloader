@@ -9,7 +9,9 @@ export interface AppEvents {
   'session:connected': { channel?: string };
   'nav:changed': { view: string };
   'nav:goto': { view: string };
+  'theme:changed': Record<string, never>;
   'download:completed': { url: string; title: string; format: string };
+  'queue:count': { active: number };
 }
 
 type Handler<K extends keyof AppEvents> = (payload: AppEvents[K]) => void;

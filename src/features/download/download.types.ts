@@ -12,7 +12,7 @@ export interface ProgressData {
 }
 
 export interface DownloadOptions {
-  mode: 'video' | 'audio';
+  mode: 'video' | 'videoonly' | 'audio';
   quality: string; // auto | max | 2160 | 1440 | 1080 | 720 | 480 | 360
   container: 'mp4' | 'mkv' | 'webm';
   audioFormat: 'mp3' | 'm4a' | 'opus';

@@ -1,9 +1,0 @@
-/* Entry único de estilos del design system Stash.
-   Se enlaza DESPUÉS de app.css para que tokens/base/shell prevalezcan. */
-@import './tokens.css';
-@import './base.css';
-@import './shell.css';
-@import './preview.css';
-@import './options.css';
-@import './library.css';
-@import './account.css';

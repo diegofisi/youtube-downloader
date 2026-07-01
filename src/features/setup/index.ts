@@ -1,1 +1,1 @@
-export { initSetup } from './ui/setup-screen';
+export { initOnboarding } from './ui/onboarding';

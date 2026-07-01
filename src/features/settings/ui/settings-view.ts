@@ -1,77 +1,73 @@
-import { getSettings, setSettings } from '../settings.api';
 import { getTheme, applyTheme, type Theme } from '../../../core/theme';
-import { setDownloadDefaults } from '../../download';
+import { getSettings, setSettings } from '../settings.api';
 import { checkDependencies } from '../../setup/setup.api';
+import { setConcurrency } from '../../queue';
 
-const themeGroup = document.getElementById('set-theme') as HTMLElement;
-const qualityGroup = document.getElementById('set-quality') as HTMLElement;
-const containerGroup = document.getElementById('set-container') as HTMLElement;
-const audioGroup = document.getElementById('set-audio') as HTMLElement;
-const concurrencySel = document.getElementById('set-concurrency') as HTMLSelectElement;
-const componentsEl = document.getElementById('set-components') as HTMLElement;
-const descargarConcurrency = document.getElementById('concurrent-select') as HTMLSelectElement;
+const $ = (id: string) => document.getElementById(id)!;
 
-function activeVal(group: HTMLElement): string {
-  return group.querySelector<HTMLElement>('.chip.is-active')?.dataset.val ?? '';
+const segStyle = (on: boolean) =>
+  `padding:6px 15px;border-radius:7px;font-size:12.5px;font-weight:600;${
+    on ? 'background:var(--panel);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)' : 'color:var(--text2);background:transparent'
+  }`;
+const chipStyle = (on: boolean) =>
+  `padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid ${
+    on ? 'var(--accent)' : 'var(--border)'
+  };background:${on ? 'var(--accentSoft)' : 'transparent'};color:${on ? 'var(--accent)' : 'var(--text2)'}`;
+
+function renderSeg(id: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
+  const el = $(id);
+  el.innerHTML = list.map(([v, l]) => `<button data-val="${v}" style="${segStyle(v === get())}">${l}</button>`).join('');
+  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b) =>
+    b.addEventListener('click', () => {
+      set(b.dataset.val!);
+      renderSeg(id, list, get, set);
+    }),
+  );
 }
-
-function selectChip(group: HTMLElement, val: string, attr: 'val' | 'theme' = 'val'): void {
-  group.querySelectorAll<HTMLElement>('.chip').forEach((c) => {
-    c.classList.toggle('is-active', c.dataset[attr] === val);
-  });
-}
-
-async function save(): Promise<void> {
-  const q = activeVal(qualityGroup);
-  const c = activeVal(containerGroup);
-  const a = activeVal(audioGroup);
-  const conc = parseInt(concurrencySel.value, 10);
-  await setSettings(q, c, a, conc);
-  // Aplicar en caliente a la vista Descargar.
-  setDownloadDefaults(q, c, a);
-  descargarConcurrency.value = String(conc);
+function renderChips(sel: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
+  const el = document.querySelector<HTMLElement>(`[data-group="${sel}"]`)!;
+  el.innerHTML = list.map(([v, l]) => `<button data-val="${v}" style="${chipStyle(v === get())}">${l}</button>`).join('');
+  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b) =>
+    b.addEventListener('click', () => {
+      set(b.dataset.val!);
+      renderChips(sel, list, get, set);
+    }),
+  );
 }
 
 async function renderComponents(): Promise<void> {
   const d = await checkDependencies();
   const row = (name: string, ok: boolean) =>
-    `<div class="set-comp"><span>${name}</span><span class="set-comp__badge set-comp__badge--${
-      ok ? 'ok' : 'err'
-    }">${ok ? 'Instalado' : 'Falta'}</span></div>`;
-  componentsEl.innerHTML = row('yt-dlp', d.ytdlp) + row('ffmpeg', d.ffmpeg) + row('deno', d.deno);
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-top:1px solid var(--border)"><span style="font-size:13.5px;font-family:'JetBrains Mono',monospace">${name}</span><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;color:${
+      ok ? 'var(--success)' : 'var(--danger)'
+    };background:${ok ? 'var(--successSoft)' : 'var(--dangerSoft)'}">${ok ? 'Instalado' : 'Falta'}</span></div>`;
+  $('set-components').innerHTML = row('yt-dlp', d.ytdlp) + row('ffmpeg', d.ffmpeg) + row('deno', d.deno);
 }
 
 export async function initSettings(): Promise<void> {
   const cfg = await getSettings();
+  let quality = cfg.default_quality || 'auto';
+  let container = (cfg.default_container || 'mp4').toUpperCase();
+  let conc = String(cfg.default_concurrency || 5);
+  setConcurrency(cfg.default_concurrency || 5);
 
-  // Estado inicial de los controles
-  selectChip(themeGroup, getTheme(), 'theme');
-  selectChip(qualityGroup, cfg.default_quality);
-  selectChip(containerGroup, cfg.default_container);
-  selectChip(audioGroup, cfg.default_audio_format);
-  concurrencySel.value = String(cfg.default_concurrency);
+  const save = () =>
+    setSettings(quality, container.toLowerCase(), cfg.default_audio_format || 'mp3', parseInt(conc, 10));
 
-  // Aplicar defaults a la vista Descargar al arrancar
-  setDownloadDefaults(cfg.default_quality, cfg.default_container, cfg.default_audio_format);
-  descargarConcurrency.value = String(cfg.default_concurrency);
-
-  // Wiring
-  themeGroup.querySelectorAll<HTMLElement>('.chip').forEach((c) => {
-    c.addEventListener('click', () => {
-      const th = c.dataset.theme as Theme;
-      applyTheme(th);
-      selectChip(themeGroup, th, 'theme');
-    });
+  renderSeg('set-theme', [['dark', 'Oscuro'], ['light', 'Claro']], getTheme, (v) => applyTheme(v as Theme));
+  renderSeg('set-concurrency', [['5', '5'], ['10', '10'], ['20', '20'], ['50', '50'], ['0', 'Todos']], () => conc, (v) => {
+    conc = v;
+    setConcurrency(parseInt(v, 10));
+    save();
   });
-  [qualityGroup, containerGroup, audioGroup].forEach((g) => {
-    g.querySelectorAll<HTMLElement>('.chip').forEach((c) => {
-      c.addEventListener('click', () => {
-        selectChip(g, c.dataset.val!);
-        save();
-      });
-    });
+  renderChips('setQuality', [['auto', 'Auto'], ['max', 'Máx'], ['2160', '4K'], ['1080', '1080p'], ['720', '720p'], ['480', '480p']], () => quality, (v) => {
+    quality = v;
+    save();
   });
-  concurrencySel.addEventListener('change', save);
+  renderChips('setContainer', [['MP4', 'MP4'], ['MKV', 'MKV'], ['WEBM', 'WebM']], () => container, (v) => {
+    container = v;
+    save();
+  });
 
   renderComponents();
 }

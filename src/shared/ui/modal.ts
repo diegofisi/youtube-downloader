@@ -8,15 +8,14 @@ export function showModal(title: string, message: string, showCancel = false): P
   return new Promise((resolve) => {
     titleEl.textContent = title;
     messageEl.textContent = message;
-    cancelBtn.style.display = showCancel ? 'inline-flex' : 'none';
-    overlay.classList.add('visible');
+    (cancelBtn as HTMLElement).style.display = showCancel ? '' : 'none';
+    overlay.hidden = false;
 
     const cleanup = () => {
-      overlay.classList.remove('visible');
+      overlay.hidden = true;
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
     };
-
     const onOk = () => {
       cleanup();
       resolve(true);
@@ -25,7 +24,6 @@ export function showModal(title: string, message: string, showCancel = false): P
       cleanup();
       resolve(false);
     };
-
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);
   });

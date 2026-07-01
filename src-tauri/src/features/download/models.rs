@@ -69,6 +69,7 @@ impl DownloadOptions {
             a.push("--merge-output-format".into());
             a.push(self.container.clone());
         }
+        // "videoonly" ya se maneja dentro de format_selector.
 
         if self.subtitles {
             a.push("--write-subs".into());
@@ -112,6 +113,13 @@ impl DownloadOptions {
             "360" => Some(360),
             _ => None, // auto | max
         };
+        if self.mode == "videoonly" {
+            // Sin pista de audio.
+            return match height {
+                Some(h) => format!("bestvideo[height<={h}][ext={vext}]/bestvideo[height<={h}]/bestvideo"),
+                None => "bestvideo".into(),
+            };
+        }
         match height {
             Some(h) => format!(
                 "bestvideo[height<={h}][ext={vext}]+bestaudio[ext={aext}]/bestvideo[height<={h}]+bestaudio/best[height<={h}]/best"
