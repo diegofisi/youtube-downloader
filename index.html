@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube Downloader</title>
+  <title>Stash</title>
   <link rel="stylesheet" href="/src/styles/app.css">
+  <link rel="stylesheet" href="/src/shared/styles/index.css">
 </head>
 <body>
 
@@ -18,7 +19,7 @@
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
       </div>
-      <h1 class="setup-title">YouTube Downloader</h1>
+      <h1 class="setup-title">Stash</h1>
       <p id="setup-message" class="setup-message">Verificando componentes...</p>
       <div class="setup-progress">
         <div class="progress-bar-container">
@@ -37,158 +38,260 @@
     </div>
   </div>
 
-  <!-- Main App -->
-  <div id="app" class="container">
-    <!-- Header -->
-    <header class="header">
-      <h1 class="title">YouTube Downloader</h1>
-      <p class="subtitle">Descarga videos de membresía con tu cuenta</p>
-    </header>
+  <!-- App Shell -->
+  <div class="app-root">
 
-    <!-- Cookie Panel -->
-    <section id="cookie-panel" class="card">
-      <div class="card-header">
-        <span class="step-badge">PASO 1</span>
-        <span class="card-title">Configura tus cookies (para membresías)</span>
+    <!-- Titlebar -->
+    <div class="titlebar" data-tauri-drag-region>
+      <div class="titlebar__brand" data-tauri-drag-region>
+        <span class="titlebar__logo"></span>
+        <span class="titlebar__name">Stash</span>
       </div>
-      <div id="cookies-status" class="status-badge status-error">
-        Sin cookies configuradas
+      <div class="titlebar__spacer" data-tauri-drag-region></div>
+      <span class="titlebar__section" id="titlebar-section" data-tauri-drag-region>Descargar</span>
+      <div class="titlebar__spacer" data-tauri-drag-region></div>
+      <button class="theme-toggle" id="theme-toggle" title="Cambiar tema"></button>
+      <div class="titlebar__controls">
+        <button class="tb-btn" id="win-min" title="Minimizar"></button>
+        <button class="tb-btn" id="win-max" title="Maximizar"></button>
+        <button class="tb-btn tb-btn--close" id="win-close" title="Cerrar"></button>
       </div>
+    </div>
 
-      <!-- Option A: YouTube Login (recommended) -->
-      <div class="instructions">
-        <p>Inicia sesion con tu cuenta de YouTube directamente:</p>
-      </div>
-      <button class="btn btn-youtube" id="btn-youtube-login">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-        </svg>
-        Iniciar sesion en YouTube
-      </button>
+    <div class="app-body">
 
-      <div class="cookie-divider">
-        <span>o carga cookies manualmente</span>
-      </div>
-
-      <!-- Option B: Manual cookie file -->
-      <details class="cookie-manual">
-        <summary>Cargar archivo cookies.txt</summary>
-        <div class="cookie-manual-content">
-          <div class="instructions">
-            <ol>
-              <li>Instala <strong>"Get cookies.txt LOCALLY"</strong>:</li>
-            </ol>
-          </div>
-          <div class="browser-buttons">
-            <button class="btn btn-secondary" data-browser="chrome">Chrome</button>
-            <button class="btn btn-secondary" data-browser="edge">Edge</button>
-            <button class="btn btn-secondary" data-browser="firefox">Firefox</button>
-          </div>
-          <div class="instructions">
-            <ol start="2">
-              <li>Ve a <strong>youtube.com</strong> con tu cuenta</li>
-              <li>Clic en la extension → <strong>"Export"</strong></li>
-              <li>Carga el archivo:</li>
-            </ol>
-          </div>
-          <button class="btn btn-accent" id="btn-load-cookies">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            Cargar cookies.txt
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="sidebar__label">Navegación</div>
+        <div class="sidebar__nav">
+          <button class="nav-item" data-nav="descargar">
+            <span class="nav-item__icon" data-icon="download"></span>
+            <span class="nav-item__label">Descargar</span>
+          </button>
+          <button class="nav-item" data-nav="cola">
+            <span class="nav-item__icon" data-icon="queue"></span>
+            <span class="nav-item__label">Cola</span>
+          </button>
+          <button class="nav-item" data-nav="youtube">
+            <span class="nav-item__icon" data-icon="youtube"></span>
+            <span class="nav-item__label">Mi YouTube</span>
+          </button>
+          <button class="nav-item" data-nav="biblioteca">
+            <span class="nav-item__icon" data-icon="library"></span>
+            <span class="nav-item__label">Biblioteca</span>
+          </button>
+          <button class="nav-item" data-nav="ajustes">
+            <span class="nav-item__icon" data-icon="settings"></span>
+            <span class="nav-item__label">Ajustes</span>
           </button>
         </div>
-      </details>
-    </section>
+        <div class="sidebar__foot">Stash · v2.0.0</div>
+      </nav>
 
-    <!-- Download Panel -->
-    <section id="download-panel" class="card">
-      <div class="card-header">
-        <span class="step-badge">PASO 2</span>
-        <span class="card-title">Pega las URLs y descarga</span>
-        <span id="url-count" class="url-count"></span>
-      </div>
-      <label class="input-label" for="url-input">URLs de YouTube (una por línea)</label>
-      <textarea
-        id="url-input"
-        class="text-input url-textarea"
-        placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=..."
-        spellcheck="false"
-        autocomplete="off"
-        rows="4"
-      ></textarea>
-      <div class="folder-row">
-        <div class="folder-row-info">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span id="folder-path" class="folder-path" title="">...</span>
-        </div>
-        <div class="folder-row-actions">
-          <a href="#" id="open-folder" class="link">Abrir</a>
-          <span class="link-separator">|</span>
-          <a href="#" id="change-folder" class="link">Cambiar carpeta</a>
-        </div>
-      </div>
-      <div class="download-row">
-        <div class="concurrency-selector">
-          <label for="concurrent-select" class="concurrency-label">Simultáneos:</label>
-          <select id="concurrent-select" class="concurrency-select">
-            <option value="5" selected>5</option>
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="0">Todos</option>
-          </select>
-        </div>
-        <button class="btn btn-download" id="btn-download">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          DESCARGAR VIDEOS
-        </button>
-      </div>
-    </section>
+      <!-- Main outlet -->
+      <main class="app-main">
 
-    <!-- Download Queue -->
-    <section id="download-queue" class="card queue-card" style="display: none;">
-      <div class="queue-header">
-        <span class="queue-title">Cola de descargas</span>
-        <span id="queue-stats" class="queue-stats"></span>
-      </div>
-      <div class="queue-overall">
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="queue-bar"></div>
-        </div>
-        <div class="queue-overall-info">
-          <span id="queue-status"></span>
-          <span id="queue-percent"></span>
-        </div>
-      </div>
-      <div id="queue-list" class="queue-list"></div>
-      <div class="queue-actions-always" id="queue-actions-always" style="display: none;">
-        <button class="btn btn-secondary btn-queue-action" id="btn-reload-cookies">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Recargar cookies
-        </button>
-        <button class="btn btn-retry btn-queue-action" id="btn-retry" style="display: none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
-          Reintentar fallidos (<span id="retry-count">0</span>)
-        </button>
-      </div>
-    </section>
+        <!-- ===== DESCARGAR ===== -->
+        <section class="view" data-view="descargar">
+          <div class="view-wrap">
+            <h1 class="view-title">Descargar</h1>
+            <p class="view-subtitle">Conecta tu cuenta y pega enlaces de YouTube para descargar.</p>
 
+            <!-- Cookie Panel -->
+            <section id="cookie-panel" class="card">
+              <div class="card-header">
+                <span class="step-badge">PASO 1</span>
+                <span class="card-title">Configura tus cookies (para membresías)</span>
+              </div>
+              <div id="cookies-status" class="status-badge status-error">
+                Sin cookies configuradas
+              </div>
+
+              <div class="instructions">
+                <p>Inicia sesion con tu cuenta de YouTube directamente:</p>
+              </div>
+              <button class="btn btn-youtube" id="btn-youtube-login">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                Iniciar sesion en YouTube
+              </button>
+
+              <div class="cookie-divider">
+                <span>o carga cookies manualmente</span>
+              </div>
+
+              <details class="cookie-manual">
+                <summary>Cargar archivo cookies.txt</summary>
+                <div class="cookie-manual-content">
+                  <div class="instructions">
+                    <ol>
+                      <li>Instala <strong>"Get cookies.txt LOCALLY"</strong>:</li>
+                    </ol>
+                  </div>
+                  <div class="browser-buttons">
+                    <button class="btn btn-secondary" data-browser="chrome">Chrome</button>
+                    <button class="btn btn-secondary" data-browser="edge">Edge</button>
+                    <button class="btn btn-secondary" data-browser="firefox">Firefox</button>
+                  </div>
+                  <div class="instructions">
+                    <ol start="2">
+                      <li>Ve a <strong>youtube.com</strong> con tu cuenta</li>
+                      <li>Clic en la extension → <strong>"Export"</strong></li>
+                      <li>Carga el archivo:</li>
+                    </ol>
+                  </div>
+                  <button class="btn btn-accent" id="btn-load-cookies">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Cargar cookies.txt
+                  </button>
+                </div>
+              </details>
+            </section>
+
+            <!-- Download Panel -->
+            <section id="download-panel" class="card">
+              <div class="card-header">
+                <span class="step-badge">PASO 2</span>
+                <span class="card-title">Pega las URLs y descarga</span>
+                <span id="url-count" class="url-count"></span>
+              </div>
+              <label class="input-label" for="url-input">URLs de YouTube (una por línea)</label>
+              <textarea
+                id="url-input"
+                class="text-input url-textarea"
+                placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=..."
+                spellcheck="false"
+                autocomplete="off"
+                rows="4"
+              ></textarea>
+              <div class="folder-row">
+                <div class="folder-row-info">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <span id="folder-path" class="folder-path" title="">...</span>
+                </div>
+                <div class="folder-row-actions">
+                  <a href="#" id="open-folder" class="link">Abrir</a>
+                  <span class="link-separator">|</span>
+                  <a href="#" id="change-folder" class="link">Cambiar carpeta</a>
+                </div>
+              </div>
+              <div class="download-row">
+                <div class="concurrency-selector">
+                  <label for="concurrent-select" class="concurrency-label">Simultáneos:</label>
+                  <select id="concurrent-select" class="concurrency-select">
+                    <option value="5" selected>5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="0">Todos</option>
+                  </select>
+                </div>
+                <button class="btn btn-download" id="btn-download">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  DESCARGAR VIDEOS
+                </button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- ===== COLA ===== -->
+        <section class="view" data-view="cola">
+          <div class="view-wrap">
+            <h1 class="view-title">Cola de descargas</h1>
+            <p class="view-subtitle">Progreso en vivo de lo que estás descargando.</p>
+
+            <div class="empty-state" id="cola-empty">
+              <div class="empty-state__title">La cola está vacía</div>
+              <div class="empty-state__hint">Lo que descargues aparecerá aquí con su progreso.</div>
+            </div>
+
+            <!-- Download Queue -->
+            <section id="download-queue" class="card queue-card" style="display: none;">
+              <div class="queue-header">
+                <span class="queue-title">Cola de descargas</span>
+                <span id="queue-stats" class="queue-stats"></span>
+              </div>
+              <div class="queue-overall">
+                <div class="progress-bar-container">
+                  <div class="progress-bar" id="queue-bar"></div>
+                </div>
+                <div class="queue-overall-info">
+                  <span id="queue-status"></span>
+                  <span id="queue-percent"></span>
+                </div>
+              </div>
+              <div id="queue-list" class="queue-list"></div>
+              <div class="queue-actions-always" id="queue-actions-always" style="display: none;">
+                <button class="btn btn-secondary btn-queue-action" id="btn-reload-cookies">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Recargar cookies
+                </button>
+                <button class="btn btn-retry btn-queue-action" id="btn-retry" style="display: none;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  Reintentar fallidos (<span id="retry-count">0</span>)
+                </button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- ===== MI YOUTUBE ===== -->
+        <section class="view" data-view="youtube">
+          <div class="view-wrap">
+            <h1 class="view-title">Mi YouTube</h1>
+            <p class="view-subtitle">Explora y descarga directamente desde tu cuenta.</p>
+            <div class="empty-state">
+              <div class="empty-state__title">Próximamente</div>
+              <div class="empty-state__hint">Conecta tu cuenta para ver suscripciones, playlists y membresías. (Fase 6)</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== BIBLIOTECA ===== -->
+        <section class="view" data-view="biblioteca">
+          <div class="view-wrap">
+            <h1 class="view-title">Biblioteca</h1>
+            <p class="view-subtitle">Tu historial de descargas.</p>
+            <div class="empty-state">
+              <div class="empty-state__title">Próximamente</div>
+              <div class="empty-state__hint">Aquí verás lo que has descargado, con búsqueda y accesos rápidos. (Fase 4)</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== AJUSTES ===== -->
+        <section class="view" data-view="ajustes">
+          <div class="view-wrap">
+            <h1 class="view-title">Ajustes</h1>
+            <p class="view-subtitle">Preferencias de la aplicación.</p>
+            <div class="empty-state">
+              <div class="empty-state__title">Próximamente</div>
+              <div class="empty-state__hint">Defaults de calidad/formato, carpeta, plantilla y más. Por ahora el tema se cambia arriba a la derecha. (Fase 7)</div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
   </div>
 
   <!-- Modal -->

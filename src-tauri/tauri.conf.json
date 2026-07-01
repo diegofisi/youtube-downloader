@@ -11,10 +11,14 @@
   "app": {
     "windows": [
       {
-        "title": "YouTube Downloader",
-        "width": 780,
-        "height": 700,
-        "resizable": false,
+        "label": "main",
+        "title": "Stash",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 940,
+        "minHeight": 640,
+        "resizable": true,
+        "decorations": false,
         "center": true
       }
     ],

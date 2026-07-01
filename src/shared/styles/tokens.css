@@ -1,0 +1,112 @@
+/* ============================================================
+   Design tokens — Stash
+   Fuente de verdad de color/espaciado/tipografía.
+   Los componentes SOLO consumen tokens semánticos (--color-*, --bg-*),
+   nunca hex ni primitivos directamente.
+   Acento de marca: #7C6BF0 (violeta).
+   ============================================================ */
+
+:root {
+  /* ---- Primitivos (no cambian por tema) ---- */
+  --violet-400: #9385F4;
+  --violet-500: #7C6BF0; /* ACENTO */
+  --violet-600: #6B58E8;
+  --violet-700: #5A46D6;
+  --violet-soft: rgba(124, 107, 240, 0.14);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --font-ui: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --dur-fast: 0.15s;
+  --dur-med: 0.25s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --titlebar-h: 40px;
+  --sidebar-w: 220px;
+}
+
+/* ---- Tema OSCURO (por defecto) ---- */
+:root,
+[data-theme='dark'] {
+  --bg-app: #14131b;
+  --bg-surface: #1d1b26;
+  --bg-elevated: #26232f;
+  --bg-inset: #201e2a;
+  --border: #322e40;
+  --border-strong: #3f3a51;
+
+  --text: #eceaf4;
+  --text-dim: #a29db5;
+  --text-faint: #6c6780;
+
+  --color-accent: var(--violet-500);
+  --color-accent-hover: var(--violet-600);
+  --color-accent-soft: var(--violet-soft);
+  --on-accent: #ffffff;
+
+  --state-success: #35d38a;
+  --state-success-soft: rgba(53, 211, 138, 0.15);
+  --state-error: #f26b6b;
+  --state-error-soft: rgba(242, 107, 107, 0.15);
+  --state-warning: #f5b54a;
+  --state-warning-soft: rgba(245, 181, 74, 0.15);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--violet-500) 45%, transparent);
+
+  /* ---- Alias legacy (usados por src/styles/app.css) ---- */
+  --bg: var(--bg-app);
+  --card: var(--bg-surface);
+  --accent: var(--color-accent);
+  --accent-hover: var(--color-accent-hover);
+  --text-dim: #a29db5;
+  --success: var(--state-success);
+  --error: var(--state-error);
+  --warning: var(--state-warning);
+  --input-bg: var(--bg-elevated);
+}
+
+/* ---- Tema CLARO ---- */
+[data-theme='light'] {
+  --bg-app: #f4f3f9;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-inset: #f0eef7;
+  --border: #e5e2f0;
+  --border-strong: #d6d1e6;
+
+  --text: #1b1926;
+  --text-dim: #6a6580;
+  --text-faint: #938fa6;
+
+  --color-accent: var(--violet-600);
+  --color-accent-hover: var(--violet-700);
+  --color-accent-soft: rgba(124, 107, 240, 0.12);
+  --on-accent: #ffffff;
+
+  --shadow-1: 0 1px 2px rgba(20, 18, 40, 0.08);
+  --shadow-2: 0 10px 30px rgba(20, 18, 40, 0.12);
+
+  --bg: var(--bg-app);
+  --card: var(--bg-surface);
+  --accent: var(--color-accent);
+  --accent-hover: var(--color-accent-hover);
+  --success: var(--state-success);
+  --error: var(--state-error);
+  --warning: var(--state-warning);
+  --input-bg: var(--bg-inset);
+}

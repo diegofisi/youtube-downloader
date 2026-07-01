@@ -2,28 +2,30 @@ import { openDownloadsFolder, getDownloadFolder, changeDownloadFolder } from './
 import { initCookiePanel } from './components/cookie-panel';
 import { initDownloadPanel } from './components/download-panel';
 import { initSetup } from './components/setup-screen';
+import { initShell } from './app/shell';
 
-// Run setup first, then initialize app
+// El shell (titlebar, sidebar, router, tema) se monta de inmediato;
+// el setup corre por encima como overlay hasta que las dependencias están listas.
+initShell();
+
 initSetup().then(() => {
   const folderPathEl = document.getElementById('folder-path')!;
 
-  // Initialize all panels
+  // Paneles existentes (se migrarán a features/ en la Fase 1)
   initCookiePanel();
   initDownloadPanel();
 
-  // Show current download folder
+  // Carpeta de descargas actual
   getDownloadFolder().then((path) => {
     folderPathEl.textContent = path;
     folderPathEl.title = path;
   });
 
-  // Open downloads folder link
   document.getElementById('open-folder')!.addEventListener('click', (e) => {
     e.preventDefault();
     openDownloadsFolder();
   });
 
-  // Change downloads folder
   document.getElementById('change-folder')!.addEventListener('click', async (e) => {
     e.preventDefault();
     const newPath = await changeDownloadFolder();
