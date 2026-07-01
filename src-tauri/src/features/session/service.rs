@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::models::CookieResult;
+use super::models::CookieResult;
 
 pub fn get_cookies_path(app_dir: &Path) -> PathBuf {
     app_dir.join("cookies.txt")
@@ -53,7 +53,6 @@ pub fn load(app_dir: &Path, source_path: &str) -> CookieResult {
         };
     }
 
-    // Copy to app directory if different path
     if source.canonicalize().ok() != cookies_path.canonicalize().ok() {
         if let Err(e) = fs::copy(source, &cookies_path) {
             return CookieResult {
@@ -64,7 +63,6 @@ pub fn load(app_dir: &Path, source_path: &str) -> CookieResult {
         }
     }
 
-    // Validate
     match fs::read_to_string(&cookies_path) {
         Ok(content) => {
             let status = validate_cookie_content(&content);

@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+
 use serde::{Deserialize, Serialize};
 
 const CONFIG_FILE: &str = "config.json";
@@ -26,7 +27,6 @@ pub fn load(app_dir: &Path) -> AppConfig {
     if !path.exists() {
         return AppConfig::default();
     }
-
     match fs::read_to_string(&path) {
         Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
         Err(_) => AppConfig::default(),
@@ -37,8 +37,7 @@ pub fn save(app_dir: &Path, config: &AppConfig) -> Result<(), String> {
     let path = config_path(app_dir);
     let content = serde_json::to_string_pretty(config)
         .map_err(|e| format!("Error al serializar config: {}", e))?;
-    fs::write(&path, content)
-        .map_err(|e| format!("Error al guardar config: {}", e))
+    fs::write(&path, content).map_err(|e| format!("Error al guardar config: {}", e))
 }
 
 pub fn get_download_folder(app_dir: &Path) -> PathBuf {

@@ -2,53 +2,24 @@ use std::io::Write;
 use tauri::webview::{PageLoadEvent, WebviewWindowBuilder};
 use tauri::{AppHandle, Emitter, Manager, Url};
 
-use crate::models::CookieResult;
-use crate::services::{config_service, cookie_service};
-
-fn get_app_dir(app: &AppHandle) -> std::path::PathBuf {
-    if cfg!(debug_assertions) {
-        let exe_path = std::env::current_exe().unwrap();
-        let exe_dir = exe_path.parent().unwrap();
-        let mut dir = exe_dir.to_path_buf();
-        for _ in 0..5 {
-            if dir.join("tauri.conf.json").exists() {
-                return dir.parent().unwrap().to_path_buf();
-            }
-            if dir.join("src-tauri").exists() {
-                return dir.to_path_buf();
-            }
-            if let Some(parent) = dir.parent() {
-                dir = parent.to_path_buf();
-            } else {
-                break;
-            }
-        }
-        app.path().resource_dir().unwrap_or(exe_dir.to_path_buf())
-    } else {
-        let data_dir = app
-            .path()
-            .app_local_data_dir()
-            .expect("No se pudo obtener directorio de datos de la app");
-        std::fs::create_dir_all(&data_dir).ok();
-        data_dir
-    }
-}
+use super::models::CookieResult;
+use super::service;
+use crate::core::paths;
 
 #[tauri::command]
 pub fn check_cookies(app: AppHandle) -> CookieResult {
-    let app_dir = get_app_dir(&app);
-    cookie_service::check(&app_dir)
+    let app_dir = paths::app_dir(&app);
+    service::check(&app_dir)
 }
 
 #[tauri::command]
 pub fn load_cookies(app: AppHandle, path: String) -> CookieResult {
-    let app_dir = get_app_dir(&app);
-    cookie_service::load(&app_dir, &path)
+    let app_dir = paths::app_dir(&app);
+    service::load(&app_dir, &path)
 }
 
 #[tauri::command]
 pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
-    // If the login window already exists, focus it
     if let Some(existing) = app.get_webview_window("youtube-login") {
         existing.set_focus().ok();
         return Ok(());
@@ -71,7 +42,6 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
         if payload.event() == PageLoadEvent::Finished {
             let url = payload.url().to_string();
 
-            // User landed on youtube.com after login
             if url.contains("youtube.com") && !url.contains("accounts.google.com") {
                 let ww = webview_window.clone();
                 let app_handle = webview_window.app_handle().clone();
@@ -128,7 +98,6 @@ async fn extract_and_save_cookies(
             let domain = cookie.domain().unwrap_or(".youtube.com");
             let path = cookie.path().unwrap_or("/");
 
-            // Deduplicar por dominio + nombre + path
             let key = format!("{}|{}|{}", domain, path, cookie.name());
             if !seen.insert(key) {
                 continue;
@@ -149,8 +118,7 @@ async fn extract_and_save_cookies(
                 _ => "0".to_string(),
             };
 
-            // Las cookies HttpOnly llevan el prefijo #HttpOnly_ en el dominio
-            // (formato que yt-dlp entiende).
+            // Las cookies HttpOnly llevan el prefijo #HttpOnly_ (formato yt-dlp).
             let domain_field = if cookie.http_only().unwrap_or(false) {
                 format!("#HttpOnly_{}", domain)
             } else {
@@ -171,8 +139,7 @@ async fn extract_and_save_cookies(
         }
     }
 
-    // Save to cookies.txt
-    let app_dir = get_app_dir(app);
+    let app_dir = paths::app_dir(app);
     let cookies_path = app_dir.join("cookies.txt");
 
     let mut file = std::fs::File::create(&cookies_path)
@@ -181,57 +148,4 @@ async fn extract_and_save_cookies(
         .map_err(|e| format!("No se pudo escribir cookies.txt: {}", e))?;
 
     Ok(count)
-}
-
-#[tauri::command]
-pub fn open_downloads_folder(app: AppHandle) {
-    let app_dir = get_app_dir(&app);
-    let downloads = config_service::get_download_folder(&app_dir);
-    std::fs::create_dir_all(&downloads).ok();
-
-    let path = downloads.to_string_lossy().to_string();
-
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&path)
-            .spawn()
-            .ok();
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&path)
-            .spawn()
-            .ok();
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&path)
-            .spawn()
-            .ok();
-    }
-}
-
-#[tauri::command]
-pub fn get_download_folder(app: AppHandle) -> String {
-    let app_dir = get_app_dir(&app);
-    let folder = config_service::get_download_folder(&app_dir);
-    folder.to_string_lossy().to_string()
-}
-
-#[tauri::command]
-pub fn set_download_folder(app: AppHandle, folder: String) -> Result<String, String> {
-    let app_dir = get_app_dir(&app);
-    let path = std::path::Path::new(&folder);
-    std::fs::create_dir_all(path).map_err(|e| format!("No se pudo crear la carpeta: {}", e))?;
-    config_service::set_download_folder(&app_dir, &folder)?;
-    Ok(folder)
-}
-
-pub fn app_dir(app: &AppHandle) -> std::path::PathBuf {
-    get_app_dir(app)
 }

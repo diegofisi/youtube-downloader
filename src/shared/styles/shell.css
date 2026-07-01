@@ -139,6 +139,65 @@
   font-family: var(--font-mono);
 }
 
+/* ---------- Toasts ---------- */
+.toast-host {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 300;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 220px;
+  max-width: 360px;
+  padding: 11px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  animation: toast-in var(--dur-med) var(--ease-out);
+}
+.toast--success {
+  border-left-color: var(--state-success);
+}
+.toast--error {
+  border-left-color: var(--state-error);
+}
+.toast__icon {
+  display: flex;
+  color: var(--color-accent);
+}
+.toast--success .toast__icon {
+  color: var(--state-success);
+}
+.toast--error .toast__icon {
+  color: var(--state-error);
+}
+.toast--out {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--dur-fast), transform var(--dur-fast);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ---------- Theme toggle (en titlebar) ---------- */
 .theme-toggle {
   width: 32px;

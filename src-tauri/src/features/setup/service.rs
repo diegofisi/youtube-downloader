@@ -4,13 +4,14 @@ use std::path::Path;
 
 use tauri::{AppHandle, Emitter};
 
-use crate::models::{DependencyStatus, SetupProgress};
+use super::models::{DependencyStatus, SetupProgress};
+use crate::core::paths;
 
-/// Check if required dependencies exist in app directory
+/// Comprueba si las dependencias existen en el app_dir.
 pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
-    let ytdlp = find_binary(app_dir, "yt-dlp");
-    let ffmpeg = find_binary(app_dir, "ffmpeg");
-    let deno = find_binary(app_dir, "deno");
+    let ytdlp = paths::has_binary(app_dir, "yt-dlp");
+    let ffmpeg = paths::has_binary(app_dir, "ffmpeg");
+    let deno = paths::has_binary(app_dir, "deno");
 
     DependencyStatus {
         ytdlp,
@@ -20,7 +21,7 @@ pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
     }
 }
 
-/// Download all missing dependencies
+/// Descarga las dependencias que falten.
 pub fn download_dependencies(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     fs::create_dir_all(app_dir).map_err(|e| format!("No se pudo crear directorio: {}", e))?;
 
@@ -59,7 +60,6 @@ fn emit_progress(app: &AppHandle, step: &str, percent: f64, message: &str) {
     );
 }
 
-/// Download yt-dlp binary from GitHub releases
 fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     let (url, filename) = if cfg!(target_os = "windows") {
         (
@@ -81,7 +81,6 @@ fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     let dest = app_dir.join(filename);
     download_file(app, url, &dest, "yt-dlp")?;
 
-    // Make executable on Unix
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -92,7 +91,6 @@ fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Download ffmpeg (platform-specific)
 fn download_ffmpeg(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     if cfg!(target_os = "windows") {
         download_ffmpeg_windows(app, app_dir)
@@ -110,11 +108,9 @@ fn download_ffmpeg_windows(app: &AppHandle, app_dir: &Path) -> Result<(), String
     download_file(app, url, &zip_path, "ffmpeg")?;
     emit_progress(app, "ffmpeg", 80.0, "Extrayendo ffmpeg...");
 
-    // Extract only ffmpeg.exe from the zip
-    let file = fs::File::open(&zip_path)
-        .map_err(|e| format!("No se pudo abrir zip: {}", e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("No se pudo leer zip: {}", e))?;
+    let file = fs::File::open(&zip_path).map_err(|e| format!("No se pudo abrir zip: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("No se pudo leer zip: {}", e))?;
 
     let mut found = false;
     for i in 0..archive.len() {
@@ -127,8 +123,7 @@ fn download_ffmpeg_windows(app: &AppHandle, app_dir: &Path) -> Result<(), String
             let dest = app_dir.join("ffmpeg.exe");
             let mut outfile = fs::File::create(&dest)
                 .map_err(|e| format!("No se pudo crear ffmpeg.exe: {}", e))?;
-            io::copy(&mut entry, &mut outfile)
-                .map_err(|e| format!("Error extrayendo: {}", e))?;
+            io::copy(&mut entry, &mut outfile).map_err(|e| format!("Error extrayendo: {}", e))?;
             found = true;
             break;
         }
@@ -150,10 +145,9 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
     download_file(app, url, &zip_path, "ffmpeg")?;
     emit_progress(app, "ffmpeg", 80.0, "Extrayendo ffmpeg...");
 
-    let file = fs::File::open(&zip_path)
-        .map_err(|e| format!("No se pudo abrir zip: {}", e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("No se pudo leer zip: {}", e))?;
+    let file = fs::File::open(&zip_path).map_err(|e| format!("No se pudo abrir zip: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("No se pudo leer zip: {}", e))?;
 
     for i in 0..archive.len() {
         let mut entry = archive
@@ -165,8 +159,7 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
             let dest = app_dir.join("ffmpeg");
             let mut outfile = fs::File::create(&dest)
                 .map_err(|e| format!("No se pudo crear ffmpeg: {}", e))?;
-            io::copy(&mut entry, &mut outfile)
-                .map_err(|e| format!("Error extrayendo: {}", e))?;
+            io::copy(&mut entry, &mut outfile).map_err(|e| format!("Error extrayendo: {}", e))?;
 
             #[cfg(unix)]
             {
@@ -181,7 +174,6 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
     Ok(())
 }
 
-/// Download deno runtime (required by yt-dlp for YouTube JS extraction)
 fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     let (url, bin_name) = if cfg!(target_os = "windows") {
         (
@@ -189,7 +181,6 @@ fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
             "deno.exe",
         )
     } else if cfg!(target_os = "macos") {
-        // Use aarch64 for Apple Silicon (most modern Macs)
         (
             "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip",
             "deno",
@@ -205,10 +196,9 @@ fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     download_file(app, url, &zip_path, "deno")?;
     emit_progress(app, "deno", 80.0, "Extrayendo deno...");
 
-    let file = fs::File::open(&zip_path)
-        .map_err(|e| format!("No se pudo abrir zip: {}", e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("No se pudo leer zip: {}", e))?;
+    let file = fs::File::open(&zip_path).map_err(|e| format!("No se pudo abrir zip: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("No se pudo leer zip: {}", e))?;
 
     let mut found = false;
     for i in 0..archive.len() {
@@ -221,8 +211,7 @@ fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
             let dest = app_dir.join(bin_name);
             let mut outfile = fs::File::create(&dest)
                 .map_err(|e| format!("No se pudo crear {}: {}", bin_name, e))?;
-            io::copy(&mut entry, &mut outfile)
-                .map_err(|e| format!("Error extrayendo: {}", e))?;
+            io::copy(&mut entry, &mut outfile).map_err(|e| format!("Error extrayendo: {}", e))?;
 
             #[cfg(unix)]
             {
@@ -244,7 +233,6 @@ fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Download a file with progress reporting
 fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<(), String> {
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
@@ -304,25 +292,4 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<
     }
 
     Ok(())
-}
-
-fn find_binary(app_dir: &Path, name: &str) -> bool {
-    let bin_name = if cfg!(target_os = "windows") {
-        format!("{}.exe", name)
-    } else {
-        name.to_string()
-    };
-
-    if app_dir.join(&bin_name).exists() {
-        return true;
-    }
-
-    // Also check parent dir (development mode)
-    if let Some(parent) = app_dir.parent() {
-        if parent.join(&bin_name).exists() {
-            return true;
-        }
-    }
-
-    false
 }

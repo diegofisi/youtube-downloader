@@ -1,8 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod commands;
-mod models;
-mod services;
+mod core;
+mod features;
+
+use features::{download, session, settings, setup};
 
 fn main() {
     tauri::Builder::default()
@@ -10,16 +11,16 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
-            commands::cookies::check_cookies,
-            commands::cookies::load_cookies,
-            commands::cookies::open_youtube_login,
-            commands::cookies::open_downloads_folder,
-            commands::cookies::get_download_folder,
-            commands::cookies::set_download_folder,
-            commands::download::start_download,
-            commands::download::cancel_download,
-            commands::setup::check_dependencies,
-            commands::setup::download_dependencies,
+            session::commands::check_cookies,
+            session::commands::load_cookies,
+            session::commands::open_youtube_login,
+            settings::commands::open_downloads_folder,
+            settings::commands::get_download_folder,
+            settings::commands::set_download_folder,
+            download::commands::start_download,
+            download::commands::cancel_download,
+            setup::commands::check_dependencies,
+            setup::commands::download_dependencies,
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar la aplicación");
