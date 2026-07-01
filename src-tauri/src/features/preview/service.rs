@@ -10,10 +10,32 @@ use super::models::{AnalyzedEntry, PlaylistMeta, VideoMeta};
 use crate::core::paths;
 use crate::features::session::service as session;
 
+/// Tope de entradas al resolver una playlist/canal (evita listas infinitas).
+const PLAYLIST_CAP: u32 = 200;
+
 /// Analiza una URL (video suelto o playlist/canal) resolviendo metadatos con yt-dlp.
 pub fn analyze(app_dir: &Path, url: &str) -> Result<AnalyzedEntry, String> {
-    let json = run_dump_json(app_dir, url)?;
-    Ok(map_entry(&json, url))
+    let clean = normalize_url(url);
+    let json = run_dump_json(app_dir, &clean)?;
+    Ok(map_entry(&json, &clean))
+}
+
+/// Las Mezclas/radios de YouTube (list=RD…, start_radio) son infinitas y
+/// autogeneradas: tomamos solo el video, no la radio completa.
+fn normalize_url(url: &str) -> String {
+    let is_radio = url.contains("list=RD") || url.contains("start_radio=");
+    if !is_radio {
+        return url.to_string();
+    }
+    // Extraer el id del video (parámetro v=)
+    if let Some(v_start) = url.find("v=") {
+        let rest = &url[v_start + 2..];
+        let id: String = rest.chars().take_while(|c| *c != '&').collect();
+        if !id.is_empty() {
+            return format!("https://www.youtube.com/watch?v={}", id);
+        }
+    }
+    url.to_string()
 }
 
 fn run_dump_json(app_dir: &Path, url: &str) -> Result<Value, String> {
@@ -24,6 +46,8 @@ fn run_dump_json(app_dir: &Path, url: &str) -> Result<Value, String> {
     let mut args: Vec<String> = vec![
         "-J".into(),
         "--flat-playlist".into(),
+        "--playlist-end".into(),
+        PLAYLIST_CAP.to_string(),
         "--no-warnings".into(),
         "--no-update".into(),
     ];

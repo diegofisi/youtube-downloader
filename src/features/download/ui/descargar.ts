@@ -470,11 +470,16 @@ async function analyze(): Promise<void> {
     const hist = await getHistory().catch(() => []);
     downloadedSet = new Set(hist.map((h) => h.url));
     entries = await analyzeUrls(urls);
-    // auto-seleccionar descargables no duplicados
     sel.clear();
-    for (const v of allVideos()) {
-      const st = statusOf(v);
-      if (STATUS_META[st].downloadable && !(v as VideoMeta & { _dup?: boolean })._dup && st !== 'downloaded') sel.add(v.url);
+    const vids = allVideos();
+    // Auto-seleccionar solo si son pocos, para no marcar cientos sin querer.
+    if (vids.length <= 20) {
+      for (const v of vids) {
+        const st = statusOf(v);
+        if (STATUS_META[st].downloadable && !(v as VideoMeta & { _dup?: boolean })._dup && st !== 'downloaded') sel.add(v.url);
+      }
+    } else {
+      showToast('Lista grande', `${vids.length} videos — elige cuáles descargar (o "Seleccionar todo").`, 'info');
     }
     renderPreview();
   } catch (e) {
