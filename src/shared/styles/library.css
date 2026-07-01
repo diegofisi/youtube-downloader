@@ -76,3 +76,27 @@
   border-color: var(--state-error);
   color: var(--state-error);
 }
+
+/* Reordenar items de la cola */
+.qi-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+}
+.qi-move {
+  width: 20px;
+  height: 15px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all var(--dur-fast);
+}
+.qi-move:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}

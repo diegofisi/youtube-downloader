@@ -19,6 +19,7 @@ const retryBtn = document.getElementById('btn-retry') as HTMLButtonElement;
 const queueActionsAlways = document.getElementById('queue-actions-always') as HTMLElement;
 const reloadCookiesBtn = document.getElementById('btn-reload-cookies') as HTMLButtonElement;
 const retryCountEl = document.getElementById('retry-count') as HTMLSpanElement;
+const pauseBtn = document.getElementById('btn-pause-queue') as HTMLButtonElement;
 
 const DOWNLOAD_ICON = `
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -61,7 +62,19 @@ interface QueueItem {
 
 let items: QueueItem[] = [];
 let isDownloading = false;
+let paused = false;
 let tryNextFn: (() => void) | null = null;
+
+function moveItem(item: QueueItem, dir: number): void {
+  const idx = items.indexOf(item);
+  const j = idx + dir;
+  if (idx < 0 || j < 0 || j >= items.length) return;
+  const other = items[j];
+  items[idx] = other;
+  items[j] = item;
+  if (dir < 0) queueList.insertBefore(item.el, other.el);
+  else queueList.insertBefore(other.el, item.el);
+}
 
 function getVideoId(url: string): string {
   try {
@@ -112,6 +125,10 @@ function createItemEl(item: QueueItem): HTMLElement {
   const el = document.createElement('div');
   el.className = 'qi qi--pending';
   el.innerHTML = `
+    <div class="qi-reorder">
+      <button class="qi-move" data-dir="-1" title="Subir">▲</button>
+      <button class="qi-move" data-dir="1" title="Bajar">▼</button>
+    </div>
     <div class="qi-icon">${ICON_PENDING}</div>
     <div class="qi-body">
       <div class="qi-name">${item.label}</div>
@@ -124,6 +141,12 @@ function createItemEl(item: QueueItem): HTMLElement {
     e.stopPropagation();
     handleItemAction(item);
   });
+  el.querySelectorAll<HTMLButtonElement>('.qi-move').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moveItem(item, parseInt(b.dataset.dir!, 10));
+    });
+  });
 
   return el;
 }
@@ -133,8 +156,11 @@ function renderItem(item: QueueItem): void {
   const fill = item.el.querySelector('.qi-fill') as HTMLElement;
   const stat = item.el.querySelector('.qi-stat')!;
   const actionBtn = item.el.querySelector('.qi-action') as HTMLElement;
+  const reorder = item.el.querySelector('.qi-reorder') as HTMLElement;
 
   item.el.className = `qi qi--${item.status}`;
+  // Reordenar solo tiene sentido en items pendientes.
+  reorder.style.display = item.status === 'pending' ? '' : 'none';
 
   switch (item.status) {
     case 'pending':
@@ -185,9 +211,17 @@ function updateOverall(): void {
   const overallPct = total > 0 ? (finished / total) * 100 : 0;
   queueBar.style.width = `${overallPct}%`;
   queuePercent.textContent = `${finished}/${total}`;
-  queueStatus.textContent = finished < total ? 'Descargando...' : 'Finalizado';
+  queueStatus.textContent =
+    finished >= total && total > 0
+      ? 'Finalizado'
+      : paused
+        ? 'Pausado'
+        : 'Descargando...';
 
   queueActionsAlways.style.display = '';
+  // El botón de pausa solo mientras hay una descarga en curso.
+  pauseBtn.style.display = isDownloading ? '' : 'none';
+  pauseBtn.textContent = paused ? 'Reanudar' : 'Pausar';
   const hasErrors = errors > 0;
   retryBtn.style.display = hasErrors ? '' : 'none';
   retryBtn.disabled = false;
@@ -217,6 +251,9 @@ function processQueue(options: DownloadOptions): Promise<void> {
         resolve();
         return;
       }
+
+      // En pausa: no se lanzan nuevas descargas (las activas terminan).
+      if (paused) return;
 
       if (next && active < getMaxConcurrent()) {
         next.status = 'downloading';
@@ -287,6 +324,7 @@ async function runDownloadForUrls(urls: string[]): Promise<void> {
   }
 
   isDownloading = true;
+  paused = false;
   downloadBtn.disabled = true;
   concurrentSelect.disabled = true;
   queueList.innerHTML = '';
@@ -405,6 +443,11 @@ async function handleRetry(): Promise<void> {
 export function initDownloadPanel(): void {
   downloadBtn.addEventListener('click', handleDownload);
   retryBtn.addEventListener('click', handleRetry);
+  pauseBtn.addEventListener('click', () => {
+    paused = !paused;
+    if (!paused) tryNextFn?.();
+    updateOverall();
+  });
   reloadCookiesBtn.addEventListener('click', async () => {
     const result = await loadCookies();
     if (result.status !== 'cancelled') {
