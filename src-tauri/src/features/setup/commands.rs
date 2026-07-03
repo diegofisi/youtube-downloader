@@ -13,10 +13,8 @@ pub fn check_dependencies(app: AppHandle) -> DependencyStatus {
 #[tauri::command]
 pub async fn download_dependencies(app: AppHandle) -> Result<(), String> {
     let dir = paths::app_dir(&app);
-    let handle = std::thread::spawn(move || service::download_dependencies(&app, &dir));
-
-    match handle.join() {
-        Ok(result) => result,
-        Err(_) => Err("Error interno en el hilo de configuración".into()),
-    }
+    // spawn_blocking: usa reqwest::blocking dentro; no debe correr en el runtime async.
+    tauri::async_runtime::spawn_blocking(move || service::download_dependencies(&app, &dir))
+        .await
+        .map_err(|e| format!("Error interno en el hilo de configuración: {}", e))?
 }

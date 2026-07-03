@@ -11,12 +11,18 @@ pub fn get_settings(app: AppHandle) -> AppConfig {
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn set_settings(
     app: AppHandle,
     default_quality: String,
     default_container: String,
     default_audio_format: String,
     default_concurrency: u32,
+    default_mode: Option<String>,
+    default_template: Option<String>,
+    default_subtitles: Option<bool>,
+    default_thumbnail: Option<bool>,
+    clear_links_after_preview: Option<bool>,
 ) -> Result<(), String> {
     let app_dir = paths::app_dir(&app);
     service::set_defaults(
@@ -25,6 +31,11 @@ pub fn set_settings(
         default_container,
         default_audio_format,
         default_concurrency,
+        default_mode,
+        default_template,
+        default_subtitles,
+        default_thumbnail,
+        clear_links_after_preview,
     )
 }
 

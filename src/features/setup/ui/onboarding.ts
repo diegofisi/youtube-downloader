@@ -1,16 +1,30 @@
 import { I } from '../../../app/icons';
+import { t } from '../../../core/i18n';
 import { checkDependencies, downloadDependencies, onSetupProgress } from '../setup.api';
 
 const $ = (id: string) => document.getElementById(id)!;
 
-const STEPS = [
-  { name: 'Preparando el descargador', desc: 'Listo para bajar videos de YouTube', icon: I.download },
-  { name: 'Activando la alta calidad', desc: 'Video y audio en su mejor versión', icon: I.film },
-  { name: 'Casi listo', desc: 'Dando los últimos toques', icon: I.spark },
+// Perezoso (función, no constante) para no depender del orden de import de i18n.
+const getSteps = () => [
+  {
+    name: t('Preparando el descargador', 'Setting up the downloader'),
+    desc: t('Listo para bajar videos de YouTube', 'Ready to download YouTube videos'),
+    icon: I.download,
+  },
+  {
+    name: t('Activando la alta calidad', 'Enabling high quality'),
+    desc: t('Video y audio en su mejor versión', 'Video and audio at their best'),
+    icon: I.film,
+  },
+  {
+    name: t('Casi listo', 'Almost ready'),
+    desc: t('Dando los últimos toques', 'Adding the finishing touches'),
+    icon: I.spark,
+  },
 ];
 
 function renderSteps(doneCount: number): void {
-  $('onb-steps').innerHTML = STEPS.map((s, i) => {
+  $('onb-steps').innerHTML = getSteps().map((s, i) => {
     const done = i < doneCount;
     const active = i === doneCount;
     const statusEl = done
@@ -31,24 +45,32 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function initOnboarding(): Promise<void> {
   const onb = $('onboarding');
   const finish = $('onb-finish') as HTMLButtonElement;
-  const done = () => onb.hidden = true;
-  finish.addEventListener('click', done);
+  const done = () => (onb.hidden = true);
+  // En modo error el botón pasa a "Reintentar" y relanza la instalación en vez de cerrar.
+  let retryMode = false;
+  finish.addEventListener('click', () => {
+    if (retryMode) {
+      retryMode = false;
+      runInstall();
+    } else {
+      done();
+    }
+  });
   $('onb-skip').addEventListener('click', done);
 
-  const status = await checkDependencies();
-  if (status.ready && localStorage.getItem('stash-onboarded')) {
-    onb.hidden = true;
-    return;
-  }
-  localStorage.setItem('stash-onboarded', '1');
-  onb.hidden = false;
-  finish.disabled = true;
-  finish.style.opacity = '.55';
-  renderSteps(0);
+  const setFinishEnabled = (on: boolean) => {
+    finish.disabled = !on;
+    finish.style.opacity = on ? '1' : '.55';
+  };
 
-  if (!status.ready) {
+  async function runInstall(): Promise<void> {
+    setFinishEnabled(false);
+    finish.textContent = t('Empezar a usar Stash', 'Start using Stash');
+    $('onb-detail').textContent = '';
+    renderSteps(0);
     let step = 0;
-    onSetupProgress((d) => {
+    // Guardar el unlisten para no dejar el listener de Tauri vivo toda la sesión.
+    const unlisten = await onSetupProgress((d) => {
       if (d.step === 'ffmpeg') step = 1;
       else if (d.step === 'deno') step = 2;
       else if (d.step === 'done') step = 3;
@@ -58,16 +80,37 @@ export async function initOnboarding(): Promise<void> {
     try {
       await downloadDependencies();
       renderSteps(3);
+      $('onb-detail').textContent = '';
+      setFinishEnabled(true);
     } catch (e) {
-      $('onb-detail').textContent = `Error: ${String(e)}`;
+      // Dejar el error visible y ofrecer reintentar; no continuar como si todo hubiera ido bien.
+      $('onb-detail').textContent = `${t('Error', 'Error')}: ${String(e)}`;
+      finish.textContent = t('Reintentar', 'Retry');
+      retryMode = true;
+      setFinishEnabled(true);
+    } finally {
+      unlisten();
     }
+  }
+
+  const status = await checkDependencies();
+  if (status.ready && localStorage.getItem('stash-onboarded')) {
+    onb.hidden = true;
+    return;
+  }
+  localStorage.setItem('stash-onboarded', '1');
+  onb.hidden = false;
+  setFinishEnabled(false);
+  renderSteps(0);
+
+  if (!status.ready) {
+    await runInstall();
   } else {
     for (let i = 1; i <= 3; i++) {
       await sleep(520);
       renderSteps(i);
     }
+    $('onb-detail').textContent = '';
+    setFinishEnabled(true);
   }
-  $('onb-detail').textContent = '';
-  finish.disabled = false;
-  finish.style.opacity = '1';
 }

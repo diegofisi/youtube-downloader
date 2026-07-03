@@ -7,6 +7,26 @@ use tauri::{AppHandle, Emitter};
 use super::models::{DependencyStatus, SetupProgress};
 use crate::core::paths;
 
+// ── Versiones fijadas de dependencias ──────────────────────────────────────
+// Se descargan tags concretos (no `releases/latest`) para que la app no se
+// rompa si una versión nueva cambia el comportamiento sin haberla probado.
+
+// Versión probada — actualizar deliberadamente.
+const YTDLP_VERSION: &str = "2026.03.17";
+
+// Versión probada — actualizar deliberadamente.
+const DENO_VERSION: &str = "v2.9.1";
+
+// Versión probada — actualizar deliberadamente.
+// BtbN publica el tag estable "latest" con assets fijados por serie: este asset
+// está anclado a la rama 7.1 (solo recibe parches 7.1.x, no saltos de major).
+const FFMPEG_WINDOWS_URL: &str =
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.1-latest-win64-gpl-7.1.zip";
+
+// Versión probada — actualizar deliberadamente.
+// evermeet.cx publica zips versionados; fijamos 7.1 (misma serie que Windows).
+const FFMPEG_MACOS_URL: &str = "https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip";
+
 /// Comprueba si las dependencias existen en el app_dir.
 pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
     let ytdlp = paths::has_binary(app_dir, "yt-dlp");
@@ -61,25 +81,21 @@ fn emit_progress(app: &AppHandle, step: &str, percent: f64, message: &str) {
 }
 
 fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
-    let (url, filename) = if cfg!(target_os = "windows") {
-        (
-            "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
-            "yt-dlp.exe",
-        )
+    let (asset, filename) = if cfg!(target_os = "windows") {
+        ("yt-dlp.exe", "yt-dlp.exe")
     } else if cfg!(target_os = "macos") {
-        (
-            "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos",
-            "yt-dlp",
-        )
+        ("yt-dlp_macos", "yt-dlp")
     } else {
-        (
-            "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp",
-            "yt-dlp",
-        )
+        ("yt-dlp", "yt-dlp")
     };
 
+    let url = format!(
+        "https://github.com/yt-dlp/yt-dlp/releases/download/{}/{}",
+        YTDLP_VERSION, asset
+    );
+
     let dest = app_dir.join(filename);
-    download_file(app, url, &dest, "yt-dlp")?;
+    download_file(app, &url, &dest, "yt-dlp")?;
 
     #[cfg(unix)]
     {
@@ -102,7 +118,7 @@ fn download_ffmpeg(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
 }
 
 fn download_ffmpeg_windows(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
-    let url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip";
+    let url = FFMPEG_WINDOWS_URL;
     let zip_path = app_dir.join("ffmpeg-temp.zip");
 
     download_file(app, url, &zip_path, "ffmpeg")?;
@@ -139,7 +155,7 @@ fn download_ffmpeg_windows(app: &AppHandle, app_dir: &Path) -> Result<(), String
 }
 
 fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
-    let url = "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip";
+    let url = FFMPEG_MACOS_URL;
     let zip_path = app_dir.join("ffmpeg-temp.zip");
 
     download_file(app, url, &zip_path, "ffmpeg")?;
@@ -175,25 +191,21 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
 }
 
 fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
-    let (url, bin_name) = if cfg!(target_os = "windows") {
-        (
-            "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip",
-            "deno.exe",
-        )
+    let (asset, bin_name) = if cfg!(target_os = "windows") {
+        ("deno-x86_64-pc-windows-msvc.zip", "deno.exe")
     } else if cfg!(target_os = "macos") {
-        (
-            "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip",
-            "deno",
-        )
+        ("deno-aarch64-apple-darwin.zip", "deno")
     } else {
-        (
-            "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip",
-            "deno",
-        )
+        ("deno-x86_64-unknown-linux-gnu.zip", "deno")
     };
 
+    let url = format!(
+        "https://github.com/denoland/deno/releases/download/{}/{}",
+        DENO_VERSION, asset
+    );
+
     let zip_path = app_dir.join("deno-temp.zip");
-    download_file(app, url, &zip_path, "deno")?;
+    download_file(app, &url, &zip_path, "deno")?;
     emit_progress(app, "deno", 80.0, "Extrayendo deno...");
 
     let file = fs::File::open(&zip_path).map_err(|e| format!("No se pudo abrir zip: {}", e))?;

@@ -14,6 +14,7 @@ fn main() {
             session::commands::check_cookies,
             session::commands::load_cookies,
             session::commands::open_youtube_login,
+            session::commands::refresh_session_silent,
             session::commands::get_session_status,
             session::commands::logout,
             settings::commands::open_downloads_folder,
@@ -28,11 +29,21 @@ fn main() {
             library::commands::get_history,
             library::commands::add_history,
             library::commands::remove_history_item,
+            library::commands::delete_history_file,
             library::commands::clear_history,
             library::commands::open_history_folder,
             setup::commands::check_dependencies,
             setup::commands::download_dependencies,
         ])
+        .on_window_event(|window, event| {
+            // Al cerrar la ventana principal, matar descargas en curso (yt-dlp/ffmpeg)
+            // para no dejar procesos huérfanos descargando en segundo plano.
+            if window.label() == "main" {
+                if let tauri::WindowEvent::Destroyed = event {
+                    core::process::kill_all();
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error al iniciar la aplicación");
 }
