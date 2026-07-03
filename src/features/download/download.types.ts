@@ -1,9 +1,9 @@
 export interface DownloadResult {
   success: boolean;
   error?: string;
-  /** Clasificación del fallo: sesión/cookies ("auth"), 403 persistente ("cache") u otro. */
+  /** Failure classification: session/cookies ("auth"), persistent 403 ("cache"), or other. */
   errorKind?: 'auth' | 'cache' | 'other';
-  /** Ruta absoluta del archivo final descargado (si se pudo capturar). */
+  /** Absolute path of the final downloaded file (if it could be captured). */
   filePath?: string;
 }
 
@@ -11,7 +11,7 @@ export interface ProgressData {
   percent: number;
   speed: string;
   eta: string;
-  /** Rust solo emite estos dos estados; el fin (éxito/error) se infiere del resultado de start_download. */
+  /** Rust only emits these two states; the end (success/error) is inferred from start_download's result. */
   status: 'downloading' | 'processing';
   url: string;
 }

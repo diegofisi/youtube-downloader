@@ -1,4 +1,4 @@
-/** Información de la cuenta de YouTube conectada (comando get_account_info). */
+/** Connected YouTube account info (get_account_info command). */
 export interface AccountInfo {
   name: string;
   handle: string | null;

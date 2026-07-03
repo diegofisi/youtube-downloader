@@ -1,6 +1,6 @@
 import { t, getLang } from '../../core/i18n';
 
-/** Duración "h:mm:ss" o "m:ss" a partir de segundos. */
+/** "h:mm:ss" or "m:ss" duration from seconds. */
 export function fmtDuration(s?: number): string {
   if (!s) return '';
   const sec = Math.floor(s);
@@ -11,14 +11,14 @@ export function fmtDuration(s?: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${m}:${pad(ss)}`;
 }
 
-/** Tamaño legible a partir de megabytes ("—" si es 0). */
+/** Human-readable size from megabytes ("—" if 0). */
 export function fmtSize(mb: number): string {
   if (!mb) return '—';
   if (mb >= 1024) return `${(mb / 1024).toFixed(mb >= 10240 ? 0 : 1)} GB`;
   return `${Math.round(mb)} MB`;
 }
 
-/** Tiempo relativo ("hace X min/h/d") a partir de un timestamp en ms. */
+/** Relative time ("X min/h/d ago") from a ms timestamp. */
 export function timeAgo(ts: number): string {
   const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
   if (s < 60) return t('ahora', 'now');
@@ -29,7 +29,7 @@ export function timeAgo(ts: number): string {
   return t(`hace ${Math.floor(h / 24)} d`, `${Math.floor(h / 24)} d ago`);
 }
 
-/** Fecha local corta (día, mes, hora:min) según el idioma activo; segundos unix. */
+/** Short local date (day, month, hour:min) per active language; unix seconds. */
 export function fmtDate(secs: number): string {
   try {
     return new Date(secs * 1000).toLocaleString(getLang(), {

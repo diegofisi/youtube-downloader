@@ -11,7 +11,7 @@ import { esc } from '../../../shared/lib/html';
 import { $ } from '../../../shared/ui/dom';
 import { renderChipGroup, renderSeg, renderToggle } from '../../../shared/ui/controls';
 
-/** Chips de Ajustes: variante compacta (padding 5px 11px). */
+/** Settings chips: compact variant (5px 11px padding). */
 function renderChips(sel: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
   renderChipGroup(sel, list, get, set, { pad: '5px 11px' });
 }
@@ -40,13 +40,13 @@ function renderFixStatus(d: DependencyStatus): void {
         'Required components are missing — use "Check & repair"',
       ),
     )}</span>`;
-    // Resalta el botón cuando falta algo.
+    // Highlight the button when something is missing.
     btn.style.borderColor = 'var(--warn)';
     btn.style.color = 'var(--warn)';
   }
 }
 
-/** Re-ejecuta la comprobación y repinta el estado amigable + la lista técnica. */
+/** Re-runs the check and repaints the friendly status + the technical list. */
 async function refreshTroubleshooting(): Promise<void> {
   const d = await checkDependencies();
   renderFixStatus(d);
@@ -59,7 +59,7 @@ function initTroubleshooting(): void {
   let repairing = false;
 
   btn.addEventListener('click', async () => {
-    if (repairing) return; // protege contra doble click
+    if (repairing) return; // guards against double click
     repairing = true;
     btn.disabled = true;
     btn.style.opacity = '.55';
@@ -80,7 +80,7 @@ function initTroubleshooting(): void {
       prog.textContent = '';
       showToast(t('Reparación completada', 'Repair completed'), '', 'done');
     } catch (e) {
-      // Dejar el error visible en el panel (no se borra) además del toast.
+      // Leave the error visible in the panel (not cleared) in addition to the toast.
       prog.hidden = false;
       prog.innerHTML = `<span style="color:var(--danger)">${esc(`${t('Error', 'Error')}: ${String(e)}`)}</span>`;
       showToast(t('Error al reparar', 'Repair failed'), String(e), 'error');
@@ -120,7 +120,7 @@ export async function initSettings(): Promise<void> {
       clearLinksAfterPreview: clearLinks,
     });
 
-  // Idioma: setLang persiste y recarga la app (el aviso está en la fila del HTML)
+  // Language: setLang persists and reloads the app (the notice is in the HTML row)
   renderSeg(
     'set-lang',
     [
@@ -202,7 +202,7 @@ export async function initSettings(): Promise<void> {
     },
   );
 
-  // Plantilla de nombre: guarda con debounce mientras se escribe y al perder foco
+  // Filename template: saves debounced while typing and on blur
   const tpl = $<HTMLInputElement>('set-template');
   tpl.value = template;
   let tplTimer: number | undefined;
@@ -241,7 +241,7 @@ export async function initSettings(): Promise<void> {
     },
   );
 
-  // Carpeta de descargas
+  // Downloads folder
   getDownloadFolder()
     .then((p) => ($('set-folder-path').textContent = p))
     .catch(() => {});

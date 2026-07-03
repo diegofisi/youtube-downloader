@@ -1,4 +1,4 @@
-/** Controles de la ventana (titlebar custom). */
+/** Window controls (custom titlebar). */
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const appWindow = getCurrentWindow();

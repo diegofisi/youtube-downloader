@@ -1,7 +1,7 @@
 import { invoke, onEvent, type UnlistenFn } from '../../core/tauri/client';
 import type { AnalyzedEntry } from './preview.types';
 
-/** Rango 1-based (inclusive) para paginar playlists/feeds: se traduce a --playlist-items. */
+/** 1-based (inclusive) range for paging playlists/feeds: translates to --playlist-items. */
 export interface AnalyzeRange {
   start: number;
   end: number;

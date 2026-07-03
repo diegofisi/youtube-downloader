@@ -1,26 +1,22 @@
-//! Runner de yt-dlp: construcción unificada de comandos + parseo de progreso.
+//! yt-dlp runner: unified command building + progress parsing.
 //!
-//! `YtdlpCmd` centraliza lo que antes duplicaban download (descarga y
-//! simulación) y preview (análisis): resolución del binario, `--encoding
-//! utf-8`, cookies, runtime deno, ffmpeg, CREATE_NO_WINDOW y el `--` final.
+//! `YtdlpCmd` centralizes what download and preview used to duplicate: binary
+//! resolution, `--encoding utf-8`, cookies, deno runtime, ffmpeg, CREATE_NO_WINDOW, trailing `--`.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::core::{paths, process};
 
-/// Resuelve el binario de yt-dlp (bundle/dev) con fallback al PATH del sistema.
+/// Resolves the yt-dlp binary (bundle/dev) with fallback to the system PATH.
 pub fn bin(app_dir: &Path) -> String {
     paths::find_executable(app_dir, "yt-dlp")
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_else(|| "yt-dlp".into())
 }
 
-/// Builder de comandos de yt-dlp con opciones encadenables.
-///
-/// `build()` añade SIEMPRE `--encoding utf-8` y cierra con `-- <url>`;
-/// los llamadores solo declaran sus flags específicos y las condiciones
-/// (p. ej. cuándo aplican cookies) que les son propias.
+/// Chainable yt-dlp command builder. `build()` ALWAYS adds `--encoding utf-8`
+/// and ends with `-- <url>`; callers only declare their own flags/conditions.
 pub struct YtdlpCmd {
     app_dir: PathBuf,
     url: String,
@@ -30,8 +26,8 @@ pub struct YtdlpCmd {
 }
 
 impl YtdlpCmd {
-    /// Crea el builder resolviendo el binario a partir de `app_dir`.
-    /// stdout/stderr arrancan en `piped` (el caso más común).
+    /// Creates the builder, resolving the binary from `app_dir`.
+    /// stdout/stderr default to `piped` (the common case).
     pub fn new(app_dir: &Path, url: &str) -> Self {
         Self {
             app_dir: app_dir.to_path_buf(),
@@ -42,13 +38,13 @@ impl YtdlpCmd {
         }
     }
 
-    /// Añade un argumento suelto.
+    /// Adds a single argument.
     pub fn arg(mut self, a: impl Into<String>) -> Self {
         self.args.push(a.into());
         self
     }
 
-    /// Añade varios argumentos (p. ej. los derivados de `DownloadOptions`).
+    /// Adds several arguments (e.g. those derived from `DownloadOptions`).
     pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -58,18 +54,18 @@ impl YtdlpCmd {
         self
     }
 
-    /// `--no-update`: no comprobar versiones nuevas de yt-dlp en cada ejecución.
+    /// `--no-update`: skip the yt-dlp self-update check on every run.
     pub fn no_update(self) -> Self {
         self.arg("--no-update")
     }
 
-    /// `--no-warnings`: silencia avisos que ensuciarían la salida parseada.
+    /// `--no-warnings`: silences warnings that would pollute the parsed output.
     pub fn no_warnings(self) -> Self {
         self.arg("--no-warnings")
     }
 
-    /// `--cookies <path>` solo si el archivo existe. La condición de CUÁNDO
-    /// aplicar cookies (por `cookie_mode` o incondicional) la decide el llamador.
+    /// `--cookies <path>` only if the file exists. WHEN to apply cookies
+    /// (by `cookie_mode` or unconditionally) is the caller's decision.
     pub fn cookies(mut self, path: &Path) -> Self {
         if path.exists() {
             self.args.push("--cookies".into());
@@ -78,7 +74,7 @@ impl YtdlpCmd {
         self
     }
 
-    /// Runtime JS deno para el extractor de YouTube (si el binario existe).
+    /// Deno JS runtime for the YouTube extractor (if the binary exists).
     pub fn deno_runtime(mut self) -> Self {
         if let Some(deno) = paths::find_executable(&self.app_dir, "deno") {
             self.args.push("--extractor-args".into());
@@ -90,7 +86,7 @@ impl YtdlpCmd {
         self
     }
 
-    /// `--ffmpeg-location` apuntando al directorio del ffmpeg bundled (si existe).
+    /// `--ffmpeg-location` pointing at the bundled ffmpeg directory (if present).
     pub fn ffmpeg_location(mut self) -> Self {
         if let Some(ffmpeg) = paths::find_executable(&self.app_dir, "ffmpeg") {
             if let Some(dir) = ffmpeg.parent() {
@@ -101,32 +97,28 @@ impl YtdlpCmd {
         self
     }
 
-    /// Configura el stdout del proceso (por defecto `piped`).
-    /// (Hoy ningún llamador lo cambia; se mantiene por simetría con `stderr`.)
+    /// Sets the process stdout (default `piped`).
+    /// (No caller changes it today; kept for symmetry with `stderr`.)
     #[allow(dead_code)]
     pub fn stdout(mut self, s: Stdio) -> Self {
         self.stdout = s;
         self
     }
 
-    /// Configura el stderr del proceso (por defecto `piped`).
+    /// Sets the process stderr (default `piped`).
     pub fn stderr(mut self, s: Stdio) -> Self {
         self.stderr = s;
         self
     }
 
-    /// Construye el `Command` final listo para spawn/output.
+    /// Builds the final `Command`, ready for spawn/output.
     pub fn build(mut self) -> Command {
-        // El exe empaquetado de yt-dlp ignora PYTHONIOENCODING y, al escribir a
-        // una tubería, descarta los caracteres no representables en la página de
-        // códigos de Windows (p. ej. títulos en japonés): las rutas/JSON llegarían
-        // degradados y no coincidirían con los archivos reales. Forzar UTF-8
-        // SIEMPRE en su salida.
+        // The packaged yt-dlp exe ignores PYTHONIOENCODING and, on piped output, drops chars not in
+        // the Windows codepage (e.g. Japanese titles), corrupting paths/JSON. ALWAYS force UTF-8.
         self.args.push("--encoding".into());
         self.args.push("utf-8".into());
 
-        // `--` cierra las opciones: una URL que empiece con "-" no se
-        // interpreta como flag.
+        // `--` ends the options: a URL starting with "-" isn't parsed as a flag.
         self.args.push("--".into());
         self.args.push(self.url);
 
@@ -137,7 +129,7 @@ impl YtdlpCmd {
     }
 }
 
-/// Extrae el porcentaje de una línea de progreso de yt-dlp.
+/// Extracts the percentage from a yt-dlp progress line.
 pub fn parse_percent(s: &str) -> Option<f64> {
     let pos = s.find('%')?;
     let before = &s[..pos];
@@ -145,7 +137,7 @@ pub fn parse_percent(s: &str) -> Option<f64> {
     before[num_start..].parse::<f64>().ok()
 }
 
-/// Extrae un campo entre dos marcadores (`end_marker` vacío = hasta el final).
+/// Extracts a field between two markers (empty `end_marker` = to end of line).
 pub fn parse_field(s: &str, start_marker: &str, end_marker: &str) -> Option<String> {
     let start = s.find(start_marker)? + start_marker.len();
     if end_marker.is_empty() {

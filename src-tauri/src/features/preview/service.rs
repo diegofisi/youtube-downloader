@@ -6,23 +6,20 @@ use super::models::{AnalyzedEntry, PlaylistMeta, VideoMeta};
 use crate::core::ytdlp::YtdlpCmd;
 use crate::features::session::service as session;
 
-/// Tope de entradas para Mezclas/radios (listas infinitas autogeneradas de YouTube).
+/// Entry cap for Mixes/radios (YouTube's infinite auto-generated lists).
 const RADIO_CAP: u32 = 25;
-/// Tope para feeds de cuenta (suscripciones, historial): son continuos, sin fin real.
+/// Cap for account feeds (subscriptions, history): continuous, no real end.
 const FEED_CAP: u32 = 50;
 
-/// Analiza una URL (video suelto o playlist/canal) resolviendo metadatos con yt-dlp.
-///
-/// `range`: rango 1-based (start, end) para paginar playlists/feeds con
-/// `--playlist-items START:END`. Si es `None`, se aplican los topes por defecto.
+/// Analyzes a URL (single video or playlist/channel), resolving metadata with yt-dlp.
+/// `range`: 1-based (start, end) mapped to `--playlist-items START:END`; `None` applies the default caps.
 pub fn analyze(
     app_dir: &Path,
     url: &str,
     range: Option<(u32, u32)>,
 ) -> Result<AnalyzedEntry, String> {
-    // Mezcla/radio (list=RD…, start_radio): infinita → topamos a 25 como en YouTube.
-    // Feeds de cuenta (/feed/...): continuos → topamos a 50.
-    // Playlists/canales reales: sin tope (todos los que encuentre).
+    // Mix/radio (list=RD…, start_radio): infinite → cap at 25 like YouTube. Account
+    // feeds (/feed/...): continuous → cap at 50. Real playlists/channels: no cap.
     let is_radio = url.contains("list=RD") || url.contains("start_radio=");
     let is_feed = url.contains("/feed/");
     let cap = if is_radio {
@@ -36,9 +33,8 @@ pub fn analyze(
     Ok(map_entry(&json, url))
 }
 
-/// Entrada de error para una URL que no se pudo analizar: el frontend la
-/// detecta por `availability = "error: …"` (mapeo de dominio, vive aquí y no
-/// en el command).
+/// Error entry for a URL that failed analysis; the frontend detects it via
+/// `availability = "error: …"` (domain mapping lives here, not in the command).
 pub fn error_entry(url: &str, msg: &str) -> AnalyzedEntry {
     AnalyzedEntry::Video(VideoMeta {
         id: String::new(),
@@ -62,7 +58,7 @@ fn run_dump_json(
     cap: Option<u32>,
     range: Option<(u32, u32)>,
 ) -> Result<Value, String> {
-    // El builder resuelve el binario y añade --encoding utf-8 y `-- <url>`.
+    // The builder resolves the binary and adds --encoding utf-8 and `-- <url>`.
     let mut builder = YtdlpCmd::new(app_dir, url)
         .arg("-J")
         .arg("--flat-playlist")
@@ -70,7 +66,7 @@ fn run_dump_json(
         .no_update();
 
     if let Some((start, end)) = range {
-        // Rango explícito (paginación desde el frontend): sustituye al tope fijo.
+        // Explicit range (frontend pagination): replaces the fixed cap.
         builder = builder
             .arg("--playlist-items")
             .arg(format!("{}:{}", start, end));
@@ -78,8 +74,8 @@ fn run_dump_json(
         builder = builder.arg("--playlist-end").arg(c.to_string());
     }
 
-    // Cookies incondicionales (si existen): el preview siempre se beneficia
-    // de la sesión para contenidos privados/members-only.
+    // Unconditional cookies (if present): previews always benefit from the
+    // session for private/members-only content.
     builder = builder
         .deno_runtime()
         .cookies(&session::get_cookies_path(app_dir));
@@ -96,11 +92,8 @@ fn run_dump_json(
             .find(|l| l.trim_start().starts_with("ERROR:"))
             .map(|l| l.trim().trim_start_matches("ERROR:").trim().to_string())
             .unwrap_or_else(|| "No se pudo analizar la URL".into());
-        // TODO(error_kind): clasificar aquí los errores de auth ("Sign in to
-        // confirm", members-only, etc. — ver download::classify_error) y
-        // devolver un error estructurado {message, kind} en vez de String.
-        // NO cambiar el contrato todavía: el frontend de preview aún no
-        // ramifica por kind (cuando lo haga, unificar con DownloadResult).
+        // TODO(error_kind): classify auth errors here (see download::classify_error) and return
+        // a structured {message, kind}. Don't change the contract yet: preview UI doesn't branch on kind.
         return Err(msg);
     }
 
@@ -156,7 +149,7 @@ fn full_video(v: &Value, url: &str) -> VideoMeta {
     }
 }
 
-/// Entrada "plana" de una playlist (sin formats/thumbnail/size resueltos).
+/// "Flat" playlist entry (formats/thumbnail/size not resolved).
 fn flat_video(v: &Value) -> Option<VideoMeta> {
     let id = str_field(v, "id");
     if id.is_empty() {
@@ -183,7 +176,7 @@ fn flat_video(v: &Value) -> Option<VideoMeta> {
         size_bytes: None,
         playlist_count: v.get("playlist_count").and_then(|x| x.as_u64()),
         flat: true,
-        // Entradas planas que apuntan a otra playlist (p. ej. /feed/playlists).
+        // Flat entries pointing at another playlist (e.g. /feed/playlists).
         is_playlist: v.get("ie_key").and_then(|x| x.as_str()) == Some("YoutubeTab"),
     })
 }
@@ -223,7 +216,7 @@ fn thumbnail_field(v: &Value) -> Option<String> {
     if let Some(t) = v.get("thumbnail").and_then(|x| x.as_str()) {
         return Some(t.to_string());
     }
-    // último thumbnail del array (mayor resolución)
+    // last thumbnail in the array (highest resolution)
     v.get("thumbnails")
         .and_then(|x| x.as_array())
         .and_then(|arr| arr.last())
@@ -232,7 +225,7 @@ fn thumbnail_field(v: &Value) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-/// Estimación aproximada de tamaño: mejor video-only (<=1080) + mejor audio-only.
+/// Rough size estimate: best video-only (<=1080) + best audio-only.
 fn estimate_size(v: &Value) -> Option<u64> {
     let formats = v.get("formats")?.as_array()?;
 

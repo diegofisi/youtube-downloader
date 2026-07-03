@@ -30,7 +30,7 @@ function mkVideo(url: string, sizeBytes?: number): VideoMeta {
   };
 }
 
-// opts/overrides son estado de módulo: limpiar overrides tras cada test.
+// opts/overrides are module state: clear overrides after each test.
 afterEach(() => {
   for (const k of Object.keys(overrides)) delete overrides[k];
 });
@@ -93,9 +93,9 @@ describe('sizeMB', () => {
 
   it('aplica el factor de calidad relativo a 1080p', () => {
     overrides[URL] = { quality: '4k', mode: 'av' };
-    expect(sizeMB(mkVideo(URL, 100 * MB))).toBeCloseTo(260); // 4k = ×2.6
+    expect(sizeMB(mkVideo(URL, 100 * MB))).toBeCloseTo(260); // 4k = x2.6
     overrides[URL] = { quality: '480p', mode: 'av' };
-    expect(sizeMB(mkVideo(URL, 100 * MB))).toBeCloseTo(30); // 480p = ×0.3
+    expect(sizeMB(mkVideo(URL, 100 * MB))).toBeCloseTo(30); // 480p = x0.3
   });
 
   it('en modo audio aplica ×0.08 sobre el tamaño a esa calidad', () => {
@@ -113,7 +113,7 @@ describe('effectiveOpts', () => {
     overrides['u1'] = { quality: '720p' };
     const eff = effectiveOpts('u1');
     expect(eff.quality).toBe('720p');
-    expect(eff.container).toBe(opts.container); // el resto viene de las globales
+    expect(eff.container).toBe(opts.container); // the rest comes from the globals
   });
 
   it('sin override devuelve las globales', () => {

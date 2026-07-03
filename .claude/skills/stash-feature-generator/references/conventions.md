@@ -1,75 +1,86 @@
-# Convenciones de naming, commits, fachadas y tests
+# Naming, comments, commits, facades and test conventions
 
-## Tabla de naming (todo verificado en el repo)
+## Naming table (all verified in the repo)
 
-| Cosa | Convención | Ejemplos reales |
+| Thing | Convention | Real examples |
 |---|---|---|
-| Archivos TS | kebab-case | `media-card.ts`, `queue-view.ts`, `video-opts-modal.ts`, `event-bus.ts` |
-| Archivos de slice FE | `{slice}.api.ts` / `{slice}.types.ts` / `{slice}.state.ts` | `session.state.ts`, `download.api.ts` (excepción: `opts-model.ts` es el modelo de download) |
-| Vistas | `ui/{nombre}-view.ts` o descriptivo | `library-view.ts`, `descargar.ts`, `onboarding.ts` |
-| Archivos Rust | fijos por slice | `commands.rs`, `service.rs`, `models.rs` (+ `webview.rs` en session) |
-| Comandos Tauri | snake_case `verbo_sustantivo` | `start_download`, `get_session_status`, `delete_history_file` |
-| Eventos Tauri | kebab-case | `download-progress`, `cookies-extracted`, `setup-progress` |
-| Eventos de bus | `dominio:accion` | `session:expired`, `nav:goto`, `download:completed`, `descargar:prefill` |
-| Funciones TS | camelCase; wrappers de comando = camelCase del comando | `startDownload`, `getSessionStatus`; init de vista = `init{Nombre}` |
-| Ids DOM | kebab-case con prefijo de vista | `search-input`, `yt-more`, `ov-done`, `set-quality` (tabla completa en ui-patterns.md) |
-| `data-group` de chips | camelCase | `setQuality`, `ovMode`, `quality` |
-| localStorage | prefijo `stash.` para claves nuevas | `stash.lang`, `stash.recentLinks` — legado sin punto que NO renombrar: `stash-theme`, `stash-onboarded` |
-| Clases CSS utilitarias | cortas, globales en stash.css | `.hov`, `.acc-btn`, `.view`/`.is-active`, `.seg`, `.chips`, `.nav-btn` |
-| Constantes | SCREAMING_SNAKE | `RADIO_CAP`, `AUTH_ERROR_MSG`, `BROWSER_UA`, `STATUS_META`, `PAGE` |
-| Slices | inglés, singular o dominio | `download`, `preview`, `queue`, `session`, `library`, `settings`, `setup`, `search`, `youtube-account` |
+| TS files | kebab-case | `media-card.ts`, `queue-view.ts`, `video-opts-modal.ts`, `event-bus.ts` |
+| FE slice files | `{slice}.api.ts` / `{slice}.types.ts` / `{slice}.state.ts` | `session.state.ts`, `download.api.ts` (exception: `opts-model.ts` is download's model) |
+| Views | `ui/{name}-view.ts` or descriptive | `library-view.ts`, `descargar.ts`, `onboarding.ts` |
+| Rust files | fixed per slice | `commands.rs`, `service.rs`, `models.rs` (+ `webview.rs` in session) |
+| Tauri commands | snake_case `verb_noun` | `start_download`, `get_session_status`, `delete_history_file` |
+| Tauri events | kebab-case | `download-progress`, `cookies-extracted`, `setup-progress` |
+| Bus events | `domain:action` | `session:expired`, `nav:goto`, `download:completed`, `descargar:prefill` |
+| TS functions | camelCase; command wrappers = camelCase of the command | `startDownload`, `getSessionStatus`; view init = `init{Name}` |
+| DOM ids | kebab-case with view prefix | `search-input`, `yt-more`, `ov-done`, `set-quality` (full table in ui-patterns.md) |
+| Chip `data-group` | camelCase | `setQuality`, `ovMode`, `quality` |
+| localStorage | `stash.` prefix for new keys | `stash.lang`, `stash.recentLinks` — dotless legacy NOT to rename: `stash-theme`, `stash-onboarded` |
+| Utility CSS classes | short, global in stash.css | `.hov`, `.acc-btn`, `.view`/`.is-active`, `.seg`, `.chips`, `.nav-btn` |
+| Constants | SCREAMING_SNAKE | `RADIO_CAP`, `AUTH_ERROR_MSG`, `BROWSER_UA`, `STATUS_META`, `PAGE` |
+| Slices | English, singular or domain | `download`, `preview`, `queue`, `session`, `library`, `settings`, `setup`, `search`, `youtube-account` |
 
-## Commits (estilo real del git log)
+## Code comments (TS and Rust)
 
-`tipo(scope): descripción` — **en español y SIN tildes** (el log usa "descripcion", "nucleo",
-"tamanos"). Tipos vistos: `feat`, `fix`, `refactor`, `chore`, `test` (combinables: `chore,test(fase4):`,
-`fix,refactor(fase1):`). Scope = slice o fase:
+**In English, concise, max 1-2 lines.** Explain the why, not the what; no comment is better
+than a redundant one. This applies to `//`, `/* */`, and doc comments alike.
+
+UI-facing strings are NOT comments and follow their own rules:
+- Rust error messages returned to the frontend (`Result<T, String>`) are user-visible text:
+  they stay in **Spanish** until backend i18n exists (see error-handling.md).
+- Frontend texts keep the `t(es, en)` / `data-en*` system exactly as documented in i18n.md.
+
+## Commits (real git-log style)
+
+`type(scope): description` — **in Spanish and WITHOUT accents** (the log uses "descripcion",
+"nucleo", "tamanos"). This convention is intentionally kept in Spanish — do not switch it to
+English. Types seen: `feat`, `fix`, `refactor`, `chore`, `test` (combinable: `chore,test(fase4):`,
+`fix,refactor(fase1):`). Scope = slice or phase:
 
 ```
 feat(session): logout real + deteccion de sesion caducada + fix Mi YouTube
 fix(preview): radios/Mix -> tope 25; playlists reales -> sin tope
 refactor(fase3): cortes de god-files, dedupe de vistas y nucleo Rust unificado
 ```
-Cuerpo (si lo hay): bullets con `-`, densos, citando números ("descargar.ts 754->265") y el porqué.
+Body (when present): `-` bullets, dense, citing numbers ("descargar.ts 754->265") and the why.
 
-## Fachadas (`index.ts`): qué exportar y qué no
+## Facades (`index.ts`): what to export and what not
 
-Exportar el MÍNIMO que otros consumen; la fachada es el contrato entre slices.
+Export the MINIMUM others consume; the facade is the contract between slices.
 
 ```ts
-// features/queue/index.ts — fachada real completa:
+// features/queue/index.ts — the complete real facade:
 export { enqueue, setConcurrency } from './queue.state';
 export type { EnqueueItem } from './queue.state';
 export { initQueueView } from './ui/queue-view';
 ```
 
-| SÍ exportar | NO exportar |
+| DO export | Do NOT export |
 |---|---|
-| `init{Name}` (lo consume main.ts) | Funciones internas del state (`pump`, `notify`, `handleAuthFailure`) |
-| Funciones de api/state que otro slice usa (`enqueue`, `getCookieMode`, `analyzeUrls`, `addHistory`) | Helpers de render (`renderList`, `paint…`) |
-| Tipos del contrato (`EnqueueItem`, `VideoMeta`, `AppConfig`, `DownloadOptions`) | Módulos internos completos (`account-card` "NO se exporta por la fachada: solo lo consume account-view") |
-| Re-export de tipos necesarios río abajo (`UnlistenFn` desde setup: los consumidores no pueden tocar core/tauri/client) | Estado mutable crudo (queue expone `getItems(): readonly QItem[]`, no el array) |
+| `init{Name}` (consumed by main.ts) | Internal state functions (`pump`, `notify`, `handleAuthFailure`) |
+| api/state functions another slice uses (`enqueue`, `getCookieMode`, `analyzeUrls`, `addHistory`) | Render helpers (`renderList`, `paint…`) |
+| Contract types (`EnqueueItem`, `VideoMeta`, `AppConfig`, `DownloadOptions`) | Whole internal modules (`account-card` is "NOT exported through the facade: only account-view consumes it") |
+| Re-exports of types needed downstream (`UnlistenFn` from setup: consumers cannot touch core/tauri/client) | Raw mutable state (queue exposes `getItems(): readonly QItem[]`, not the array) |
 
-Un slice puede tener fachada mínima (`search/index.ts` exporta solo `initSearch`).
+A slice may have a minimal facade (`search/index.ts` exports only `initSearch`).
 
-## Estilo de tests
+## Test style
 
 **TypeScript (vitest):**
-- Junto al código: `{modulo}.test.ts`. Nombres de `describe`/`it` EN ESPAÑOL, describiendo
-  comportamiento: `it('rechaza URL ya encolada o activa')`, `describe('begin() (anti-race)')`.
-- Se mockean las FACHADAS de otros slices, nunca los internos:
-  `vi.mock('../download', () => ({ startDownload: mocks.startDownload }))` con `vi.hoisted`.
-- Módulos con estado global → `vi.resetModules()` en `beforeEach` + import dinámico
-  (`await import('./queue.state')`); o limpieza puntual en `afterEach` (overrides de opts-model).
-- Helpers con nombre español: `flush()`, `descargaEterna()`, `cargarCola()`, `pagina()`, `linea()`.
-- Tests de DOM: viven en `ui/` (proyecto jsdom de vitest.config.ts) y/o marcan
-  `// @vitest-environment jsdom` con una línea explicando por qué necesitan DOM.
+- Next to the code: `{module}.test.ts`. `describe`/`it` names IN SPANISH, describing
+  behavior: `it('rechaza URL ya encolada o activa')`, `describe('begin() (anti-race)')`.
+- Mock other slices' FACADES, never their internals:
+  `vi.mock('../download', () => ({ startDownload: mocks.startDownload }))` with `vi.hoisted`.
+- Modules with global state → `vi.resetModules()` in `beforeEach` + dynamic import
+  (`await import('./queue.state')`); or targeted cleanup in `afterEach` (opts-model overrides).
+- Helpers with Spanish names: `flush()`, `descargaEterna()`, `cargarCola()`, `pagina()`, `linea()`.
+- DOM tests: live in `ui/` (vitest.config.ts's jsdom project) and/or mark
+  `// @vitest-environment jsdom` with a one-line English comment explaining why they need the DOM.
 
 **Rust:**
-- `#[cfg(test)] mod tests { use super::*; … }` AL FINAL del mismo archivo.
-- Nombres de test en español con snake_case:
+- `#[cfg(test)] mod tests { use super::*; … }` AT THE END of the same file.
+- Test names in Spanish with snake_case:
   `fn build_fuerza_encoding_utf8_y_cierra_con_doble_guion_antes_de_la_url()`.
-- Secciones separadas con `// ---------- nombre ----------`.
-- Helpers/fixtures locales al mod tests: `fn linea(...)`, `struct TempDir` con `Drop`, `fn opciones(...)`.
+- Sections separated with `// ---------- name ----------`.
+- Helpers/fixtures local to the tests mod: `fn linea(...)`, `struct TempDir` with `Drop`, `fn opciones(...)`.
 
-Ver testing.md para qué merece test y qué no.
+See testing.md for what deserves a test and what doesn't.

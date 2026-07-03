@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { DownloadOptions } from '../download';
 
-// Se mockean las FACHADAS que importa queue.state (efectos de otros slices);
-// el bus y la i18n son puros y se usan reales. El módulo tiene estado global
-// (items/seq), así que cada test lo importa fresco con vi.resetModules().
+// Mock the facades queue.state imports (other slices' effects); bus and i18n are pure and used
+// real. The module holds global state (items/seq), so each test re-imports it via vi.resetModules().
 const mocks = vi.hoisted(() => ({
   startDownload: vi.fn(),
   cancelDownload: vi.fn(),
@@ -48,12 +47,12 @@ function mkItem(url: string) {
   return { url, title: `Título de ${url}`, channel: 'Canal', grad: 'g1', fmt: 'MP4 · Máxima', options: OPTS };
 }
 
-/** Deja correr los microtasks/timers pendientes (los .then encadenados de run()). */
+/** Flushes pending microtasks/timers (run()'s chained .then callbacks). */
 async function flush(): Promise<void> {
   for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
 }
 
-/** startDownload que nunca termina: los items quedan "downloading". */
+/** startDownload that never resolves: items stay "downloading". */
 function descargaEterna(): void {
   mocks.startDownload.mockReturnValue(new Promise(() => {}));
 }
@@ -155,7 +154,7 @@ describe('fallo de auth (sesión caducada)', () => {
     expect(i1.pausedByAuth).toBe(true);
     expect(i2.status).toBe('paused');
     expect(i3.status).toBe('paused');
-    // Ninguno de los pausados llegó a lanzarse.
+    // None of the paused items were ever launched.
     expect(mocks.startDownload).toHaveBeenCalledTimes(1);
   });
 
@@ -169,7 +168,7 @@ describe('fallo de auth (sesión caducada)', () => {
     q.enqueue([mkItem('u1'), mkItem('u2')]);
     await flush();
 
-    // Tras renovar sesión, el pump relanza: u1 (reencolado) vuelve a bajar.
+    // After session renewal, pump relaunches: u1 (re-queued) downloads again.
     expect(mocks.attemptSilentReconnect).toHaveBeenCalledTimes(1);
     expect(mocks.startDownload).toHaveBeenCalledTimes(2);
     expect(q.getItems().some((i) => i.pausedByAuth)).toBe(false);
@@ -191,8 +190,8 @@ describe('resume vs retry', () => {
 
     q.action(it.id, 'resume');
     await flush();
-    expect(it.status).toBe('downloading'); // el pump lo relanzó
-    expect(it.progress).toBe(42); // el avance NO se pierde
+    expect(it.status).toBe('downloading'); // pump relaunched it
+    expect(it.progress).toBe(42); // progress is NOT lost
   });
 
   it('reintentar resetea el progreso a 0', async () => {
@@ -206,11 +205,11 @@ describe('resume vs retry', () => {
 
     const it = q.getItems()[0];
     expect(it.status).toBe('error');
-    expect(it.progress).toBe(77); // el error conserva el avance visual
+    expect(it.progress).toBe(77); // error keeps the visual progress
 
     q.action(it.id, 'retry');
     await flush();
-    expect(it.progress).toBe(0); // retry SÍ parte de cero
+    expect(it.progress).toBe(0); // retry DOES start from zero
     expect(it.error).toBeUndefined();
   });
 });
@@ -279,7 +278,7 @@ describe('limpieza y estado agregado', () => {
 
     q.retryAllFailed();
     await flush();
-    expect(q.getItems()[0].status).toBe('downloading'); // reencolado y relanzado
-    expect(q.getItems()[1].status).toBe('done'); // el completado no se toca
+    expect(q.getItems()[0].status).toBe('downloading'); // re-queued and relaunched
+    expect(q.getItems()[1].status).toBe('done'); // the completed one is untouched
   });
 });

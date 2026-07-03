@@ -1,12 +1,12 @@
 import { $ } from './dom';
 
-/** Chip con borde de acento cuando está activo. `pad` permite la variante compacta de Ajustes (5px 11px). */
+/** Chip with accent border when active. `pad` enables the compact Settings variant (5px 11px). */
 export const chipStyle = (on: boolean, pad = '6px 11px'): string =>
   `padding:${pad};border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid ${
     on ? 'var(--accent)' : 'var(--border)'
   };background:${on ? 'var(--accentSoft)' : 'transparent'};color:${on ? 'var(--accent)' : 'var(--text2)'}`;
 
-/** Botón de un grupo segmentado (estilo Ajustes: pieza elevada cuando está activa). */
+/** Button of a segmented group (Settings style: raised piece when active). */
 export const segStyle = (on: boolean): string =>
   `padding:6px 15px;border-radius:7px;font-size:12.5px;font-weight:600;${
     on
@@ -14,30 +14,27 @@ export const segStyle = (on: boolean): string =>
       : 'color:var(--text2);background:transparent'
   }`;
 
-/** Pista del interruptor on/off. */
+/** Track of the on/off toggle. */
 export const toggleStyle = (on: boolean): string =>
   `width:38px;height:22px;flex:none;border-radius:12px;padding:2px;display:flex;background:${
     on ? 'var(--accent)' : 'var(--border2)'
   };justify-content:${on ? 'flex-end' : 'flex-start'};transition:all .18s`;
 
-/** Bolita blanca del interruptor. */
+/** White knob of the toggle. */
 export const knob =
   '<span style="width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>';
 
 export interface ChipGroupOpts {
-  /** Padding del chip (variante compacta de Ajustes: '5px 11px'). */
+  /** Chip padding (compact Settings variant: '5px 11px'). */
   pad?: string;
-  /** false: no re-renderizar el grupo al elegir (el llamador repinta todo, p. ej. modales). */
+  /** false: don't re-render the group on pick (the caller repaints everything, e.g. modals). */
   rerender?: boolean;
-  /** Se ejecuta tras el re-render provocado por cada click. */
+  /** Runs after the re-render triggered by each click. */
   after?: () => void;
 }
 
-/**
- * Pinta un grupo de chips en el contenedor `[data-group="…"]`. El valor elegido
- * se toma de `list` por índice (mismo orden que el innerHTML) para conservar el
- * tipo literal T sin castear dataset.val (que siempre es string).
- */
+/** Paints a chip group into the `[data-group="…"]` container. The picked value comes from `list`
+ * by index (same order as the innerHTML) to keep the literal type T without casting dataset.val. */
 export function renderChipGroup<T extends string>(
   groupSel: string,
   list: [T, string][],
@@ -59,7 +56,7 @@ export function renderChipGroup<T extends string>(
   );
 }
 
-/** Pinta un grupo segmentado en el elemento con id `id` y se re-pinta al elegir. */
+/** Paints a segmented group into element `id`; repaints on pick. */
 export function renderSeg(id: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
   const el = $(id);
   el.innerHTML = list
@@ -73,7 +70,7 @@ export function renderSeg(id: string, list: [string, string][], get: () => strin
   );
 }
 
-/** Pinta un interruptor on/off en el elemento con id `id` y alterna al click. */
+/** Paints an on/off toggle into element `id`; flips on click. */
 export function renderToggle(id: string, get: () => boolean, set: (v: boolean) => void): void {
   const btn = $(id);
   const paint = () => {

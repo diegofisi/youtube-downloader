@@ -1,10 +1,5 @@
-/**
- * Paginación "Ver más" compartida (Mi YouTube / Buscar). Encapsula el estado
- * nextStart/hasMore/loadingMore/loadSeq (anti-race: los resultados de cargas
- * viejas se descartan), el append sin duplicados por clave y el wiring/estado
- * de carga del botón "Ver más". La primera página la orquesta cada vista
- * (loading/vacío/error propios) con begin() + loadFirst().
- */
+// Shared "See more" pagination (My YouTube / Search): loadSeq anti-race (stale loads discarded),
+// keyed dedupe append, "See more" button wiring. Views orchestrate page 1 via begin() + loadFirst().
 import { $ } from './dom';
 import { I } from './icons';
 import { showToast } from './toast';
@@ -12,52 +7,47 @@ import { t } from '../../core/i18n';
 
 export interface PagedResult<T> {
   items: T[];
-  /**
-   * Nº de entradas crudas que devolvió la fuente. Permite calcular hasMore
-   * cuando la vista filtra en cliente (Buscar); si se omite, se usa items.length.
-   */
+  /** Raw entry count returned by the source; lets hasMore be computed when the
+   * view filters client-side (Search). Defaults to items.length. */
   rawCount?: number;
 }
 
 export interface PagedLoaderOptions<T> {
-  /** Tamaño de página; también umbral de "puede haber más" (página llena). */
+  /** Page size; also the "may have more" threshold (full page). */
   pageSize: number;
-  /** Clave de deduplicación entre páginas (el feed puede moverse entre peticiones). */
+  /** Cross-page dedupe key (the feed may shift between requests). */
   key: (item: T) => string;
-  /** Pide la página [start, end] (índices 1-based inclusivos) de la fuente actual. */
+  /** Fetches page [start, end] (1-based inclusive indices) of the current source. */
   fetchPage: (start: number, end: number) => Promise<PagedResult<T>>;
-  /** id del botón "Ver más": el loader gestiona su click, disabled y spinner. */
+  /** Id of the "See more" button: the loader manages its click, disabled and spinner. */
   moreButtonId: string;
-  /** Re-render tras añadir con éxito una página de "Ver más". */
+  /** Re-render after successfully appending a "See more" page. */
   onPage: () => void;
 }
 
 export interface PagedLoader<T> {
-  /** Items acumulados (referencia viva; no mutar desde fuera). */
+  /** Accumulated items (live reference; do not mutate from outside). */
   readonly items: T[];
-  /** true si la última página vino llena (puede haber más). */
+  /** true if the last page came back full (there may be more). */
   readonly hasMore: boolean;
-  /** Nueva carga: invalida las anteriores, vacía items y devuelve su token. */
+  /** New load: invalidates previous ones, clears items and returns its token. */
   begin(): number;
-  /**
-   * Pide y acumula la primera página de la carga `seq`. Devuelve 'stale' si
-   * begin() se llamó de nuevo mientras cargaba (los errores de cargas viejas
-   * también se descartan como 'stale'); relanza el error si la carga sigue viva.
-   */
+  /** Fetches and stores the first page of load `seq`. Returns 'stale' if begin() was called again
+   * meanwhile (stale-load errors also become 'stale'); rethrows the error if the load is still live. */
   loadFirst(seq: number): Promise<'ok' | 'stale'>;
-  /** Conecta el click del botón "Ver más" (llamar una vez en el init de la vista). */
+  /** Wires the "See more" button click (call once in the view's init). */
   wireMore(): void;
 }
 
 export function createPagedLoader<T>(opts: PagedLoaderOptions<T>): PagedLoader<T> {
   let items: T[] = [];
-  /** Siguiente índice 1-based a pedir con "Ver más". */
+  /** Next 1-based index to request with "See more". */
   let nextStart = 1;
   let hasMore = false;
   let loadingMore = false;
   let loadSeq = 0;
 
-  /** Añade una página evitando duplicados (por clave) si el feed se movió. */
+  /** Appends a page, skipping duplicates (by key) in case the feed shifted. */
   function appendUnique(page: T[]): void {
     const known = new Set(items.map(opts.key));
     for (const it of page) {
@@ -68,17 +58,17 @@ export function createPagedLoader<T>(opts: PagedLoaderOptions<T>): PagedLoader<T
     }
   }
 
-  /** Acumula una página recibida y avanza el cursor/hasMore. */
+  /** Stores a received page and advances the cursor/hasMore. */
   function accept(res: PagedResult<T>): void {
     nextStart += opts.pageSize;
     hasMore = (res.rawCount ?? res.items.length) >= opts.pageSize;
     appendUnique(res.items);
   }
 
-  /** Carga la siguiente página (botón "Ver más") y la añade al grid. */
+  /** Loads the next page ("See more" button) and appends it to the grid. */
   async function loadMore(): Promise<void> {
     if (loadingMore || !hasMore) return;
-    const seq = loadSeq; // si cambia (otra fuente/búsqueda), se descarta el resultado
+    const seq = loadSeq; // if it changes (new source/search), the result is discarded
     loadingMore = true;
     const btn = $<HTMLButtonElement>(opts.moreButtonId);
     const prevHtml = btn.innerHTML;

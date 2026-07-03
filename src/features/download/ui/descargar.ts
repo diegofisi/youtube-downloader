@@ -32,10 +32,8 @@ import {
 import { closeVideoOpts, initVideoOptsModal, isVideoOptsOpen, openVideoOpts } from './video-opts-modal';
 import { addRecentLinks, closeRecentPanel, initRecentLinks, isRecentPanelOpen, lineCountLabel } from './recent-links';
 
-// Orquestador de la vista Descargar: opciones globales (tarjetas de modo y
-// chips), analyze()/startDownload() y el wiring de botones y bus. El modelo
-// vive en ../opts-model; la preview, el modal por-video y el panel Recientes
-// en sus módulos hermanos.
+// Download view orchestrator: global options, analyze()/startDownload(), button/bus wiring.
+// Model lives in ../opts-model; preview, per-video modal and Recents panel in sibling modules.
 
 // ---------- render options ----------
 const MODE_DEFS = () => [
@@ -88,7 +86,7 @@ function renderModeCards(): void {
         $('video-opts').hidden = opts.mode === 'audio';
         $('audio-opts').hidden = opts.mode !== 'audio';
         renderModeCards();
-        renderPreview(); // los badges de tamaño por tarjeta dependen del modo
+        renderPreview(); // per-card size badges depend on the mode
         refreshSummary();
       }),
     );
@@ -124,7 +122,7 @@ async function analyze(): Promise<void> {
     setEntries(await analyzeUrls(urls));
     sel.clear();
     const vids = allVideos();
-    // Auto-seleccionar solo si son pocos, para no marcar cientos sin querer.
+    // Auto-select only small batches to avoid checking hundreds by accident.
     if (vids.length <= 20) {
       for (const v of vids) {
         const st = statusOf(v);
@@ -142,10 +140,9 @@ async function analyze(): Promise<void> {
       );
     }
     renderPreview();
-    // Historial de enlaces analizados (para el botón "Recientes").
     addRecentLinks(urls);
-    // Auto-limpiar el cuadro de enlaces tras un análisis exitoso, salvo que el
-    // ajuste lo desactive; se lee fresco para respetar cambios recientes.
+    // Auto-clear the links box after a successful analysis unless the setting
+    // disables it; read fresh to honor recent changes.
     const cfg = await getSettings().catch(() => null);
     if (cfg?.clear_links_after_preview !== false) {
       $<HTMLTextAreaElement>('url-input').value = '';
@@ -187,8 +184,8 @@ function startDownload(): void {
     };
   });
   enqueue(items);
-  // Limpiar la selección para que volver a pulsar "Descargar" no encole
-  // duplicados; la preview se conserva por si se quieren elegir otros videos.
+  // Clear the selection so pressing "Download" again doesn't enqueue duplicates;
+  // the preview is kept in case other videos are picked next.
   sel.clear();
   renderPreview();
   bus.emit('nav:goto', { view: 'cola' });
@@ -203,12 +200,12 @@ function startDownload(): void {
 }
 
 export function initDescargar(): void {
-  // Las tarjetas de la preview abren el modal por-video vía inyección (evita
-  // el ciclo preview-render ⇄ video-opts-modal).
+  // Preview cards open the per-video modal via injection (avoids the
+  // preview-render ⇄ video-opts-modal import cycle).
   setOnVideoOptsClick(openVideoOpts);
 
   renderModeCards();
-  // La calidad repinta también la preview (los badges de tamaño dependen de ella).
+  // Quality also repaints the preview (size badges depend on it).
   const paintQuality = () =>
     renderChipGroup(
       'quality',
@@ -267,8 +264,8 @@ export function initDescargar(): void {
     { after: refreshSummary },
   );
 
-  // Aplicar los defaults de Ajustes (el mapeo de valores vive en el modelo;
-  // aquí solo se repinta la UI que depende de ellos).
+  // Apply Settings defaults (value mapping lives in the model; here we only
+  // repaint the UI that depends on them).
   const applyDefaultsAndPaint = (cfg: AppConfig): void => {
     applyDefaults(cfg);
     $('video-opts').hidden = opts.mode === 'audio';
@@ -302,7 +299,7 @@ export function initDescargar(): void {
     renderPreview();
   });
 
-  // Carpeta de destino: solo informativa; se cambia desde Ajustes.
+  // Destination folder: informational only; changed from Settings.
   const paintFolder = () =>
     getDownloadFolder()
       .then((p) => ($('folder-path').textContent = p))
@@ -310,10 +307,8 @@ export function initDescargar(): void {
   void paintFolder();
   $('btn-open-ajustes').addEventListener('click', () => bus.emit('nav:goto', { view: 'ajustes' }));
 
-  // Al volver a la vista: refrescar siempre la línea de carpeta (pudo cambiar
-  // en Ajustes) y re-aplicar los defaults SOLO si no hay una tanda cargada —
-  // con preview activa el usuario pudo ajustar opciones para esos videos y no
-  // hay que pisárselas a mitad de sesión.
+  // On returning to the view: always refresh the folder line (may have changed in Settings)
+  // and re-apply defaults ONLY with no batch loaded — never clobber per-batch tweaks mid-session.
   bus.on('nav:changed', ({ view }) => {
     if (view !== 'descargar') return;
     void paintFolder();
@@ -326,16 +321,15 @@ export function initDescargar(): void {
   initRecentLinks();
   initVideoOptsModal();
 
-  // Escape con prioridad: primero el modal por-video, luego el panel Recientes.
+  // Escape priority: per-video modal first, then the Recents panel.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (isVideoOptsOpen()) closeVideoOpts(false);
     else if (isRecentPanelOpen()) closeRecentPanel();
   });
 
-  // Pre-carga de urls desde otras vistas (Mi YouTube, Buscar…): añade los
-  // enlaces al textarea sin duplicar líneas y lanza el análisis. Funciona
-  // aunque la vista no esté visible; la navegación la hace el emisor.
+  // URL prefill from other views (My YouTube, Search…): adds links to the textarea without
+  // duplicating lines and triggers analysis. Works while hidden; the emitter handles navigation.
   bus.on('descargar:prefill', ({ urls }) => {
     if (!urls.length) return;
     const existing = urlInput.value
@@ -350,7 +344,7 @@ export function initDescargar(): void {
     void analyze();
   });
 
-  // Marcar "Ya descargado" en vivo cuando termina una descarga, sin re-analizar.
+  // Mark "Already downloaded" live when a download finishes, without re-analyzing.
   bus.on('download:completed', ({ url, videoId }) => {
     markDownloaded(url, videoId);
     if (hasEntries()) renderPreview();

@@ -17,7 +17,7 @@ const TITLES: Record<ViewId, string> = {
   ajustes: t('Ajustes', 'Settings'),
 };
 
-/** Lupa a 18px (I.search es de 16px, los iconos del nav van a 18). */
+/** Magnifier at 18px (I.search is 16px; nav icons are 18). */
 const searchNavIcon =
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.9"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
 
@@ -51,11 +51,11 @@ export function initShell(): void {
     applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
     bus.emit('theme:changed');
   });
-  // Repinta el icono cuando el tema cambia desde cualquier sitio (p. ej. Ajustes).
-  // Solo escucha y repinta: no vuelve a emitir, así no hay bucle.
+  // Repaints the icon when the theme changes from anywhere (e.g. Settings).
+  // Only listens and repaints: never re-emits, so no loop.
   bus.on('theme:changed', renderTheme);
 
-  // Window controls (2 juegos: traffic lights + botones)
+  // Window controls (2 sets: traffic lights + buttons)
   const wire = (ids: string[], fn: () => void) =>
     ids.forEach((id) => document.getElementById(id)?.addEventListener('click', fn));
   wire(['win-close', 'win-close-2'], () => void closeWindow());
@@ -105,7 +105,7 @@ export function initShell(): void {
   bus.on('nav:goto', ({ view }) => navigate(view as ViewId));
   bus.on('queue:count', ({ active }) => router.setBadge(active));
 
-  // Session banner: aparece cuando la sesión de YouTube caduca
+  // Session banner: appears when the YouTube session expires
   let bannerDismissed = false;
   bus.on('session:expired', () => {
     if (!bannerDismissed) document.getElementById('session-banner')!.hidden = false;

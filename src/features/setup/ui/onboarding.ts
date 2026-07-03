@@ -3,7 +3,7 @@ import { t } from '../../../core/i18n';
 import { $ } from '../../../shared/ui/dom';
 import { checkDependencies, downloadDependencies, onSetupProgress } from '../setup.api';
 
-// Perezoso (función, no constante) para no depender del orden de import de i18n.
+// Lazy (function, not constant) to avoid depending on i18n import order.
 const getSteps = () => [
   {
     name: t('Preparando el descargador', 'Setting up the downloader'),
@@ -47,7 +47,7 @@ export async function initOnboarding(): Promise<void> {
   const onb = $('onboarding');
   const finish = $<HTMLButtonElement>('onb-finish');
   const done = () => (onb.hidden = true);
-  // En modo error el botón pasa a "Reintentar" y relanza la instalación en vez de cerrar.
+  // In error mode the button becomes "Retry" and relaunches the install instead of closing.
   let retryMode = false;
   finish.addEventListener('click', () => {
     if (retryMode) {
@@ -70,7 +70,7 @@ export async function initOnboarding(): Promise<void> {
     $('onb-detail').textContent = '';
     renderSteps(0);
     let step = 0;
-    // Guardar el unlisten para no dejar el listener de Tauri vivo toda la sesión.
+    // Keep the unlisten so the Tauri listener doesn't stay alive all session.
     const unlisten = await onSetupProgress((d) => {
       if (d.step === 'ffmpeg') step = 1;
       else if (d.step === 'deno') step = 2;
@@ -84,7 +84,7 @@ export async function initOnboarding(): Promise<void> {
       $('onb-detail').textContent = '';
       setFinishEnabled(true);
     } catch (e) {
-      // Dejar el error visible y ofrecer reintentar; no continuar como si todo hubiera ido bien.
+      // Keep the error visible and offer retry; don't continue as if all went well.
       $('onb-detail').textContent = `${t('Error', 'Error')}: ${String(e)}`;
       finish.textContent = t('Reintentar', 'Retry');
       retryMode = true;

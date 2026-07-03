@@ -6,7 +6,7 @@ export function getSettings(): Promise<AppConfig> {
   return invoke<AppConfig>('get_settings');
 }
 
-/** Set completo de ajustes persistentes (comando set_settings). */
+/** Full set of persistent settings (set_settings command). */
 export interface SettingsUpdate {
   defaultQuality: string;
   defaultContainer: string;
@@ -14,7 +14,7 @@ export interface SettingsUpdate {
   defaultConcurrency: number;
   /** "video" | "audio" */
   defaultMode: string;
-  /** Plantilla de salida (sin ".%(ext)s"). */
+  /** Output template (without ".%(ext)s"). */
   defaultTemplate: string;
   defaultSubtitles: boolean;
   defaultThumbnail: boolean;

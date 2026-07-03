@@ -4,9 +4,8 @@ use super::models::AnalyzedEntry;
 use super::service;
 use crate::core::paths;
 
-/// Analiza un lote de URLs y devuelve preview (video suelto o playlist).
-/// Emite `preview-progress` {done, total} durante el análisis.
-/// `start`/`end` (opcionales, 1-based) paginan playlists/feeds con `--playlist-items`.
+/// Analyzes a batch of URLs and returns previews (single video or playlist). Emits `preview-progress` {done, total};
+/// optional 1-based `start`/`end` paginate playlists/feeds via `--playlist-items`.
 #[tauri::command]
 pub async fn analyze_urls(
     app: AppHandle,

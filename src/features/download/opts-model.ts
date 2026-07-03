@@ -3,11 +3,10 @@ import type { VideoMeta } from '../preview';
 import type { AppConfig } from '../settings';
 import type { DownloadOptions } from './download.types';
 
-// Modelo del slice de descarga: estado de opciones globales y por-video,
-// mapeos UI ↔ backend y cálculos derivados. SIN DOM: las vistas importan de
-// aquí, nunca al revés.
+// Download slice model: global and per-video option state, UI ↔ backend mappings
+// and derived calculations. No DOM: views import from here, never the reverse.
 
-// ---------- estado de opciones ----------
+// ---------- option state ----------
 export interface Opts {
   mode: 'av' | 'video' | 'audio';
   quality: string; // max|4k|1440p|1080p|720p|480p
@@ -58,9 +57,8 @@ const Q_BACKEND: Record<string, string> = {
   '720p': '720',
   '480p': '480',
 };
-// Ajustes guarda la calidad en formato backend ('max', '2160', '1080'…) y el
-// contenedor en minúsculas ('mp4'); mapear a los literales de esta vista.
-// 'auto' no tiene chip aquí: se mantiene el valor por defecto ('max').
+// Settings stores quality in backend format ('max', '2160'…) and container lowercase ('mp4');
+// map to this view's literals. 'auto' has no chip here: the default ('max') is kept.
 const SETTINGS_Q: Record<string, string> = {
   max: 'max',
   '2160': '4k',
@@ -70,7 +68,7 @@ const SETTINGS_Q: Record<string, string> = {
   '480': '480p',
 };
 const SETTINGS_C: Record<string, Opts['container']> = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
-// Mapeos UI → backend de contenedor y formato de audio (evitan casts sobre toLowerCase()).
+// UI → backend mappings for container and audio format (avoid casts on toLowerCase()).
 const CONTAINER_BACKEND: Record<Opts['container'], DownloadOptions['container']> = {
   MP4: 'mp4',
   MKV: 'mkv',
@@ -82,8 +80,8 @@ const AUDIO_BACKEND: Record<Opts['audioFmt'], DownloadOptions['audioFormat']> = 
   Opus: 'opus',
 };
 
-// Opciones efectivas de un video: globales + override parcial (evita
-// "undefined" si el override solo cambia algunos campos).
+// Effective options for a video: globals + partial override (avoids
+// "undefined" when the override only changes some fields).
 export function effectiveOpts(url: string): Opts {
   return { ...opts, ...(overrides[url] || {}) };
 }
@@ -107,18 +105,16 @@ export function fmtDescription(o: Opts): string {
 }
 
 export function sizeMB(v: VideoMeta): number {
-  // size_bytes del backend ya es ~el tamaño a 1080p (mejor video ≤1080 + audio),
-  // y Q_FACTOR['1080p'] === 1, así que el factor va directo (no dividir por max).
+  // Backend size_bytes is already ~the 1080p size (best video ≤1080 + audio) and
+  // Q_FACTOR['1080p'] === 1, so the factor applies directly (no division by max).
   const eff = effectiveOpts(v.url);
   const base = v.size_bytes ? v.size_bytes / 1048576 : 0;
   const rel = Q_FACTOR[eff.quality] ?? 1;
   return base * rel * (eff.mode === 'audio' ? 0.08 : 1);
 }
 
-// Aplicar los ajustes de "Descarga por defecto" (los defaults de modo, subs,
-// miniatura y plantilla ya no tienen controles en la vista: viven en Ajustes).
-// Si no se pueden leer, se mantienen los valores por defecto (Máxima / MP4).
-// Solo muta el estado; el repintado lo hace el orquestador (descargar.ts).
+// Applies the "Default download" settings (mode/subs/thumbnail/template live in Settings, not here).
+// Unreadable values keep the defaults. Only mutates state; the orchestrator (descargar.ts) repaints.
 export function applyDefaults(cfg: AppConfig): void {
   const q = SETTINGS_Q[cfg.default_quality];
   if (q) opts.quality = q;

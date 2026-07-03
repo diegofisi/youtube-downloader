@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// El loader cablea un botón "Ver más" real; jsdom aporta el document mínimo.
+// The loader wires a real "See more" button; jsdom provides the minimal document.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createPagedLoader, type PagedResult } from './paged-loader';
 
@@ -43,11 +43,11 @@ describe('begin() (anti-race)', () => {
     const seqVieja = loader.begin();
     const promesaVieja = loader.loadFirst(seqVieja);
 
-    const seqNueva = loader.begin(); // el usuario cambió de fuente/búsqueda
+    const seqNueva = loader.begin(); // the user switched source/search
     resuelveVieja(pagina(['viejo1', 'viejo2', 'viejo3']));
 
     expect(await promesaVieja).toBe('stale');
-    expect(loader.items).toHaveLength(0); // nada de la carga vieja se cuela
+    expect(loader.items).toHaveLength(0); // nothing from the stale load sneaks in
 
     expect(await loader.loadFirst(seqNueva)).toBe('ok');
     expect(loader.items.map((i) => i.id)).toEqual(['nuevo1']);
@@ -95,7 +95,7 @@ describe('hasMore', () => {
   });
 
   it('con rawCount manda el crudo, no el filtrado (la vista filtra en cliente)', async () => {
-    // La fuente devolvió 3 crudos pero el filtro dejó 1: puede haber más.
+    // The source returned 3 raw entries but the filter kept 1: there may be more.
     const loader = mkLoader(vi.fn().mockResolvedValue(pagina(['a'], 3)), 3);
     await loader.loadFirst(loader.begin());
     expect(loader.hasMore).toBe(true);
@@ -107,7 +107,7 @@ describe('appendUnique y "Ver más"', () => {
     const fetchPage = vi
       .fn()
       .mockResolvedValueOnce(pagina(['a', 'b', 'c']))
-      .mockResolvedValueOnce(pagina(['b', 'c', 'd'])); // el feed se corrió 1
+      .mockResolvedValueOnce(pagina(['b', 'c', 'd'])); // the feed shifted by 1
     const loader = mkLoader(fetchPage, 3);
     loader.wireMore();
     await loader.loadFirst(loader.begin());
@@ -116,7 +116,7 @@ describe('appendUnique y "Ver más"', () => {
     await flush();
 
     expect(loader.items.map((i) => i.id)).toEqual(['a', 'b', 'c', 'd']);
-    // La segunda página se pidió con el cursor avanzado (1-based inclusivo).
+    // The second page was requested with the advanced cursor (1-based inclusive).
     expect(fetchPage).toHaveBeenNthCalledWith(2, 4, 6);
   });
 
@@ -129,7 +129,7 @@ describe('appendUnique y "Ver más"', () => {
 
     document.getElementById('btn-more')!.click();
     await flush();
-    expect(fetchPage).toHaveBeenCalledTimes(1); // solo la primera página
+    expect(fetchPage).toHaveBeenCalledTimes(1); // only the first page
   });
 
   it('si "Ver más" falla con la carga viva, avisa con un toast de error', async () => {
@@ -145,6 +145,6 @@ describe('appendUnique y "Ver más"', () => {
     await flush();
 
     expect(mocks.showToast).toHaveBeenCalledWith(expect.any(String), expect.stringContaining('sin red'), 'error');
-    expect(loader.items).toHaveLength(3); // no se añadió nada
+    expect(loader.items).toHaveLength(3); // nothing was appended
   });
 });

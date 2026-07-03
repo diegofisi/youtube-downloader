@@ -1,8 +1,8 @@
-//! Resolución de rutas y binarios (única fuente; antes duplicada).
+//! Path and binary resolution (single source; previously duplicated).
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-/// Directorio base de la app: raíz del repo en dev, AppData/Local en release.
+/// App base directory: repo root in dev, AppData/Local in release.
 pub fn app_dir(app: &AppHandle) -> PathBuf {
     if cfg!(debug_assertions) {
         let exe_path = std::env::current_exe().unwrap();
@@ -23,10 +23,8 @@ pub fn app_dir(app: &AppHandle) -> PathBuf {
         }
         app.path().resource_dir().unwrap_or(exe_dir.to_path_buf())
     } else {
-        // Sin expect: si el resolver de Tauri falla (entorno raro, perfil roto),
-        // caemos a un directorio temporal escribible en vez de panicar en cada
-        // comando. El dir del ejecutable no sirve de fallback: en release suele
-        // ser Program Files (solo lectura).
+        // No expect: if Tauri's resolver fails, fall back to a writable temp dir instead of
+        // panicking. The exe dir is no fallback: in release it's usually read-only Program Files.
         let data_dir = app.path().app_local_data_dir().unwrap_or_else(|e| {
             eprintln!(
                 "No se pudo obtener el directorio de datos de la app ({}); usando temp como fallback",
@@ -47,7 +45,7 @@ pub fn binary_name(name: &str) -> String {
     }
 }
 
-/// Busca un binario en el app_dir y en su directorio padre (modo dev).
+/// Looks for a binary in app_dir and in its parent directory (dev mode).
 pub fn find_executable(app_dir: &Path, name: &str) -> Option<PathBuf> {
     let bin = binary_name(name);
     let local = app_dir.join(&bin);

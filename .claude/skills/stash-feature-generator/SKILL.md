@@ -1,41 +1,42 @@
 ---
 name: stash-feature-generator
 description: >
-  Genera código nuevo en Stash (Tauri 2 + TS vanilla, vertical slices) siguiendo
-  la arquitectura y convenciones REALES del repo. Usar cuando se pida una
-  "nueva feature", "nuevo comando" (Tauri), "nueva vista", "añadir sección",
-  "nuevo evento", "generate module", "add command/view/feature/slice", o
-  cualquier cambio que cruce la frontera frontend↔backend.
+  Generates new code in Stash (Tauri 2 + vanilla TS, vertical slices) following
+  the repo's REAL architecture and conventions. Use when asked to add a new
+  feature, a new Tauri command, a new view or section, a new event, "generate
+  module", "add command/view/feature/slice" — including the Spanish trigger
+  phrases "nueva feature", "nuevo comando", "nueva vista", "añadir sección",
+  "nuevo evento" — or any change that crosses the frontend↔backend boundary.
 ---
 
 # Stash Feature Generator
 
-Examples > prose: cada patrón de abajo existe en el código; copia el ejemplo citado en vez de inventar. Español en textos de UI y mensajes de error; inglés en código y nombres de archivo.
+Examples > prose: every pattern below exists in the code; copy the cited example instead of inventing. Spanish for UI texts and user-facing error messages; English for code, file names, and code comments (concise, max 1-2 lines).
 
-## Referencias
+## References
 
-| Archivo | Cuándo leerlo |
+| File | When to read it |
 |---|---|
-| `references/architecture.md` | Antes de crear un slice o mover código entre capas. Árboles reales, reglas ESLint, bus, decision log. |
-| `references/tauri-commands.md` | Antes de tocar un comando o evento Tauri. Tabla completa del contrato FE↔BE, serde, spawn_blocking, YtdlpCmd. |
-| `references/ui-patterns.md` | Antes de escribir cualquier vista o componente. innerHTML+rebind, componentes shared, prefijos de ids, CSS vars. |
-| `references/error-handling.md` | Errores, toasts, `error_kind`, flujo de auth en la cola. |
-| `references/i18n.md` | Cualquier texto visible nuevo. |
-| `references/conventions.md` | Naming, commits, fachadas, estilo de tests. |
-| `references/testing.md` | Antes de escribir tests (qué testear y con qué patrones). |
+| `references/architecture.md` | Before creating a slice or moving code between layers. Real trees, ESLint rules, bus, decision log. |
+| `references/tauri-commands.md` | Before touching a Tauri command or event. Full FE↔BE contract table, serde, spawn_blocking, YtdlpCmd. |
+| `references/ui-patterns.md` | Before writing any view or component. innerHTML+rebind, shared components, id prefixes, CSS vars. |
+| `references/error-handling.md` | Errors, toasts, `error_kind`, the queue's auth flow. |
+| `references/i18n.md` | Any new visible text. |
+| `references/conventions.md` | Naming, comments, commits, facades, test style. |
+| `references/testing.md` | Before writing tests (what to test and with which patterns). |
 
-## Workflow A — Nuevo comando Tauri
+## Workflow A — New Tauri command
 
-Cadena completa (mirar `library` o `settings` como slice modelo):
+Full chain (use `library` or `settings` as the model slice):
 
-1. **`src-tauri/src/features/{slice}/models.rs`** — struct de entrada/salida. Structs NUEVOS siempre con:
+1. **`src-tauri/src/features/{slice}/models.rs`** — input/output structs. NEW structs always:
    ```rust
    #[derive(Debug, Clone, Serialize, Deserialize)]
    #[serde(rename_all = "camelCase")]
-   pub struct {Thing} { pub file_path: Option<String>, /* llega como filePath */ }
+   pub struct {Thing} { pub file_path: Option<String>, /* arrives as filePath */ }
    ```
-2. **`service.rs`** — TODA la lógica. Firma típica: `pub fn {verb}(app_dir: &Path, ...) -> Result<{Thing}, String>` con mensajes en español (`format!("No se pudo …: {}", e)`). Sin `tauri::` salvo `AppHandle` si emite eventos.
-3. **`commands.rs`** — wrapper FINO:
+2. **`service.rs`** — ALL the logic. Typical signature: `pub fn {verb}(app_dir: &Path, ...) -> Result<{Thing}, String>` with user-facing messages in Spanish (`format!("No se pudo …: {}", e)`). No `tauri::` except `AppHandle` when it emits events.
+3. **`commands.rs`** — THIN wrapper:
    ```rust
    #[tauri::command]
    pub fn {verb}_{noun}(app: AppHandle, {arg}: String) -> Result<{Thing}, String> {
@@ -43,86 +44,86 @@ Cadena completa (mirar `library` o `settings` como slice modelo):
        service::{verb}(&app_dir, &{arg})
    }
    ```
-   Si el trabajo es pesado (proceso externo, `reqwest::blocking`, papelera/COM): `async fn` + `tauri::async_runtime::spawn_blocking` — copia el patrón y el comentario de `download/commands.rs::start_download` o `library/commands.rs::delete_history_file`.
-4. **`main.rs`** — añadir `{slice}::commands::{verb}_{noun}` al `tauri::generate_handler![…]`.
-5. **`src/features/{slice}/{slice}.api.ts`** — único sitio donde se puede llamar `invoke` (el lint lo impone):
+   If the work is heavy (external process, `reqwest::blocking`, trash/COM): `async fn` + `tauri::async_runtime::spawn_blocking` — copy the pattern and comment from `download/commands.rs::start_download` or `library/commands.rs::delete_history_file`.
+4. **`main.rs`** — add `{slice}::commands::{verb}_{noun}` to `tauri::generate_handler![…]`.
+5. **`src/features/{slice}/{slice}.api.ts`** — the only place allowed to call `invoke` (the lint enforces it):
    ```ts
    export function {verbNoun}({arg}: string): Promise<{Thing}> {
      return invoke<{Thing}>('{verb}_{noun}', { {arg} });
    }
    ```
-   Args planos en camelCase: Tauri los mapea solo a snake_case (`videoId` → `video_id`).
-6. **`{slice}.types.ts`** — espejo TS del modelo, camelCase.
-7. **`index.ts`** — exportar el wrapper SOLO si otro slice/app lo necesita.
-8. Verificar (checklist final).
+   Flat camelCase args: Tauri maps them to snake_case on its own (`videoId` → `video_id`).
+6. **`{slice}.types.ts`** — TS mirror of the model, camelCase.
+7. **`index.ts`** — export the wrapper ONLY if another slice/app needs it.
+8. Verify (final checklist).
 
-## Workflow B — Nueva vista/sección
+## Workflow B — New view/section
 
-1. **`index.html`** — `<section class="view" data-view="{id}">` dentro de `<main>`. Todos los ids con prefijo propio (`{pfx}-…`, ver tabla en ui-patterns). Textos estáticos en español + `data-en` / `data-en-ph` / `data-en-title` con el inglés.
-2. **`src/app/shell.ts`** — añadir el id al union `ViewId`, una entrada en `TITLES` (con `t(es, en)`) y otra en `NAV` (icono del registro `I` a 18px).
-3. **Slice** `src/features/{slice}/ui/{slice}-view.ts` exportando `init{Name}(): void` — el wiring de botones estáticos se hace UNA vez en init; las listas se repintan con innerHTML + rebind (ver ui-patterns).
-4. **`index.ts`** del slice exporta `init{Name}`.
-5. **`src/main.ts`** — llamar `init{Name}()` (con `void` delante si es async: `no-floating-promises` es error).
-6. Refresco al entrar en la vista: `bus.on('nav:changed', ({ view }) => { if (view !== '{id}') return; … })` (patrón de `library-view.ts` / `descargar.ts`).
+1. **`index.html`** — `<section class="view" data-view="{id}">` inside `<main>`. All ids carry the view's own prefix (`{pfx}-…`, see table in ui-patterns). Static texts in Spanish + `data-en` / `data-en-ph` / `data-en-title` carrying the English.
+2. **`src/app/shell.ts`** — add the id to the `ViewId` union, an entry in `TITLES` (with `t(es, en)`) and one in `NAV` (icon from the `I` registry at 18px).
+3. **Slice** `src/features/{slice}/ui/{slice}-view.ts` exporting `init{Name}(): void` — static buttons are wired ONCE in init; lists are repainted with innerHTML + rebind (see ui-patterns).
+4. The slice's **`index.ts`** exports `init{Name}`.
+5. **`src/main.ts`** — call `init{Name}()` (prefixed with `void` if async: `no-floating-promises` is an error).
+6. Refresh on entering the view: `bus.on('nav:changed', ({ view }) => { if (view !== '{id}') return; … })` (pattern from `library-view.ts` / `descargar.ts`).
 
-La vista NO importa nada de `app/`: para navegar emite `bus.emit('nav:goto', { view: '…' })`.
+The view imports NOTHING from `app/`: to navigate it emits `bus.emit('nav:goto', { view: '…' })`.
 
-## Workflow C — Nuevo evento
+## Workflow C — New event
 
-| Caso | Mecanismo |
+| Case | Mechanism |
 |---|---|
-| Slice FE → otros slices FE / shell | Bus tipado (`core/bus/event-bus.ts`) |
-| Backend Rust → frontend | Evento Tauri + wrapper en `{slice}.api.ts` |
+| FE slice → other FE slices / shell | Typed bus (`core/bus/event-bus.ts`) |
+| Rust backend → frontend | Tauri event + wrapper in `{slice}.api.ts` |
 
-**Bus:** añadir la clave a `AppEvents` (nombre `dominio:accion`, ej. `download:completed`), con payload tipado o `void`. Emisor: `bus.emit(...)`; oyentes: `bus.on(...)`. Nunca strings sueltos fuera de esa interfaz.
+**Bus:** add the key to `AppEvents` (name `domain:action`, e.g. `download:completed`), with a typed payload or `void`. Emitter: `bus.emit(...)`; listeners: `bus.on(...)`. Never loose strings outside that interface.
 
-**Tauri:** nombre en kebab-case (`download-progress`). El payload es SIEMPRE un struct serde (`preview-progress` usa tupla `(done, total)` — legado, NO imitar). En Rust: `app.emit("{event-name}", {Payload} { … })`. En el api.ts:
+**Tauri:** kebab-case name (`download-progress`). The payload is ALWAYS a serde struct (`preview-progress` uses a `(done, total)` tuple — legacy, do NOT imitate). In Rust: `app.emit("{event-name}", {Payload} { … })`. In the api.ts:
 ```ts
 export function on{X}(cb: (data: {Payload}) => void): Promise<UnlistenFn> {
   return onEvent<{Payload}>('{event-name}', cb);
 }
 ```
-El consumidor guarda el unlisten y lo libera (`descargar.ts::analyze`: `const unlisten = await onPreviewProgress(…)` … `finally { unlisten(); }`).
+The consumer keeps the unlisten and releases it (`descargar.ts::analyze`: `const unlisten = await onPreviewProgress(…)` … `finally { unlisten(); }`).
 
-## Workflow D — ¿Dónde vive la lógica compartida?
+## Workflow D — Where does shared logic live?
 
-| La lógica… | Va en |
+| The logic… | Goes in |
 |---|---|
-| Toca DOM y es genérica (tarjetas, menús, chips, toasts) | `shared/ui/` |
-| Es pura, sin DOM (formateo, escape, hashes) | `shared/lib/` |
-| Tiene dominio de UN slice (mapeos de opciones, estado de cola…) | El slice dueño; se comparte exportándola por su `index.ts` |
-| Orquesta VARIOS slices para vistas | Excepción única ya existente: `shared/ui/dl-actions.ts` (deuda documentada en eslint.config.js). NO crear más; valorar un evento de bus. |
+| Touches the DOM and is generic (cards, menus, chips, toasts) | `shared/ui/` |
+| Is pure, no DOM (formatting, escaping, hashes) | `shared/lib/` |
+| Belongs to ONE slice's domain (option mappings, queue state…) | The owning slice; shared by exporting it through its `index.ts` |
+| Orchestrates SEVERAL slices for views | Single existing exception: `shared/ui/dl-actions.ts` (debt documented in eslint.config.js). Do NOT create more; consider a bus event instead. |
 
-## Checklist final de validación
+## Final validation checklist
 
 ```
 npm run check        # tsc --noEmit + eslint src + cargo check
 npm run check:rust   # cargo check + cargo clippy -- -D warnings
-npm test             # vitest run (proyectos node + jsdom)
+npm test             # vitest run (node + jsdom projects)
 cd src-tauri && cargo test
 ```
-- [ ] Textos nuevos con `t(es, en)` (dinámicos) o `data-en` (estáticos).
-- [ ] Todo dato dinámico interpolado en innerHTML pasa por `esc()`.
-- [ ] Comando nuevo registrado en `generate_handler!` y con wrapper en su `.api.ts`.
-- [ ] Ids DOM nuevos con el prefijo de su vista.
+- [ ] New texts use `t(es, en)` (dynamic) or `data-en` (static).
+- [ ] Every dynamic value interpolated into innerHTML goes through `esc()`.
+- [ ] New command registered in `generate_handler!` and wrapped in its `.api.ts`.
+- [ ] New DOM ids use their view's prefix.
 
 ## DO NOT
 
-**El lint ya lo caza** (no pierdas tiempo intentándolo):
-- Importar `@tauri-apps/*` o `core/tauri/client` fuera de `*.api.ts` / `core/tauri/*`.
-- Importar internos de otro slice (solo su `index.ts`).
-- `features` → `app`, `shared` → `features` (salvo dl-actions), `core` → cualquiera.
-- Promesas sueltas en handlers (`no-floating-promises`).
+**The lint already catches these** (don't waste time trying):
+- Importing `@tauri-apps/*` or `core/tauri/client` outside `*.api.ts` / `core/tauri/*`.
+- Importing another slice's internals (only its `index.ts`).
+- `features` → `app`, `shared` → `features` (except dl-actions), `core` → anything.
+- Floating promises in handlers (`no-floating-promises`).
 
-**El lint NO lo caza** (disciplina manual):
-- Interpolar strings en innerHTML sin `esc()`.
-- Payloads de eventos Tauri como tuplas o valores pelados nuevos.
-- Structs serde nuevos sin `rename_all = "camelCase"` — y al revés: "arreglar" los legados snake_case (`AppConfig`, `VideoMeta`) sin plan de migración.
-- `Record`s con textos traducidos como valores estáticos (usar getters; ver i18n.md).
-- `addEventListener` dentro de un `paint()` que se re-ejecuta (acumula listeners; usar `.onclick`, ver `video-opts-modal.ts`).
-- Lógica de dominio en `commands.rs` (va en `service.rs`).
-- Trabajo bloqueante en un command async sin `spawn_blocking`.
-- Claves de localStorage fuera del prefijo `stash.` (nuevas).
-- Invocar yt-dlp con `Command::new` a mano: usar el builder `YtdlpCmd` (garantiza `--encoding utf-8` y `-- <url>`).
-- Procesos cancelables sin registrarlos en `DownloadRegistry`.
-- Persistir JSON con `fs::write` directo: usar `core::fsx::write_atomic`.
+**The lint does NOT catch these** (manual discipline):
+- Interpolating strings into innerHTML without `esc()`.
+- New Tauri event payloads as tuples or bare values.
+- New serde structs without `rename_all = "camelCase"` — and the reverse: "fixing" the legacy snake_case ones (`AppConfig`, `VideoMeta`) without a migration plan.
+- `Record`s with translated texts as static values (use getters; see i18n.md).
+- `addEventListener` inside a `paint()` that re-runs (accumulates listeners; use `.onclick`, see `video-opts-modal.ts`).
+- Domain logic in `commands.rs` (it belongs in `service.rs`).
+- Blocking work in an async command without `spawn_blocking`.
+- New localStorage keys outside the `stash.` prefix.
+- Invoking yt-dlp with a raw `Command::new`: use the `YtdlpCmd` builder (guarantees `--encoding utf-8` and `-- <url>`).
+- Cancelable processes not registered in `DownloadRegistry`.
+- Persisting JSON with a direct `fs::write`: use `core::fsx::write_atomic`.

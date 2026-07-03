@@ -6,8 +6,8 @@ use crate::core::fsx;
 
 const CONFIG_FILE: &str = "config.json";
 
-/// Actualiza los ajustes por defecto. Los parámetros `Option` solo se aplican
-/// si llegan con valor (retro-compatible con llamadas que no los envían).
+/// Updates the default settings. `Option` params only apply when present
+/// (backward compatible with callers that don't send them).
 #[allow(clippy::too_many_arguments)]
 pub fn set_defaults(
     app_dir: &Path,
@@ -63,7 +63,7 @@ pub fn save(app_dir: &Path, config: &AppConfig) -> Result<(), String> {
     let path = config_path(app_dir);
     let content = serde_json::to_string_pretty(config)
         .map_err(|e| format!("Error al serializar config: {}", e))?;
-    // Escritura atómica: un corte a mitad no deja config.json corrupto.
+    // Atomic write: a mid-write crash can't corrupt config.json.
     fsx::write_atomic(&path, content).map_err(|e| format!("Error al guardar config: {}", e))
 }
 

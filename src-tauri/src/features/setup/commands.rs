@@ -13,7 +13,7 @@ pub fn check_dependencies(app: AppHandle) -> DependencyStatus {
 #[tauri::command]
 pub async fn download_dependencies(app: AppHandle) -> Result<(), String> {
     let dir = paths::app_dir(&app);
-    // spawn_blocking: usa reqwest::blocking dentro; no debe correr en el runtime async.
+    // spawn_blocking: uses reqwest::blocking inside; must not run on the async runtime.
     tauri::async_runtime::spawn_blocking(move || service::download_dependencies(&app, &dir))
         .await
         .map_err(|e| format!("Error interno en el hilo de configuración: {}", e))?

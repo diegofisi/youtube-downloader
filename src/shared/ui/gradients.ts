@@ -1,4 +1,4 @@
-/** Paleta de degradados para miniaturas sin imagen. */
+/** Gradient palette for imageless thumbnails. */
 const GRADS = [
   'linear-gradient(135deg,#3a2d6b,#c2456b)',
   'linear-gradient(135deg,#1f6b52,#2b3b4d)',
@@ -7,12 +7,12 @@ const GRADS = [
   'linear-gradient(135deg,#1f4d6b,#33335a)',
 ];
 
-/** Degradado estable por id (hash h*31 sobre la paleta). */
+/** Stable per-id gradient (h*31 hash over the palette). */
 export function gradFor(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
   return GRADS[h % GRADS.length];
 }
 
-/** Degradado fijo de las tarjetas de video (Mi YouTube / Buscar). */
+/** Fixed gradient for video cards (My YouTube / Search). */
 export const CARD_GRAD = 'linear-gradient(135deg,#3a2d6b,#c2456b)';

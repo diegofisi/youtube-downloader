@@ -1,4 +1,4 @@
-//! Features del producto (screaming architecture). Cada carpeta = una capacidad.
+//! Product features (screaming architecture). Each folder = one capability.
 pub mod download;
 pub mod library;
 pub mod preview;

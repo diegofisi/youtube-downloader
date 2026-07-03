@@ -1,16 +1,12 @@
-/**
- * Tarjeta de video del grid (Mi YouTube / Buscar) y estados vacíos/de carga.
- * Componentes de presentación puros: reciben un tipo estructural mínimo
- * (VideoMeta es compatible) y devuelven HTML; los eventos se conectan con
- * wireVideoCards() sobre el contenedor ya pintado.
- */
+// Grid video card (My YouTube / Search) and empty/loading states. Pure presentational: take a
+// minimal structural type (VideoMeta fits), return HTML; events wire via wireVideoCards() after paint.
 import { I } from './icons';
 import { CARD_GRAD } from './gradients';
 import { esc } from '../lib/html';
 import { fmtDuration } from '../lib/format';
 import { t } from '../../core/i18n';
 
-/** Campos mínimos que necesita la tarjeta (estructural: VideoMeta lo cumple). */
+/** Minimum fields the card needs (structural: VideoMeta satisfies it). */
 export interface CardMedia {
   url: string;
   title: string;
@@ -19,17 +15,15 @@ export interface CardMedia {
   duration?: number;
 }
 
-/** Checkbox overlay de selección (esquina superior izquierda de la tarjeta). */
+/** Selection checkbox overlay (top-left corner of the card). */
 function checkOverlay(on: boolean): string {
   return `<button class="mc-check" style="position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;border:1.8px solid ${
     on ? 'var(--accent)' : 'rgba(255,255,255,.7)'
   };background:${on ? 'var(--accent)' : 'rgba(0,0,0,.4)'};color:#fff;backdrop-filter:blur(4px)">${on ? I.check : ''}</button>`;
 }
 
-/**
- * Tarjeta de video del grid: thumbnail (CARD_GRAD de fondo mientras carga),
- * badge de duración, checkbox de selección, botón ⬇, título a 2 líneas y canal.
- */
+/** Grid video card: thumbnail (CARD_GRAD background while loading), duration
+ * badge, selection checkbox, ⬇ button, 2-line title and channel. */
 export function videoCard(v: CardMedia, selected: boolean): string {
   const thumbInner = v.thumbnail
     ? `<img src="${esc(v.thumbnail)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" alt="">`
@@ -50,10 +44,8 @@ export function videoCard(v: CardMedia, selected: boolean): string {
   </div>`;
 }
 
-/**
- * Conecta el checkbox y el botón ⬇ de las tarjetas ya pintadas en `list`.
- * `toggle` recibe la url de la tarjeta; `download` el botón ancla y el item.
- */
+/** Wires the checkbox and ⬇ button of the cards already painted in `list`.
+ * `toggle` gets the card url; `download` gets the anchor button and the item. */
 export function wireVideoCards<T extends CardMedia>(
   list: HTMLElement,
   items: T[],
@@ -73,11 +65,8 @@ export function wireVideoCards<T extends CardMedia>(
   });
 }
 
-/**
- * Estado vacío/error del grid (título + mensaje). `actionHtml` (opcional)
- * inyecta un CTA ya construido por el llamador (p. ej. botón de reconexión);
- * el llamador es responsable de escapar su contenido y de su wiring.
- */
+/** Grid empty/error state (title + message). Optional `actionHtml` injects a caller-built
+ * CTA (e.g. reconnect button); the caller is responsible for escaping and wiring it. */
 export function stateCard(title: string, msg: string, actionHtml = ''): string {
   return `<div style="grid-column:1/-1;text-align:center;padding:50px 20px;border:1.5px dashed var(--border2);border-radius:16px;color:var(--text3)">
     <div style="font-size:14px;font-weight:600;color:var(--text2)">${esc(title)}</div>
@@ -86,16 +75,13 @@ export function stateCard(title: string, msg: string, actionHtml = ''): string {
   </div>`;
 }
 
-/** Fila de carga del grid (spinner + texto). `labelHtml` ya viene escapado por el llamador. */
+/** Grid loading row (spinner + text). `labelHtml` arrives pre-escaped by the caller. */
 export function loadingCard(labelHtml: string): string {
   return `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:9px;padding:40px;color:var(--text2);font-size:13px">${I.spinner} ${labelHtml}</div>`;
 }
 
-/**
- * Barra de píldoras de filtro (tabs de Mi YouTube, chips de Buscar). No se
- * re-renderiza sola: `onPick` debe repintar (y no se llama si la píldora ya
- * estaba activa).
- */
+/** Filter pill bar (My YouTube tabs, Search chips). Doesn't re-render itself:
+ * `onPick` must repaint (and isn't called if the pill was already active). */
 export function renderPillBar(
   el: HTMLElement,
   items: readonly { key: string; label: string }[],

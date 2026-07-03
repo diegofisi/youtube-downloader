@@ -8,9 +8,9 @@ export function getHistory(): Promise<LibraryEntry[]> {
 export interface AddHistoryMeta {
   videoId?: string;
   thumbnail?: string;
-  /** Duración en segundos. */
+  /** Duration in seconds. */
   duration?: number;
-  /** Ruta absoluta del archivo descargado. */
+  /** Absolute path of the downloaded file. */
   filePath?: string;
 }
 
@@ -35,10 +35,8 @@ export function removeHistoryItem(id: string): Promise<void> {
   return invoke('remove_history_item', { id });
 }
 
-/**
- * Borra el archivo de una entrada (papelera si es posible, permanente como
- * fallback) y elimina la entrada del historial.
- */
+/** Deletes an entry's file (trash if possible, permanent as fallback)
+ * and removes the entry from history. */
 export function deleteHistoryFile(id: string): Promise<'trash' | 'permanent' | 'no_file'> {
   return invoke<'trash' | 'permanent' | 'no_file'>('delete_history_file', { id });
 }

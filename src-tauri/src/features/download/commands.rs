@@ -13,12 +13,11 @@ pub async fn start_download(
 ) -> Result<DownloadResult, String> {
     let app_dir = paths::app_dir(&app);
 
-    // spawn_blocking usa el pool bloqueante de tokio (cientos de hilos), así una
-    // descarga larga NO ocupa un worker del runtime async (que congelaría analyze_urls,
-    // login, etc.).
+    // spawn_blocking uses tokio's blocking pool, so a long download does NOT
+    // occupy an async runtime worker (which would freeze analyze_urls, login, etc.).
     tauri::async_runtime::spawn_blocking(move || {
-        // El registry vive en el State de Tauri; se recupera desde el handle
-        // (State<> no puede moverse a un hilo bloqueante).
+        // The registry lives in Tauri State; grab it from the handle
+        // (State<> can't move into a blocking thread).
         let registry = app.state::<DownloadRegistry>();
         service::start(&app, &registry, &app_dir, &url, &options)
     })
@@ -28,7 +27,7 @@ pub async fn start_download(
 
 #[tauri::command]
 pub fn cancel_download(registry: State<'_, DownloadRegistry>, url: Option<String>) -> bool {
-    // Marca cancelled y mata el PID bajo el mismo lock: cubre también la
-    // ventana sin proceso del reintento post-cache y la simulación de nombre.
+    // Sets cancelled and kills the PID under one lock: also covers the
+    // process-less window of the post-cache retry and the name simulation.
     registry.cancel(url.as_deref())
 }

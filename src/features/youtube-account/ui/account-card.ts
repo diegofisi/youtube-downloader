@@ -1,9 +1,5 @@
-/**
- * Tarjeta de cuenta/sesión de "Mi YouTube": caché en memoria de AccountInfo
- * (single-flight), pintado de avatar/nombre/badge, alternancia de los paneles
- * logged-in/logged-out y logout. Módulo interno del slice youtube-account:
- * NO se exporta por la fachada (solo lo consume account-view).
- */
+// "My YouTube" account/session card: in-memory AccountInfo cache (single-flight), avatar/name/badge
+// painting, logged-in/out panel toggling, logout. Slice-internal: only account-view consumes it.
 import { $ } from '../../../shared/ui/dom';
 import { showToast } from '../../../shared/ui/toast';
 import { showModal } from '../../../shared/ui/modal';
@@ -19,46 +15,44 @@ import {
 } from '../../session';
 
 interface AccountCardHooks {
-  /** Sesión activa/caducada tras updateConnection: la vista decide si recargar el grid. */
+  /** Active/expired session after updateConnection: the view decides whether to reload the grid. */
   onLoggedIn: () => void;
-  /** Logout confirmado: la vista limpia su estado (grid, selección, playlist abierta). */
+  /** Logout confirmed: the view clears its state (grid, selection, open playlist). */
   onLoggedOut: () => void;
 }
 let hooks: AccountCardHooks = { onLoggedIn: () => {}, onLoggedOut: () => {} };
 
-/** Abre el login de YouTube con toast de error (login/reconexión). */
+/** Opens the YouTube login with an error toast (login/reconnect). */
 export function openLogin(): void {
   openYouTubeLogin().catch(() => showToast(t('No se pudo abrir el login', 'Could not open login'), '', 'error'));
 }
 
-// ---------- info real de la cuenta (nombre, handle y avatar) ----------
-/** Caché en memoria de la cuenta conectada (se invalida al logout/reconectar). */
+// ---------- real account info (name, handle, avatar) ----------
+/** In-memory cache of the connected account (invalidated on logout/reconnect). */
 let accountInfo: AccountInfo | null = null;
-/** Promesa en curso: evita pedir la cuenta más de una vez por sesión. */
+/** In-flight promise: avoids fetching the account more than once per session. */
 let accountInfoPromise: Promise<AccountInfo | null> | null = null;
 
 export function invalidateAccountInfo(): void {
   accountInfo = null;
   accountInfoPromise = null;
-  applyAccountInfo(); // restaura la UI genérica ("A" + "Cuenta de YouTube")
+  applyAccountInfo(); // restores the generic UI ("A" + "YouTube account")
 }
 
-/** Pide getAccountInfo() una sola vez y pinta el resultado al llegar. */
+/** Calls getAccountInfo() only once and paints the result when it arrives. */
 function ensureAccountInfo(): void {
   if (accountInfoPromise) return;
   const p = getAccountInfo().catch(() => null);
   accountInfoPromise = p;
   void p.then((info) => {
-    if (p !== accountInfoPromise) return; // invalidada mientras cargaba
+    if (p !== accountInfoPromise) return; // invalidated while loading
     accountInfo = info;
     applyAccountInfo();
   });
 }
 
-/**
- * Pinta (o restaura) avatar y nombre en la tarjeta de cuenta.
- * Los ids `acc-avatar`/`acc-name` se asignan dinámicamente en initAccountCard().
- */
+/** Paints (or restores) avatar and name on the account card.
+ * The `acc-avatar`/`acc-name` ids are assigned dynamically in initAccountCard(). */
 function applyAccountInfo(): void {
   const avatar = document.getElementById('acc-avatar');
   const nameEl = document.getElementById('acc-name');
@@ -68,7 +62,7 @@ function applyAccountInfo(): void {
     nameEl.textContent = accountInfo.name;
     const prev = avatar.querySelector('img');
     if (accountInfo.avatarUrl && prev?.getAttribute('src') !== accountInfo.avatarUrl) {
-      // El degradado del div queda de fondo mientras carga y si la imagen falla.
+      // The div's gradient stays as background while loading and if the image fails.
       avatar.textContent = '';
       const img = document.createElement('img');
       img.alt = '';
@@ -86,7 +80,7 @@ function applyAccountInfo(): void {
     nameEl.textContent = t('Cuenta de YouTube', 'YouTube account');
   }
 
-  // La descripción depende del estado (conectada/caducada): re-renderizar.
+  // The description depends on state (connected/expired): re-render.
   if (!$('yt-logged-in').hidden) renderAccountCard();
 }
 
@@ -151,11 +145,11 @@ async function handleLogout(): Promise<void> {
   }
 }
 
-/** Asigna los ids dinámicos de la tarjeta y conecta login/reconexión/logout. */
+/** Assigns the card's dynamic ids and wires login/reconnect/logout. */
 export function initAccountCard(h: AccountCardHooks): void {
   hooks = h;
-  // Ids dinámicos (sin tocar index.html) para el círculo del avatar (div con
-  // la "A", primer hijo de la tarjeta) y el nombre ("Cuenta de YouTube").
+  // Dynamic ids (without touching index.html) for the avatar circle (div with
+  // the "A", first child of the card) and the name ("YouTube account").
   const accCard = $('btn-yt-logout').parentElement as HTMLElement;
   const avatarDiv = accCard.firstElementChild as HTMLElement | null;
   if (avatarDiv) avatarDiv.id = 'acc-avatar';

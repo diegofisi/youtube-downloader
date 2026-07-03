@@ -1,4 +1,4 @@
-//! Infraestructura transversal (sin dominio). Cada feature la consume.
+//! Cross-cutting infrastructure (no domain logic); consumed by every feature.
 pub mod fsx;
 pub mod models;
 pub mod paths;

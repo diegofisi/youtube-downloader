@@ -15,7 +15,7 @@ pub fn get_session_status(app: AppHandle) -> String {
 #[tauri::command]
 pub async fn get_account_info(app: AppHandle) -> Result<Option<AccountInfo>, String> {
     let app_dir = paths::app_dir(&app);
-    // spawn_blocking: usa reqwest::blocking; no debe correr en el runtime async.
+    // spawn_blocking: uses reqwest::blocking; must not run on the async runtime.
     tauri::async_runtime::spawn_blocking(move || service::get_account_info(&app_dir))
         .await
         .map_err(|e| format!("Error interno consultando la cuenta: {}", e))?
@@ -77,17 +77,13 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Intenta refrescar la sesión de YouTube SIN interacción del usuario.
-///
-/// Abre una ventana oculta con la URL de login pasivo: si el perfil persistente
-/// del webview aún tiene la sesión de Google viva, Google redirige directo a
-/// youtube.com y podemos re-extraer cookies frescas. Si tras ~20s seguimos en
-/// accounts.google.com (pide interacción), resolvemos `false`.
+/// Refreshes the YouTube session WITHOUT user interaction: a hidden window loads the passive login URL; if Google's session is still alive it redirects straight to youtube.com and fresh cookies are re-extracted.
+/// Still on accounts.google.com after ~20s (interaction required) resolves `false`.
 #[tauri::command]
 pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
     const LABEL: &str = "youtube-login-silent";
 
-    // No duplicar: si quedó una ventana anterior, cerrarla antes de reintentar.
+    // Avoid duplicates: close any leftover window before retrying.
     if let Some(existing) = app.get_webview_window(LABEL) {
         existing.close().ok();
     }
@@ -96,8 +92,8 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
         .parse()
         .map_err(|e| format!("URL inválida: {}", e))?;
 
-    // Canal para esperar el resultado desde el callback on_page_load.
-    // El Sender va dentro de un Mutex<Option<..>> para consumirlo una sola vez.
+    // Channel to await the result from the on_page_load callback.
+    // The Sender sits in a Mutex<Option<..>> so it's consumed exactly once.
     let (tx, rx) = std::sync::mpsc::channel::<bool>();
     let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
     let tx_for_cb = std::sync::Arc::clone(&tx);
@@ -113,7 +109,7 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
                     let url = payload.url().to_string();
 
                     if url.contains("youtube.com") && !url.contains("accounts.google.com") {
-                        // Aterrizamos en YouTube sin interacción: la sesión sigue viva.
+                        // Landed on YouTube without interaction: the session is still alive.
                         let sender = tx_for_cb.lock().unwrap().take();
                         let Some(sender) = sender else { return };
 
@@ -149,7 +145,7 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
         ));
     }
 
-    // Esperar el resultado con timeout (~20s) sin bloquear el runtime async.
+    // Wait for the result with a ~20s timeout without blocking the async runtime.
     let outcome = tauri::async_runtime::spawn_blocking(move || {
         rx.recv_timeout(std::time::Duration::from_secs(20))
     })
@@ -157,14 +153,14 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
 
     let success = match outcome {
         Ok(Ok(ok)) => ok,
-        // Timeout o canal cerrado: no aterrizó en youtube.com (pide interacción).
+        // Timeout or closed channel: never landed on youtube.com (interaction required).
         _ => {
             println!("[silent-login] Timeout: la sesión de Google requiere interacción");
             false
         }
     };
 
-    // Invalidar el sender para que un aterrizaje tardío no haga trabajo extra.
+    // Invalidate the sender so a late landing does no extra work.
     tx.lock().unwrap().take();
 
     if let Some(win) = app.get_webview_window(LABEL) {

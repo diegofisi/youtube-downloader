@@ -26,7 +26,7 @@ export function showModal(title: string, message: string, showCancel = false): P
       cleanup();
       resolve(false);
     };
-    // Cerrar con Escape o click en el fondo cuenta como cancelar.
+    // Closing with Escape or backdrop click counts as cancel.
     const onOverlayClick = (e: MouseEvent) => {
       if (e.target === overlay) onCancel();
     };

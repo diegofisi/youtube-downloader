@@ -7,11 +7,8 @@ import { gradFor } from '../../../shared/ui/gradients';
 import type { AnalyzedEntry, VideoMeta, PlaylistMeta } from '../../preview';
 import { Q_LABEL, effectiveOpts, fmtDescription, opts, overrides, sizeMB } from '../opts-model';
 
-// Vista de la preview de análisis: tarjetas de video, grupos de playlist,
-// toolbar y resumen. El estado de la preview vive aquí (y no en un fichero
-// aparte) porque renderPreview/refreshSummary son sus únicos consumidores
-// intensivos; el orquestador y el modal lo tocan vía los accesores exportados,
-// lo que deja las dependencias en una sola dirección (modelo ← vista).
+// Analysis preview view: video cards, playlist groups, toolbar and summary. Preview state lives
+// here (its heaviest consumers); orchestrator/modal use exported accessors, keeping deps one-way.
 
 // ---------- preview state ----------
 let entries: AnalyzedEntry[] = [];
@@ -37,9 +34,8 @@ export function toggleOnlyDownloadable(): void {
   onlyDownloadable = !onlyDownloadable;
 }
 
-// El modal de opciones por-video se abre desde estas tarjetas, pero el modal
-// también repinta la preview al cerrarse; para no crear un ciclo de imports,
-// la vista recibe el handler por inyección (lo cablea descargar.ts en init).
+// The per-video options modal opens from these cards but also repaints the preview on close;
+// to avoid an import cycle the handler is injected (wired by descargar.ts in init).
 let onVideoOptsClick: (url: string) => void = () => {};
 export function setOnVideoOptsClick(fn: (url: string) => void): void {
   onVideoOptsClick = fn;
@@ -148,8 +144,8 @@ function videoCard(v: VideoMeta): string {
   const color = dup ? 'var(--text3)' : meta.color;
   const label = dup ? t('Duplicado', 'Duplicate') : meta.label;
   const ov = overrides[v.url];
-  // Opciones efectivas: globales + override parcial (evita "undefined" si el
-  // override solo cambia algunos campos).
+  // Effective options: globals + partial override (avoids "undefined" when
+  // the override only changes some fields).
   const eff = effectiveOpts(v.url);
   const ovLabel = ov
     ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent);background:var(--accentSoft);padding:2px 7px;border-radius:6px" title="${t('Opciones personalizadas de este video', 'Custom options for this video')}">${esc(fmtDescription(eff))}</span>`
@@ -284,7 +280,7 @@ export function renderPreview(): void {
 
   // toolbar
   const total = vids.length;
-  $('preview-count-label').textContent = `${total} video${total === 1 ? '' : 's'}`; // «video(s)» es igual en ambos idiomas
+  $('preview-count-label').textContent = `${total} video${total === 1 ? '' : 's'}`; // "video(s)" is the same in both languages
   $('btn-filter-dl').hidden = false;
   $('btn-select-all').hidden = false;
   const selectable = vids.filter((v) => STATUS_META[statusOf(v)].downloadable);
@@ -303,7 +299,7 @@ export function renderPreview(): void {
 
 export function refreshSummary(): void {
   const chosen = allVideos().filter((v) => sel.has(v.url) && STATUS_META[statusOf(v)].downloadable);
-  // Cuántos de los seleccionados llevan opciones personalizadas (override no vacío).
+  // How many selected videos carry custom options (non-empty override).
   const custom = chosen.filter((v) => overrides[v.url] && Object.keys(overrides[v.url]).length > 0).length;
   $('sel-count').textContent = t(
     `${chosen.length} seleccionados${custom > 0 ? ` · ${custom} personalizado${custom === 1 ? '' : 's'}` : ''}`,

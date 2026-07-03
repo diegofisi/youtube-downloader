@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fmtDuration, fmtSize, timeAgo } from './format';
 
-// Nota: i18n cae a 'es' cuando localStorage está vacío/no disponible, así que
-// las cadenas esperadas de timeAgo son las españolas.
+// Note: i18n falls back to 'es' when localStorage is empty/unavailable,
+// so the expected timeAgo strings are the Spanish ones.
 
 describe('fmtDuration', () => {
   it('devuelve cadena vacía para 0 o undefined', () => {

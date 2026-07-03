@@ -3,11 +3,9 @@ import { t } from '../../../core/i18n';
 import { $ } from '../../../shared/ui/dom';
 import { timeAgo } from '../../../shared/lib/format';
 
-// ---------- historial de enlaces recientes (localStorage) ----------
-// Nota: no usa shared/ui/anchored-menu a propósito — ese helper crea un menú
-// flotante genérico de items icono+etiqueta, mientras que este panel es un
-// elemento fijo del layout (#recent-panel) con filas ricas (url en mono +
-// timeAgo + pie "Limpiar recientes") y cierre coordinado con el modal.
+// ---------- recent links history (localStorage) ----------
+// Deliberately NOT anchored-menu: that helper builds a generic floating icon+label menu, while
+// this is a fixed layout element (#recent-panel) with rich rows and modal-coordinated closing.
 
 const RECENT_KEY = 'stash.recentLinks';
 interface RecentLink {
@@ -20,7 +18,7 @@ function loadRecents(): RecentLink[] {
     if (Array.isArray(raw))
       return (raw as RecentLink[]).filter((r) => r && typeof r.url === 'string' && typeof r.ts === 'number');
   } catch {
-    /* dato corrupto: se ignora */
+    /* corrupt data: ignored */
   }
   return [];
 }
@@ -32,7 +30,7 @@ export function addRecentLinks(urls: string[]): void {
   try {
     localStorage.setItem(RECENT_KEY, JSON.stringify(out));
   } catch {
-    /* sin espacio: no es crítico */
+    /* out of space: not critical */
   }
 }
 export function lineCountLabel(n: number): string {
@@ -61,7 +59,7 @@ function renderRecentPanel(): void {
     </div>`;
   panel.querySelectorAll<HTMLElement>('.rl-item').forEach((b) =>
     b.addEventListener('click', () => {
-      // Añade el enlace al textarea sin duplicar líneas y actualiza el contador.
+      // Adds the link to the textarea without duplicating lines and updates the counter.
       const input = $<HTMLTextAreaElement>('url-input');
       const lines = input.value
         .split('\n')
@@ -76,13 +74,13 @@ function renderRecentPanel(): void {
     try {
       localStorage.removeItem(RECENT_KEY);
     } catch {
-      /* ignorar */
+      /* ignore */
     }
     renderRecentPanel();
   });
 }
 
-/** ¿Está visible el panel? (para el Escape coordinado en descargar.ts). */
+/** Is the panel visible? (for the coordinated Escape in descargar.ts). */
 export function isRecentPanelOpen(): boolean {
   return !$('recent-panel').hidden;
 }
@@ -90,11 +88,8 @@ export function closeRecentPanel(): void {
   $('recent-panel').hidden = true;
 }
 
-/**
- * Panel de enlaces recientes: anclado a la cabecera del cuadro de enlaces;
- * se cierra con click fuera o Escape (el Escape lo registra descargar.ts,
- * que da prioridad al modal por-video si está abierto).
- */
+/** Recent links panel: anchored to the links box header; closes on outside click or
+ * Escape (registered by descargar.ts, which prioritizes the per-video modal if open). */
 export function initRecentLinks(): void {
   const recentPanel = $('recent-panel');
   $('btn-recents').addEventListener('click', (e) => {

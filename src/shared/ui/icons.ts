@@ -1,4 +1,4 @@
-/** Set de iconos del diseño Stash (SVG string, currentColor). */
+/** Stash design icon set (SVG string, currentColor). */
 export const I: Record<string, string> = {
   download:
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M5 18v1.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',

@@ -1,18 +1,5 @@
-/**
- * Vista "Buscar": busca videos en YouTube (yt-dlp sobre /results) y permite
- * descargarlos sin salir de la app. Calca los patrones de account-view:
- * paginación con --playlist-items vía analyzeUrls, loadSeq, selección y
- * mini-menú "Descargar / Descarga personalizada" por tarjeta.
- *
- * Estrategia por chip (verificada empíricamente con el yt-dlp de la app):
- * - Todo:   /results?search_query=Q                → todo tipo; se filtran
- *           canales/playlists en cliente (is_playlist) porque no son descargables
- *           como video suelto.
- * - Videos: &sp=EgIQAQ%3D%3D (filtro "Tipo: Video") → solo videos, server-side.
- * - Shorts: &sp=EgQQARgB (Video + duración <4 min)  → no existe sp fiable solo
- *           para Shorts y las entradas planas siempre traen url watch?v= (nunca
- *           /shorts/), así que se afina en cliente con duración ≤ 180 s.
- */
+// "Search" view: yt-dlp over /results, mirroring account-view patterns (paged analyzeUrls, loadSeq,
+// selection, per-card download menu). Chip strategy (empirically verified): see CHIP_SP below.
 import { esc } from '../../../shared/lib/html';
 import { bus } from '../../../core/bus/event-bus';
 import { showToast } from '../../../shared/ui/toast';
@@ -32,16 +19,17 @@ const CHIPS = [
 ] as const;
 type ChipKey = (typeof CHIPS)[number]['key'];
 
-/** sp del buscador de YouTube por chip (ya URL-encoded para pegar a la query). */
+/** YouTube search `sp` per chip (already URL-encoded). "All" filters channels/playlists client-side;
+ * no reliable Shorts-only sp exists and flat entries always use watch?v=, so Shorts refine client-side. */
 const CHIP_SP: Record<ChipKey, string> = {
   todo: '',
-  videos: '&sp=EgIQAQ%3D%3D', // Tipo: Video
-  shorts: '&sp=EgQQARgB', // Tipo: Video + duración < 4 min (se afina en cliente)
+  videos: '&sp=EgIQAQ%3D%3D', // Type: Video (server-side)
+  shorts: '&sp=EgQQARgB', // Type: Video + duration < 4 min (refined client-side)
 };
-/** Shorts hoy pueden durar hasta 3 minutos. */
+/** Shorts can currently last up to 3 minutes. */
 const SHORTS_MAX_SECONDS = 180;
 
-/** Tamaño de página para la paginación con "Ver más". */
+/** Page size for the "See more" pagination. */
 const PAGE = 50;
 
 let query = '';
@@ -51,10 +39,10 @@ const sel = new Set<string>();
 function searchUrl(): string {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}${CHIP_SP[chip]}`;
 }
-/** Afina la página en cliente según el chip (ver cabecera del archivo). */
+/** Refines the page client-side per chip (see CHIP_SP note). */
 function clientFilter(page: VideoMeta[]): VideoMeta[] {
-  // En todos los chips descartamos canales/playlists (entradas YoutubeTab):
-  // aquí solo se descargan videos sueltos.
+  // All chips drop channels/playlists (YoutubeTab entries): only single videos
+  // are downloadable here.
   const vids = page.filter((v) => !v.is_playlist);
   if (chip === 'shorts')
     return vids.filter((v) => v.url.includes('/shorts/') || (v.duration != null && v.duration <= SHORTS_MAX_SECONDS));
@@ -64,7 +52,7 @@ function clientFilter(page: VideoMeta[]): VideoMeta[] {
 const loader = createPagedLoader<VideoMeta>({
   pageSize: PAGE,
   key: (v) => v.id || v.url,
-  // rawCount: nº de entradas crudas (hasMore se decide antes del filtrado en cliente).
+  // rawCount: raw entry count (hasMore is decided before client-side filtering).
   fetchPage: async (start, end) => {
     const raw = flatten(await analyzeUrls([searchUrl()], { start, end }));
     return { items: clientFilter(raw), rawCount: raw.length };
@@ -78,12 +66,12 @@ function renderChips(): void {
   renderPillBar($('search-chips'), CHIPS, chip, (key) => {
     chip = key as ChipKey;
     renderChips();
-    if (query) void doSearch(); // re-busca la query actual con el nuevo filtro
+    if (query) void doSearch(); // re-search the current query with the new filter
   });
 }
 
 function renderList(): void {
-  closeAnchoredMenu(); // el grid se re-renderiza con innerHTML: el ancla deja de existir
+  closeAnchoredMenu(); // the grid is re-rendered via innerHTML: the anchor node no longer exists
   const videos = loader.items;
   $('search-empty').hidden = true;
   $('search-count').textContent = videos.length
@@ -111,7 +99,7 @@ function renderList(): void {
   });
 }
 
-// ---------- carga ----------
+// ---------- loading ----------
 async function doSearch(): Promise<void> {
   const q = $<HTMLInputElement>('search-input').value.trim();
   if (!q) {
@@ -129,7 +117,7 @@ async function doSearch(): Promise<void> {
   $('search-empty').hidden = true;
   $('search-list').innerHTML = loadingCard(`${t('Buscando', 'Searching')} “${esc(query)}”…`);
   try {
-    if ((await loader.loadFirst(seq)) === 'stale') return; // llegó tarde: hay otra búsqueda en curso
+    if ((await loader.loadFirst(seq)) === 'stale') return; // arrived late: another search is in flight
     if (loader.items.length === 0 && !loader.hasMore) {
       const chipLabel = CHIPS.find((c) => c.key === chip)!.label;
       $('search-list').innerHTML = stateCard(

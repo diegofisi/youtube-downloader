@@ -1,4 +1,4 @@
-//! Modelo de configuración persistente de la app (config.json).
+//! Persistent app configuration model (config.json).
 use serde::{Deserialize, Serialize};
 
 fn default_quality() -> String {
@@ -44,7 +44,7 @@ pub struct AppConfig {
     /// "video" | "audio"
     #[serde(default = "default_mode")]
     pub default_mode: String,
-    /// Plantilla de salida (sin ".%(ext)s").
+    /// Output template (without ".%(ext)s").
     #[serde(default = "default_template")]
     pub default_template: String,
     #[serde(default = "default_subtitles")]
@@ -76,8 +76,8 @@ impl Default for AppConfig {
 mod tests {
     use super::*;
 
-    // Contrato de retro-compatibilidad: un config.json viejo (sin los campos
-    // añadidos después) debe deserializar con los defaults de serde, nunca fallar.
+    // Backward-compat contract: an old config.json (missing later-added fields)
+    // must deserialize with the serde defaults, never fail.
 
     #[test]
     fn config_json_vacio_deserializa_con_todos_los_defaults() {
@@ -96,8 +96,8 @@ mod tests {
 
     #[test]
     fn config_json_viejo_conserva_lo_suyo_y_rellena_los_campos_nuevos() {
-        // Formato de la primera versión: solo carpeta, calidad, contenedor,
-        // audio y concurrencia (sin modo/plantilla/subs/miniatura/clear_links).
+        // First-version format: only folder, quality, container, audio and
+        // concurrency (no mode/template/subs/thumbnail/clear_links).
         let viejo = r#"{
             "download_folder": "C:\\Descargas",
             "default_quality": "1080",
@@ -111,7 +111,7 @@ mod tests {
         assert_eq!(cfg.default_container, "mkv");
         assert_eq!(cfg.default_audio_format, "m4a");
         assert_eq!(cfg.default_concurrency, 2);
-        // Campos nuevos → defaults.
+        // New fields → defaults.
         assert_eq!(cfg.default_mode, "video");
         assert_eq!(cfg.default_template, "%(title)s [%(id)s]");
         assert!(!cfg.default_subtitles);
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn el_default_de_rust_y_el_de_serde_coinciden() {
-        // Si alguien cambia un default en un sitio y no en el otro, este test avisa.
+        // Catches a default changed in one place but not the other.
         let por_serde: AppConfig = serde_json::from_str("{}").unwrap();
         let por_rust = AppConfig::default();
         assert_eq!(

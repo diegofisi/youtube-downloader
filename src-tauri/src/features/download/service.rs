@@ -18,8 +18,8 @@ fn get_output_dir(app_dir: &Path) -> PathBuf {
     dir
 }
 
-/// Clasifica el texto de error de yt-dlp: "auth" (sesión/cookies inválidas),
-/// "cache" (HTTP 403 / fragmentos forbidden, típico de cache viciado) o None.
+/// Classifies yt-dlp error text: "auth" (invalid session/cookies),
+/// "cache" (HTTP 403 / forbidden fragments, typical of a stale cache) or None.
 fn classify_error(error_text: &str) -> Option<&'static str> {
     let e = error_text.to_lowercase();
 
@@ -47,8 +47,8 @@ fn classify_error(error_text: &str) -> Option<&'static str> {
 const AUTH_ERROR_MSG: &str =
     "Sesión de YouTube caducada o inválida. Reconecta tu cuenta de YouTube para descargar este contenido.";
 
-/// Limpia el cache de yt-dlp (equivale a `yt-dlp --rm-cache-dir`).
-/// No usa YtdlpCmd porque no opera sobre una URL.
+/// Clears the yt-dlp cache (`yt-dlp --rm-cache-dir`).
+/// Not via YtdlpCmd because it doesn't operate on a URL.
 fn clear_ytdlp_cache(app_dir: &Path) {
     let mut cmd = Command::new(ytdlp::bin(app_dir));
     cmd.arg("--rm-cache-dir")
@@ -71,14 +71,14 @@ pub fn start(
 ) -> DownloadResult {
     registry.begin(url);
 
-    // Resolución de duplicados estilo Windows/macOS: si el archivo esperado ya
-    // existe, se descarga con sufijo " (N)" en vez de que yt-dlp lo salte.
+    // Windows/macOS-style duplicate handling: if the expected file already
+    // exists, download with an " (N)" suffix instead of yt-dlp skipping it.
     let mut effective = options.clone();
     if let Some(tpl) = resolve_duplicate_template(registry, app_dir, url, options) {
         effective.output_template = Some(tpl);
     }
 
-    // La simulación tarda ~1-2s: si el usuario canceló mientras tanto, abortar.
+    // The simulation takes ~1-2s: abort if the user cancelled meanwhile.
     if registry.is_cancelled(url) {
         registry.finish(url);
         return failure("Descarga cancelada por el usuario.".into(), Some("other"));
@@ -89,7 +89,7 @@ pub fn start(
     result
 }
 
-/// Inserta " (N)" en la plantilla de salida, antes del ".%(ext)s" final si existe.
+/// Inserts " (N)" into the output template, before a trailing ".%(ext)s" if present.
 fn template_with_suffix(tpl: &str, n: u32) -> String {
     const EXT_SUFFIX: &str = ".%(ext)s";
     if let Some(base) = tpl.strip_suffix(EXT_SUFFIX) {
@@ -99,7 +99,7 @@ fn template_with_suffix(tpl: &str, n: u32) -> String {
     }
 }
 
-/// Inserta " (N)" en una ruta, antes de la extensión.
+/// Inserts " (N)" into a path, before the extension.
 fn path_with_suffix(path: &Path, n: u32) -> PathBuf {
     let stem = path
         .file_stem()
@@ -112,9 +112,8 @@ fn path_with_suffix(path: &Path, n: u32) -> PathBuf {
     path.with_file_name(name)
 }
 
-/// Rutas finales plausibles para el nombre simulado: la impresa por yt-dlp y,
-/// si hay postprocesado (extracción de audio / merge), la misma con la
-/// extensión final real.
+/// Plausible final paths for the simulated name: the one yt-dlp printed and,
+/// if there is postprocessing (audio extraction/merge), the same with the real final extension.
 fn expected_final_paths(simulated: &Path, options: &DownloadOptions) -> Vec<PathBuf> {
     let mut paths = vec![simulated.to_path_buf()];
     let final_ext = if options.mode == "audio" {
@@ -133,8 +132,8 @@ fn expected_final_paths(simulated: &Path, options: &DownloadOptions) -> Vec<Path
     paths
 }
 
-/// Simula la descarga (`--print filename --no-download`) para conocer la ruta
-/// de salida esperada. Devuelve None si la simulación falla.
+/// Simulates the download (`--print filename --no-download`) to learn the
+/// expected output path. Returns None if the simulation fails.
 fn simulate_filename(
     registry: &DownloadRegistry,
     app_dir: &Path,
@@ -155,8 +154,8 @@ fn simulate_filename(
         builder = builder.cookies(&session::get_cookies_path(app_dir));
     }
 
-    // spawn (y no output()) para registrar el PID: así "cancelar" durante la
-    // simulación también mata este proceso (antes quedaba huérfano).
+    // spawn (not output()) so the PID gets registered: cancelling during the
+    // simulation also kills this process (it used to be orphaned).
     let child = builder.build().spawn().ok()?;
     registry.set_pid(url, child.id());
     let output = child.wait_with_output();
@@ -176,8 +175,8 @@ fn simulate_filename(
     }
 }
 
-/// Si el archivo destino ya existe, devuelve una plantilla con sufijo " (N)"
-/// (N = 1..20) cuyo resultado no exista aún. None = usar la plantilla original.
+/// If the target file exists, returns a template with an " (N)" suffix
+/// (N = 1..20) whose result doesn't exist yet. None = use the original template.
 fn resolve_duplicate_template(
     registry: &DownloadRegistry,
     app_dir: &Path,
@@ -240,11 +239,11 @@ fn run_with_retry(
     url: &str,
     options: &DownloadOptions,
 ) -> DownloadResult {
-    // Primer intento.
+    // First attempt.
     let first = run_once(app, registry, app_dir, url, options);
     let (exit_ok, error_text, file_path) = match first {
         Ok(triple) => triple,
-        Err(result) => return result, // no se pudo lanzar yt-dlp
+        Err(result) => return result, // yt-dlp failed to launch
     };
 
     if exit_ok {
@@ -258,8 +257,8 @@ fn run_with_retry(
 
     let kind = classify_error(&error_text);
 
-    // HTTP 403 / forbidden: cache de yt-dlp viciado -> limpiar y reintentar UNA vez,
-    // salvo que el usuario haya cancelado la descarga.
+    // HTTP 403 / forbidden: stale yt-dlp cache -> clear it and retry ONCE,
+    // unless the user cancelled the download.
     if kind == Some("cache") && !registry.is_cancelled(url) {
         println!(
             "[download] HTTP 403 detectado en {}. Limpiando cache de yt-dlp y reintentando (1/1)...",
@@ -267,10 +266,8 @@ fn run_with_retry(
         );
         clear_ytdlp_cache(app_dir);
 
-        // Consultar cancelled justo antes del spawn: si el usuario canceló en
-        // la ventana sin PID, no se relanza. Y si cancela justo DESPUÉS de
-        // esta consulta, set_pid() lo detectará y matará el proceso (ver
-        // esquema anti-race en core::process).
+        // Check cancelled right before the spawn: no relaunch if cancelled in the PID-less
+        // window; a cancel right AFTER this check is caught by set_pid() (anti-race in core::process).
         if registry.is_cancelled(url) {
             return failure(error_text, Some("cache"));
         }
@@ -342,8 +339,8 @@ fn failure(message: String, kind: Option<&str>) -> DownloadResult {
     }
 }
 
-/// Ejecuta yt-dlp una vez. Devuelve Ok((exit_ok, ultimo_error, ruta_final)) si el
-/// proceso llegó a lanzarse, o Err(DownloadResult) si ni siquiera se pudo ejecutar.
+/// Runs yt-dlp once. Ok((exit_ok, last_error, final_path)) if the process
+/// launched, Err(DownloadResult) if it couldn't even start.
 fn run_once(
     app: &AppHandle,
     registry: &DownloadRegistry,
@@ -353,16 +350,15 @@ fn run_once(
 ) -> Result<(bool, String, Option<String>), DownloadResult> {
     let output_dir = get_output_dir(app_dir);
 
-    // Args derivados de las opciones (formato/calidad/audio/subs/plantilla)
-    // + comunes de descarga. El builder añade --encoding utf-8 y `-- <url>`.
+    // Args derived from the options (format/quality/audio/subs/template)
+    // + common download flags. The builder adds --encoding utf-8 and `-- <url>`.
     let mut builder = YtdlpCmd::new(app_dir, url)
         .args(options.to_ytdlp_args(&output_dir))
         .arg("--newline")
         .arg("--progress")
         .no_update()
-        // Imprime por stdout la ruta final del archivo tras moverlo/postprocesarlo.
-        // OJO: --print implica --quiet, por eso se fuerza --no-quiet para no perder
-        // las líneas de progreso/[Merger] que ya parseamos.
+        // Prints the final file path to stdout after move/postprocessing. NOTE: --print
+        // implies --quiet, so --no-quiet is forced to keep the progress/[Merger] lines we parse.
         .arg("--no-quiet")
         .arg("--print")
         .arg("after_move:filepath")
@@ -388,15 +384,15 @@ fn run_once(
         }
     };
 
-    // set_pid detecta un cancel ocurrido durante el spawn y mata el proceso
-    // bajo el mismo lock (cierre de la race del reintento post-cache).
+    // set_pid catches a cancel that happened during the spawn and kills the
+    // process under the same lock (closes the post-cache retry race).
     registry.set_pid(url, child.id());
 
     let app_handle = app.clone();
     let last_error = Arc::new(Mutex::new(String::new()));
     let last_error_clone = Arc::clone(&last_error);
-    // Última línea de stdout que sea una ruta absoluta existente (la que
-    // imprime `--print after_move:filepath` al terminar).
+    // Last stdout line that is an existing absolute path (the one
+    // `--print after_move:filepath` prints at the end).
     let final_path: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
     let final_path_clone = Arc::clone(&final_path);
 
@@ -440,8 +436,8 @@ fn run_once(
                     },
                 );
             } else if !trimmed.starts_with('[') {
-                // Candidata a ruta impresa por `--print after_move:filepath`:
-                // ruta absoluta y existente en disco.
+                // Candidate for the path printed by `--print after_move:filepath`:
+                // absolute and existing on disk.
                 let p = Path::new(&trimmed);
                 if p.is_absolute() && p.exists() {
                     *final_path_clone.lock().unwrap() = Some(trimmed.clone());
@@ -458,7 +454,7 @@ fn run_once(
             if trimmed.is_empty() {
                 continue;
             }
-            // Solo las lineas "ERROR:" cuentan como error real.
+            // Only "ERROR:" lines count as real errors.
             if let Some(rest) = trimmed.strip_prefix("ERROR:") {
                 *last_error_clone.lock().unwrap() = rest.trim().to_string();
             }
@@ -470,8 +466,8 @@ fn run_once(
 
     let exit_ok = child.wait().map(|s| s.success()).unwrap_or(false);
 
-    // Solo se limpia el PID: la entrada (y su flag cancelled) vive hasta
-    // que start() llame a finish(), cubriendo el posible reintento.
+    // Only the PID is cleared: the entry (and its cancelled flag) lives until
+    // start() calls finish(), covering a possible retry.
     registry.clear_pid(url);
 
     let error_text = last_error.lock().unwrap().clone();
@@ -527,7 +523,7 @@ mod tests {
 
     #[test]
     fn classify_error_auth_tiene_prioridad_sobre_cache() {
-        // Un error que menciona ambos: la sesión inválida es la causa raíz.
+        // An error mentioning both: the invalid session is the root cause.
         assert_eq!(
             classify_error("HTTP Error 401 then forbidden"),
             Some("auth")

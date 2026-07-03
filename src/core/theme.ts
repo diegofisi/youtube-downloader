@@ -1,4 +1,4 @@
-/** Tema Stash: aplica la paleta completa como CSS vars en <html>. Acento violeta. */
+/** Stash theme: applies the full palette as CSS vars on <html>. Violet accent. */
 export type Theme = 'dark' | 'light';
 const KEY = 'stash-theme';
 

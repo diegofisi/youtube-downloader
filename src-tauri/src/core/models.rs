@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Progreso de descarga emitido al frontend (evento `download-progress`).
+/// Download progress emitted to the frontend (`download-progress` event).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgressData {
     pub percent: f64,

@@ -1,12 +1,12 @@
-# Patrones de UI (TS vanilla, sin framework)
+# UI patterns (vanilla TS, no framework)
 
-## El patrón base: innerHTML + rebind con `data-*`
+## The base pattern: innerHTML + rebind with `data-*`
 
-Toda lista/grid se repinta entera y se recablea después. Nunca hay estado en el DOM:
+Every list/grid is repainted whole and rewired afterwards. State never lives in the DOM:
 
 ```ts
 function renderList(): void {
-  closeAnchoredMenu();                       // el ancla de un menú abierto deja de existir al repintar
+  closeAnchoredMenu();                       // an open menu's anchor stops existing on repaint
   $('{pfx}-list').innerHTML = items.map((it) => `
     <button data-url="${esc(it.url)}" style="…">${esc(it.title)}</button>`).join('');
   $('{pfx}-list').querySelectorAll<HTMLElement>('[data-url]').forEach((b) =>
@@ -15,118 +15,119 @@ function renderList(): void {
 }
 ```
 
-- El wiring de botones ESTÁTICOS (existen en index.html) se hace UNA vez en `init{Name}()`.
-- En un `paint()` que se re-ejecuta (modales), usar `.onclick`/`.oninput` en vez de
-  `addEventListener` "para no acumular listeners entre repintados" (video-opts-modal.ts).
-- **`esc()` es obligatorio** para todo dato dinámico interpolado (títulos, URLs, mensajes de error:
-  `Error: ${esc(String(e))}`). Solo se omite en literales propios e iconos del registro `I`.
+- STATIC buttons (they exist in index.html) are wired ONCE in `init{Name}()`.
+- Inside a `paint()` that re-runs (modals), use `.onclick`/`.oninput` instead of
+  `addEventListener` to avoid accumulating listeners across repaints (video-opts-modal.ts).
+- **`esc()` is mandatory** for every interpolated dynamic value (titles, URLs, error messages:
+  `Error: ${esc(String(e))}`). Only skipped for your own literals and icons from the `I` registry.
 
-## Componentes shared reales (firmas y cuándo usarlos)
+## Real shared components (signatures and when to use them)
 
-| Componente | Firma | Cuándo |
+| Component | Signature | When |
 |---|---|---|
-| `dom.$` | `$<T extends HTMLElement>(id): T` — lanza si no existe | Siempre, en vez de getElementById (falla ruidoso y tipado) |
-| `toast.showToast` | `(title, body = '', kind: 'done'\|'warn'\|'info'\|'error' = 'done', ms = 4200)` | Feedback no bloqueante. Título corto + detalle en body |
-| `modal.showModal` | `(title, message, showCancel = false): Promise<boolean>` | Confirmaciones destructivas (vaciar historial, borrar archivo) |
-| `media-card.videoCard` | `(v: CardMedia, selected: boolean): string` | Tarjeta de grid (Buscar / Mi YouTube). Tipo estructural mínimo: VideoMeta lo cumple |
-| `media-card.wireVideoCards` | `(list, items, { toggle(url), download(anchor, item) })` | Recablear checkbox y botón ⬇ tras pintar el grid |
-| `media-card.stateCard / loadingCard` | `(title, msg, actionHtml = '')` / `(labelHtml)` | Estados vacío/error y fila de carga del grid |
-| `media-card.renderPillBar` | `(el, items {key,label}[], active, onPick)` | Tabs/chips de filtro (no se re-renderiza sola: onPick repinta) |
-| `paged-loader.createPagedLoader` | `({ pageSize, key, fetchPage(start,end), moreButtonId, onPage })` | Cualquier lista con "Ver más" paginada contra `analyzeUrls(range)` |
-| `anchored-menu.openAnchoredMenu` | `(anchor, items {icon?,label,color?,onPick}[])` | Menú contextual anclado a un botón (toggle, click-fuera, Escape, clamp al viewport) |
-| `controls.renderChipGroup` | `(groupSel, [valor,label][], get, onPick, {pad?, rerender?, after?})` — pinta en `[data-group="…"]` | Grupos de chips (calidad, contenedor…) |
-| `controls.renderSeg / renderToggle` | `(id, list, get, set)` / `(id, get, set)` | Segmentados estilo Ajustes / interruptores on-off |
-| `gradients.gradFor / CARD_GRAD` | `(id): string` degradado estable por hash / degradado fijo | Fondo de miniaturas sin imagen |
-| `format.fmtDuration / fmtSize / timeAgo / fmtDate` | ver shared/lib/format.ts | Duración `h:mm:ss`, MB/GB, "hace X", fecha local por idioma |
-| `dl-actions.*` | `flatten, defaultOptions, toQueueItem, openDlMenu, downloadSelected, customizeSelected` | SOLO para grids tipo Buscar/Mi YouTube (flujo descargar/personalizar) |
+| `dom.$` | `$<T extends HTMLElement>(id): T` — throws if missing | Always, instead of getElementById (fails loudly and typed) |
+| `toast.showToast` | `(title, body = '', kind: 'done'\|'warn'\|'info'\|'error' = 'done', ms = 4200)` | Non-blocking feedback. Short title + detail in body |
+| `modal.showModal` | `(title, message, showCancel = false): Promise<boolean>` | Destructive confirmations (clear history, delete file) |
+| `media-card.videoCard` | `(v: CardMedia, selected: boolean): string` | Grid card (Search / My YouTube). Minimal structural type: VideoMeta satisfies it |
+| `media-card.wireVideoCards` | `(list, items, { toggle(url), download(anchor, item) })` | Rewire checkbox and ⬇ button after painting the grid |
+| `media-card.stateCard / loadingCard` | `(title, msg, actionHtml = '')` / `(labelHtml)` | Empty/error states and the grid's loading row |
+| `media-card.renderPillBar` | `(el, items {key,label}[], active, onPick)` | Filter tabs/chips (does not re-render itself: onPick repaints) |
+| `paged-loader.createPagedLoader` | `({ pageSize, key, fetchPage(start,end), moreButtonId, onPage })` | Any "Load more" paginated list against `analyzeUrls(range)` |
+| `anchored-menu.openAnchoredMenu` | `(anchor, items {icon?,label,color?,onPick}[])` | Context menu anchored to a button (toggle, click-outside, Escape, viewport clamp) |
+| `controls.renderChipGroup` | `(groupSel, [value,label][], get, onPick, {pad?, rerender?, after?})` — paints into `[data-group="…"]` | Chip groups (quality, container…) |
+| `controls.renderSeg / renderToggle` | `(id, list, get, set)` / `(id, get, set)` | Settings-style segmented controls / on-off switches |
+| `gradients.gradFor / CARD_GRAD` | `(id): string` stable hash-based gradient / fixed gradient | Background for imageless thumbnails |
+| `format.fmtDuration / fmtSize / timeAgo / fmtDate` | see shared/lib/format.ts | Duration `h:mm:ss`, MB/GB, "X ago", locale-aware date |
+| `dl-actions.*` | `flatten, defaultOptions, toQueueItem, openDlMenu, downloadSelected, customizeSelected` | ONLY for Search/My YouTube-style grids (download/customize flow) |
 
-## Paginación anti-race: `begin()` + `loadSeq`
+## Anti-race pagination: `begin()` + `loadSeq`
 
-El paged-loader encapsula `nextStart/hasMore/loadingMore/loadSeq`. La primera página la orquesta
-cada vista (su propio loading/vacío/error); las siguientes las gestiona el botón "Ver más":
+The paged-loader encapsulates `nextStart/hasMore/loadingMore/loadSeq`. Each view orchestrates
+the first page itself (its own loading/empty/error); subsequent ones are handled by the
+"Ver más" button:
 
 ```ts
 const loader = createPagedLoader<VideoMeta>({
   pageSize: 50,
-  key: (v) => v.id || v.url,                       // dedupe si el feed se mueve entre páginas
+  key: (v) => v.id || v.url,                       // dedupe when the feed shifts between pages
   fetchPage: async (start, end) => ({ items: flatten(await analyzeUrls([srcUrl()], { start, end })) }),
   moreButtonId: '{pfx}-more',
   onPage: () => renderList(),
 });
-loader.wireMore();                                  // una vez, en init
+loader.wireMore();                                  // once, in init
 
 async function load(): Promise<void> {
-  const seq = loader.begin();                       // invalida cargas anteriores
+  const seq = loader.begin();                       // invalidates previous loads
   pintarLoading();
   try {
-    if ((await loader.loadFirst(seq)) === 'stale') return;   // llegó tarde: descartar
+    if ((await loader.loadFirst(seq)) === 'stale') return;   // arrived late: discard
     renderList();
-  } catch (e) { pintarError(e); }                   // los errores stale NO llegan aquí
+  } catch (e) { pintarError(e); }                   // stale errors do NOT land here
 }
 ```
-Si la vista filtra en cliente, pasar `rawCount` en el resultado para que `hasMore` se calcule
-sobre lo crudo (search-view.ts).
+If the view filters client-side, pass `rawCount` in the result so `hasMore` is computed
+against the raw count (search-view.ts).
 
 ## Single-flight
 
-Para operaciones que varios llamadores pueden disparar a la vez, compartir la promesa/flag:
-- `session.state::attemptSilentReconnect` — guarda `silentReconnectInFlight: Promise<boolean> | null`.
-- `queue.state::handleAuthFailure` — flag booleano `authReconnectInFlight`.
-- `account-card::ensureAccountInfo` — cachea la promesa y descarta el resultado si fue invalidada
+For operations several callers may trigger at once, share the promise/flag:
+- `session.state::attemptSilentReconnect` — stores `silentReconnectInFlight: Promise<boolean> | null`.
+- `queue.state::handleAuthFailure` — boolean flag `authReconnectInFlight`.
+- `account-card::ensureAccountInfo` — caches the promise and discards the result if invalidated
   (`if (p !== accountInfoPromise) return;`).
 
-## Drafts de modal (aplicar solo al confirmar)
+## Modal drafts (apply only on confirm)
 
-`video-opts-modal.ts`: los cambios editan `ovDraft` (copia del override); "Listo" hace commit a
-`overrides[url]`; X / Escape / backdrop descartan. Un draft vacío BORRA el override
-(`delete overrides[url]`). Los inputs de texto no se repintan mientras tienen foco
+`video-opts-modal.ts`: changes edit `ovDraft` (a copy of the override); "Listo" commits to
+`overrides[url]`; X / Escape / backdrop discard. An empty draft DELETES the override
+(`delete overrides[url]`). Text inputs are not repainted while focused
 (`if (document.activeElement !== tplIn) tplIn.value = …`).
 
-## Visibilidad: `hidden` vs `.is-active`
+## Visibility: `hidden` vs `.is-active`
 
-- **Vistas** (secciones del shell): clase `view` + `is-active`, toggled por `shell.navigate` según
-  `data-view`. Nunca tocar esto a mano: navegar es `bus.emit('nav:goto', {view})`.
-- **Todo lo demás** (paneles, modales, bloques condicionales): atributo `hidden`
+- **Views** (shell sections): class `view` + `is-active`, toggled by `shell.navigate` based on
+  `data-view`. Never touch this by hand: navigation is `bus.emit('nav:goto', {view})`.
+- **Everything else** (panels, modals, conditional blocks): the `hidden` attribute
   (`$('ov-overlay').hidden = false`, `dlBtn.hidden = nSel === 0`).
 
-## Prefijos de ids por vista (tabla real de index.html)
+## Id prefixes per view (real table from index.html)
 
-| Vista / zona | Prefijos e ids |
+| View / zone | Prefixes and ids |
 |---|---|
 | Shell | `win-*` (+`-2`), `nav`, `section-title`, `theme-toggle`, `session-banner`, `banner-*`, `toast-host` |
 | Descargar | `url-input`, `link-count`, `btn-analyze`, `btn-download`, `btn-recents`, `recent-panel`, `preview-*`, `mode-cards`, `video-opts`, `audio-opts`, `folder-path`, `sel-count`, `est-total`, `options-summary`, `btn-*` |
-| Modal por-video | `ov-*` |
-| Buscar | `search-*`, `btn-search-*` |
-| Cola | `queue-*`, `btn-clear-done`, `btn-retry-all` |
-| Mi YouTube | `yt-*`, `acc-*`, `btn-yt-*` |
-| Biblioteca | `library-*`, `btn-open-downloads`, `btn-clear-history` |
-| Ajustes | `set-*`, `fix-*`, `btn-repair` |
+| Per-video modal | `ov-*` |
+| Search | `search-*`, `btn-search-*` |
+| Queue | `queue-*`, `btn-clear-done`, `btn-retry-all` |
+| My YouTube | `yt-*`, `acc-*`, `btn-yt-*` |
+| Library | `library-*`, `btn-open-downloads`, `btn-clear-history` |
+| Settings | `set-*`, `fix-*`, `btn-repair` |
 | Onboarding | `onb-*` |
-| Modal genérico | `modal-*` |
+| Generic modal | `modal-*` |
 
-Vista nueva ⇒ prefijo nuevo. Grupos de chips usan `data-group="camelCase"` (`setQuality`, `ovMode`).
+New view ⇒ new prefix. Chip groups use `data-group="camelCase"` (`setQuality`, `ovMode`).
 
-## Estilos: inline con CSS vars (nunca hex directos)
+## Styles: inline with CSS vars (never raw hex)
 
-Sin clases por componente: estilos inline en el template usando las vars de `core/theme.ts`
-(cambiar de tema repinta solo). Vars disponibles:
+No per-component classes: inline styles in the template using the vars from `core/theme.ts`
+(switching themes repaints on its own). Available vars:
 
-| Var | Uso |
+| Var | Use |
 |---|---|
-| `--bg` `--bg2` `--side` `--panel` `--panel2` | Fondos (app, sidebar, tarjetas, elevado) |
-| `--hover` `--border` `--border2` | Hover y bordes (2 = más marcado) |
-| `--text` `--text2` `--text3` | Texto principal / secundario / terciario |
-| `--accent` `--accentText` `--accentSoft` | Violeta de marca, texto sobre acento, fondo suave |
-| `--success/--warn/--danger/--info` + `*Soft` | Semánticos y sus fondos suaves (badges, toasts) |
-| `--shadow` | Sombra de paneles elevados |
+| `--bg` `--bg2` `--side` `--panel` `--panel2` | Backgrounds (app, sidebar, cards, elevated) |
+| `--hover` `--border` `--border2` | Hover and borders (2 = stronger) |
+| `--text` `--text2` `--text3` | Primary / secondary / tertiary text |
+| `--accent` `--accentText` `--accentSoft` | Brand violet, text on accent, soft background |
+| `--success/--warn/--danger/--info` + `*Soft` | Semantics and their soft backgrounds (badges, toasts) |
+| `--shadow` | Elevated panel shadow |
 
-Clases utilitarias globales (stash.css): `.hov` (hover genérico), `.acc-btn` (botón acento),
-`.view`/`.is-active`, `.seg`, `.chips`, `.nav-btn`. Animaciones: `spin`, `barflow`, `pulsedot`, `toastin`.
-Monoespaciada para números/rutas/urls: `font-family:'JetBrains Mono',monospace`.
+Global utility classes (stash.css): `.hov` (generic hover), `.acc-btn` (accent button),
+`.view`/`.is-active`, `.seg`, `.chips`, `.nav-btn`. Animations: `spin`, `barflow`, `pulsedot`, `toastin`.
+Monospace for numbers/paths/urls: `font-family:'JetBrains Mono',monospace`.
 
-## Iconos: registro `I`
+## Icons: the `I` registry
 
 `shared/ui/icons.ts` — `I.download`, `I.youtube`, `I.queue`, `I.library`, `I.settings`, `I.sun/moon`,
 `I.film/music/video/spark`, `I.check/spinner/alert`, `I.pause/play/x/retry/folder/trash/search/play20`…
-SVG inline con `currentColor` (heredan el color del contenedor). Icono nuevo → añadirlo al registro,
-no incrustar el SVG en la vista (los del nav van a 18px).
+Inline SVG with `currentColor` (they inherit the container's color). New icon → add it to the
+registry, don't embed the SVG in the view (nav icons render at 18px).

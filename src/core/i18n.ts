@@ -1,5 +1,5 @@
-// i18n minimalista sin diccionarios: cada texto lleva su par (es, en) inline.
-// El idioma se persiste en localStorage ('stash.lang') y cambiarlo recarga la app.
+// Minimal dictionary-less i18n: every text carries its (es, en) pair inline.
+// The language persists in localStorage ('stash.lang'); changing it reloads the app.
 
 export type Lang = 'es' | 'en';
 
@@ -13,7 +13,7 @@ export function getLang(): Lang {
   try {
     v = localStorage.getItem(STORAGE_KEY);
   } catch {
-    /* localStorage no disponible: usa el default */
+    /* localStorage unavailable: use the default */
   }
   cached = v === 'en' ? 'en' : 'es';
   return cached;
@@ -23,7 +23,7 @@ export function setLang(l: Lang): void {
   try {
     localStorage.setItem(STORAGE_KEY, l);
   } catch {
-    /* ignora errores de persistencia */
+    /* ignore persistence errors */
   }
   cached = l;
   location.reload();
@@ -33,13 +33,8 @@ export function t(es: string, en: string): string {
   return getLang() === 'en' ? en : es;
 }
 
-/**
- * Traduce el HTML estático si el idioma es inglés.
- * - [data-en]       → reemplaza el texto del elemento (si tiene hijos, solo los
- *                     nodos de texto no vacíos, para no destruir iconos SVG).
- * - [data-en-ph]    → reemplaza el placeholder.
- * - [data-en-title] → reemplaza el title (tooltip).
- */
+/** Translates static HTML when the language is English: [data-en] replaces element text (only
+ * non-empty text nodes, to keep SVG icons), [data-en-ph] the placeholder, [data-en-title] the title. */
 export function applyStaticI18n(): void {
   if (getLang() !== 'en') return;
   document.documentElement.lang = 'en';

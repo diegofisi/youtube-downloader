@@ -7,17 +7,17 @@ pub struct DownloadResult {
     pub success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
-    /// Clasificación del fallo: "auth" (sesión/cookies), "cache" (HTTP 403
-    /// persistente tras limpiar cache) u "other". Llega al frontend como `errorKind`.
+    /// Failure class: "auth" (session/cookies), "cache" (HTTP 403 persisting
+    /// after a cache clear) or "other". Reaches the frontend as `errorKind`.
     #[serde(rename = "errorKind", skip_serializing_if = "Option::is_none")]
     pub error_kind: Option<String>,
-    /// Ruta absoluta del archivo final descargado (capturada con
-    /// `--print after_move:filepath`). None si no se pudo capturar.
+    /// Absolute path of the downloaded file (captured via
+    /// `--print after_move:filepath`). None if it couldn't be captured.
     #[serde(rename = "filePath", skip_serializing_if = "Option::is_none")]
     pub file_path: Option<String>,
 }
 
-/// Opciones de descarga (enviadas desde el frontend en camelCase).
+/// Download options (sent from the frontend in camelCase).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
@@ -29,10 +29,10 @@ pub struct DownloadOptions {
     pub container: String,
     /// "mp3" | "m4a" | "opus"
     pub audio_format: String,
-    /// kbps (0 = por defecto)
+    /// kbps (0 = default)
     pub audio_bitrate: u32,
     pub subtitles: bool,
-    /// idiomas separados por coma, p.ej. "es,en"
+    /// comma-separated languages, e.g. "es,en"
     pub sub_langs: String,
     pub embed_thumbnail: bool,
     #[serde(default)]
@@ -59,7 +59,7 @@ impl Default for DownloadOptions {
 }
 
 impl DownloadOptions {
-    /// Traduce las opciones a argumentos de yt-dlp (sin los comunes, que añade el service).
+    /// Translates the options into yt-dlp args (without the common ones the service adds).
     pub fn to_ytdlp_args(&self, output_dir: &Path) -> Vec<String> {
         let mut a: Vec<String> = Vec::new();
 
@@ -77,7 +77,7 @@ impl DownloadOptions {
             a.push("--merge-output-format".into());
             a.push(self.container.clone());
         }
-        // "videoonly" ya se maneja dentro de format_selector.
+        // "videoonly" is handled inside format_selector.
 
         if self.subtitles {
             a.push("--write-subs".into());
@@ -122,7 +122,7 @@ impl DownloadOptions {
             _ => None, // auto | max
         };
         if self.mode == "videoonly" {
-            // Sin pista de audio.
+            // No audio track.
             return match height {
                 Some(h) => {
                     format!("bestvideo[height<={h}][ext={vext}]/bestvideo[height<={h}]/bestvideo")

@@ -1,4 +1,4 @@
-/* Base Stash — reset, fuentes, animaciones, scrollbar. La paleta va por CSS vars (core/theme.ts). */
+/* Stash base — reset, fonts, animations, scrollbar. Palette comes via CSS vars (core/theme.ts). */
 * {
   box-sizing: border-box;
 }
@@ -99,13 +99,13 @@ select {
   }
 }
 
-/* Hover helper: los elementos con [data-hover] aplican su valor al pasar el cursor.
-   Como no podemos usar style-hover inline, exponemos utilidades mínimas. */
+/* Hover helper: [data-hover] elements apply their value on hover.
+   Inline style-hover isn't possible, so minimal utilities are exposed. */
 [hidden] {
   display: none !important;
 }
 
-/* Vistas: el router muestra una a la vez */
+/* Views: the router shows one at a time */
 .view {
   display: none;
 }
@@ -114,7 +114,7 @@ select {
   animation: fadein 0.25s ease;
 }
 
-/* Scroll del main */
+/* Main scroll area */
 .main-scroll {
   flex: 1;
   overflow-y: auto;

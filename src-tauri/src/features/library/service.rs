@@ -36,7 +36,7 @@ fn write(app_dir: &Path, entries: &[LibraryEntry]) -> Result<(), String> {
     let path = history_path(app_dir);
     let content = serde_json::to_string_pretty(entries)
         .map_err(|e| format!("Error al serializar historial: {}", e))?;
-    // Escritura atómica (tmp + rename): ver core::fsx.
+    // Atomic write (tmp + rename): see core::fsx.
     fsx::write_atomic(&path, content).map_err(|e| format!("Error al guardar historial: {}", e))
 }
 
@@ -58,7 +58,7 @@ pub fn add(app_dir: &Path, new: NewEntry) -> Result<LibraryEntry, String> {
         date: now_secs(),
     };
     all.insert(0, entry.clone());
-    // Limitar a 500 entradas.
+    // Cap at 500 entries.
     all.truncate(500);
     write(app_dir, &all)?;
     Ok(entry)
@@ -70,9 +70,8 @@ pub fn remove(app_dir: &Path, id: &str) -> Result<(), String> {
     write(app_dir, &all)
 }
 
-/// Borra el archivo asociado a una entrada del historial (papelera si es
-/// posible; permanente como fallback) y SIEMPRE elimina la entrada al final.
-/// Devuelve "trash" | "permanent" | "no_file".
+/// Deletes the file behind a history entry (trash if possible, permanent as
+/// fallback) and ALWAYS removes the entry. Returns "trash" | "permanent" | "no_file".
 pub fn delete_file(app_dir: &Path, id: &str) -> Result<String, String> {
     let all = list(app_dir);
     let entry = all.iter().find(|e| e.id == id);
@@ -110,7 +109,7 @@ pub fn delete_file(app_dir: &Path, id: &str) -> Result<String, String> {
         }
     }
 
-    // La entrada del historial se elimina SIEMPRE, incluso si el borrado falló.
+    // The history entry is ALWAYS removed, even if the file deletion failed.
     remove(app_dir, id)?;
 
     match delete_error {

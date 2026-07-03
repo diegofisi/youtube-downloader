@@ -1,8 +1,8 @@
 import { invoke, onEvent, type UnlistenFn } from '../../core/tauri/client';
 import type { DependencyStatus, SetupProgress } from './setup.types';
 
-// Re-export: los consumidores de onSetupProgress necesitan tipar el unlisten
-// sin tocar core/tauri/client directamente (regla: invoke solo en *.api.ts).
+// Re-export: onSetupProgress consumers need to type the unlisten without
+// touching core/tauri/client directly (rule: invoke only in *.api.ts).
 export type { UnlistenFn };
 
 export async function checkDependencies(): Promise<DependencyStatus> {

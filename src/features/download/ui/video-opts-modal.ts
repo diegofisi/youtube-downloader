@@ -7,11 +7,11 @@ import { allVideos, renderPreview } from './preview-render';
 
 // ---------- per-video options modal ----------
 let ovUrl: string | null = null;
-// Borrador de overrides: los cambios solo se aplican a `overrides` al pulsar
-// "Listo"; cerrar con la X / Escape / backdrop los descarta.
+// Override draft: changes are applied to `overrides` only on "Done";
+// closing via X / Escape / backdrop discards them.
 let ovDraft: Partial<Opts> | null = null;
 
-/** ¿Está abierto el modal? (para que descargar.ts priorice su cierre con Escape). */
+/** Is the modal open? (so descargar.ts prioritizes closing it on Escape). */
 export function isVideoOptsOpen(): boolean {
   return !$('ov-overlay').hidden;
 }
@@ -22,7 +22,7 @@ export function openVideoOpts(url: string): void {
   $('ov-title').textContent = v?.title ?? url;
   ovDraft = { ...(overrides[url] || {}) };
   $('ov-overlay').hidden = false;
-  // La sección "Avanzado" arranca plegada en cada apertura.
+  // The "Advanced" section starts collapsed on every open.
   $('ov-adv-body').hidden = true;
   $('ov-adv-arrow').style.transform = '';
   const paint = () => {
@@ -83,9 +83,8 @@ export function openVideoOpts(url: string): void {
       eff.bitrate,
       (val) => setOv('bitrate', val),
     );
-    // Avanzado: subs / miniatura / plantilla — también editan solo el borrador.
-    // Se usa .onclick/.oninput (no addEventListener) para no acumular listeners
-    // entre repintados y aperturas del modal.
+    // Advanced: subs / thumbnail / template — also edit only the draft. Uses .onclick/.oninput
+    // (not addEventListener) to avoid stacking listeners across repaints and modal opens.
     const paintTgl = (id: string, key: 'subs' | 'thumb') => {
       const btn = $<HTMLButtonElement>(id);
       const on = !!eff[key];
@@ -103,7 +102,7 @@ export function openVideoOpts(url: string): void {
     if (document.activeElement !== tplIn) tplIn.value = eff.template;
     tplIn.oninput = () => {
       ovDraft = { ...(ovDraft || {}), template: tplIn.value };
-      $('ov-clear').hidden = false; // sin repintar: no interrumpir la escritura
+      $('ov-clear').hidden = false; // no repaint: don't interrupt typing
     };
     $('ov-clear').hidden = Object.keys(ovDraft || {}).length === 0;
   };
@@ -124,10 +123,10 @@ export function closeVideoOpts(commit: boolean): void {
   ovUrl = null;
   ovDraft = null;
   $('ov-overlay').hidden = true;
-  renderPreview(); // resincroniza icono de engranaje y badge de override
+  renderPreview(); // resyncs the gear icon and override badge
 }
 
-/** Chips del modal por-video: no se auto-repintan (paint() repinta todo el modal). */
+/** Per-video modal chips: no self-repaint (paint() repaints the whole modal). */
 function renderChipsInto<T extends string>(
   group: string,
   list: [T, string][],
@@ -137,10 +136,8 @@ function renderChipsInto<T extends string>(
   renderChipGroup(group, list, () => curVal, onPick, { rerender: false });
 }
 
-/**
- * Wiring estático del modal: "Listo" aplica el borrador; X / backdrop cancelan.
- * (El Escape vive en descargar.ts, que coordina la prioridad con el panel Recientes.)
- */
+/** Static modal wiring: "Done" applies the draft; X / backdrop cancel.
+ * (Escape lives in descargar.ts, which coordinates priority with the Recents panel.) */
 export function initVideoOptsModal(): void {
   $('ov-close').addEventListener('click', () => closeVideoOpts(false));
   $('ov-done').addEventListener('click', () => closeVideoOpts(true));
@@ -154,7 +151,7 @@ export function initVideoOptsModal(): void {
   $('ov-overlay').addEventListener('click', (e) => {
     if (e.target === $('ov-overlay')) closeVideoOpts(false);
   });
-  // Desplegable "Avanzado" del modal (flecha rota al abrir).
+  // Modal's "Advanced" collapsible (arrow rotates when open).
   $('ov-adv-toggle').addEventListener('click', () => {
     const body = $('ov-adv-body');
     body.hidden = !body.hidden;

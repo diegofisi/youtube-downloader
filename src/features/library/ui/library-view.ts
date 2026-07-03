@@ -16,7 +16,7 @@ let entries: LibraryEntry[] = [];
 const PAGE_SIZE = 50;
 let visibleCount = PAGE_SIZE;
 
-// ---------- mini-menú del tacho ----------
+// ---------- trash-button mini-menu ----------
 function openDelMenu(anchor: HTMLElement, e: LibraryEntry): void {
   const items: AnchoredMenuItem[] = [
     {
@@ -134,7 +134,7 @@ function render(): void {
         );
       row.querySelector<HTMLElement>('.lib-del')?.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        // Segundo click en el mismo tacho: el menú anclado hace toggle solo.
+        // Second click on the same trash button: the anchored menu toggles itself.
         openDelMenu(ev.currentTarget as HTMLElement, e);
       });
     });
@@ -147,8 +147,8 @@ async function refresh(): Promise<void> {
 }
 
 export function initLibrary(): void {
-  // El historial lo escribe la cola (queue.ts) al completar, con videoId, miniatura
-  // y duración; aquí solo refrescamos la vista. (Antes ambos escribían → duplicados.)
+  // History is written by the queue on completion (with videoId, thumbnail, duration);
+  // here we only refresh the view. (Both used to write → duplicates.)
   bus.on('download:completed', () => {
     void refresh();
   });

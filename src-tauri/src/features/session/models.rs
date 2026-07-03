@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Información pública de la cuenta de YouTube conectada (endpoint account_menu).
+/// Public info of the connected YouTube account (account_menu endpoint).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountInfo {

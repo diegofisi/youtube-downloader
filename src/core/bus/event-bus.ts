@@ -1,11 +1,7 @@
-/**
- * Event bus in-app tipado. Desacopla slices: un slice emite y otros reaccionan
- * sin importarse entre sí. Corta ciclos preview↔queue↔session.
- *
- * Extiende AppEvents a medida que aparezcan eventos de dominio.
- */
+// Typed in-app event bus. Decouples slices (breaks preview↔queue↔session cycles).
+// Extend AppEvents as new domain events appear.
 export interface AppEvents {
-  // Eventos sin payload: se tipan `void` y se emiten sin segundo argumento.
+  // Payload-less events: typed `void` and emitted without a second argument.
   'session:expired': void;
   'session:connected': void;
   'session:changed': void;
@@ -14,13 +10,13 @@ export interface AppEvents {
   'nav:goto': { view: string };
   'download:completed': { url: string; title: string; format: string; videoId?: string };
   'queue:count': { active: number };
-  /** Pre-carga urls en la vista Descargar y lanza el análisis (el emisor navega con nav:goto). */
+  /** Prefills urls into the Download view and triggers analysis (the emitter navigates via nav:goto). */
   'descargar:prefill': { urls: string[] };
 }
 
 type Handler<K extends keyof AppEvents> = (payload: AppEvents[K]) => void;
 
-/** Los eventos `void` se emiten sin payload; el resto exige su payload tipado. */
+/** `void` events emit without payload; the rest require their typed payload. */
 type EmitArgs<K extends keyof AppEvents> = AppEvents[K] extends void ? [] : [payload: AppEvents[K]];
 
 const handlers = new Map<keyof AppEvents, Set<(payload: never) => void>>();

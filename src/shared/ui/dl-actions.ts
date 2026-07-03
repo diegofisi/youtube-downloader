@@ -1,11 +1,5 @@
-/**
- * Acciones de descarga comunes a las vistas de grid (Mi YouTube / Buscar):
- * opciones por defecto, conversión a item de cola, mini-menú por tarjeta y
- * handlers de "Descargar seleccionados" / "Personalizar".
- *
- * Consume únicamente los tipos y funciones PÚBLICOS de las fachadas de
- * download, queue, preview y session (features/x/index.ts), nunca sus internos.
- */
+// Download actions shared by grid views (My YouTube / Search): default options, queue-item
+// conversion, per-card menu, "Download selected" / "Customize" handlers. Uses only PUBLIC facades.
 import { bus } from '../../core/bus/event-bus';
 import { t } from '../../core/i18n';
 import { I } from './icons';
@@ -18,7 +12,7 @@ import { getCookieMode } from '../../features/session';
 import type { DownloadOptions } from '../../features/download';
 import type { AnalyzedEntry, PlaylistMeta, VideoMeta } from '../../features/preview';
 
-/** Aplana el resultado de analyzeUrls: expande playlists y descarta entradas sin id. */
+/** Flattens analyzeUrls output: expands playlists and drops entries without id. */
 export function flatten(entries: AnalyzedEntry[]): VideoMeta[] {
   const out: VideoMeta[] = [];
   for (const e of entries) {
@@ -28,7 +22,7 @@ export function flatten(entries: AnalyzedEntry[]): VideoMeta[] {
   return out.filter((v) => v.id);
 }
 
-/** Opciones de descarga por defecto de los grids (máxima calidad, MP4). */
+/** Default download options for the grids (max quality, MP4). */
 export function defaultOptions(): DownloadOptions {
   return {
     mode: 'video',
@@ -44,7 +38,7 @@ export function defaultOptions(): DownloadOptions {
   };
 }
 
-/** Convierte un VideoMeta del grid en un item listo para enqueue(). */
+/** Converts a grid VideoMeta into an item ready for enqueue(). */
 export function toQueueItem(v: VideoMeta): EnqueueItem {
   return {
     url: v.url,
@@ -59,7 +53,7 @@ export function toQueueItem(v: VideoMeta): EnqueueItem {
   };
 }
 
-/** Abre el menú "Descargar / Descarga personalizada" anclado al botón ⬇ de una tarjeta. */
+/** Opens the "Download / Custom download" menu anchored to a card's ⬇ button. */
 export function openDlMenu(anchor: HTMLElement, v: VideoMeta): void {
   openAnchoredMenu(anchor, [
     {
@@ -81,11 +75,8 @@ export function openDlMenu(anchor: HTMLElement, v: VideoMeta): void {
   ]);
 }
 
-/**
- * Handler de "Descargar seleccionados": encola, navega a la cola y avisa.
- * `doneMsg` conserva el texto exacto de cada vista; `onDone` limpia la
- * selección y re-renderiza antes de navegar.
- */
+/** "Download selected" handler: enqueues, navigates to the queue and notifies. `doneMsg` keeps
+ * each view's exact text; `onDone` clears the selection and re-renders before navigating. */
 export function downloadSelected(items: VideoMeta[], doneMsg: string, onDone: () => void): void {
   if (!items.length) return;
   enqueue(items.map(toQueueItem));
@@ -94,10 +85,8 @@ export function downloadSelected(items: VideoMeta[], doneMsg: string, onDone: ()
   showToast(t('Añadido a la cola', 'Added to queue'), doneMsg, 'done');
 }
 
-/**
- * Handler de "Personalizar": manda las urls elegidas a la vista Descargar.
- * `onDone` limpia la selección y re-renderiza antes de navegar.
- */
+/** "Customize" handler: sends the chosen urls to the Download view.
+ * `onDone` clears the selection and re-renders before navigating. */
 export function customizeSelected(urls: string[], onDone: () => void): void {
   if (!urls.length) return;
   bus.emit('descargar:prefill', { urls });

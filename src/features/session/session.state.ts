@@ -10,8 +10,8 @@ import { bus } from '../../core/bus/event-bus';
 let status: SessionStatus = 'none';
 
 export function getCookieMode(): string {
-  // Con sesión caducada seguimos pasando las cookies (los videos públicos funcionan),
-  // pero la UI avisa que hace falta reconectar para contenido de miembros.
+  // With an expired session we still pass the cookies (public videos work),
+  // but the UI warns that reconnecting is needed for members-only content.
   return status === 'none' ? 'none' : 'file';
 }
 
@@ -35,14 +35,11 @@ export async function refreshSession(): Promise<SessionStatus> {
   return status;
 }
 
-// Single-flight: si ya hay una reconexión silenciosa en curso, se comparte la promesa.
+// Single-flight: if a silent reconnect is already in flight, the promise is shared.
 let silentReconnectInFlight: Promise<boolean> | null = null;
 
-/**
- * Intenta reconectar la sesión de YouTube sin interacción del usuario.
- * Devuelve true si se refrescaron las cookies; en cualquier caso re-lee el
- * estado de sesión (emite session:changed / session:connected / session:expired).
- */
+/** Tries to reconnect the YouTube session without user interaction. Returns true if cookies were
+ * refreshed; always re-reads session state (emits session:changed / :connected / :expired). */
 export function attemptSilentReconnect(): Promise<boolean> {
   if (silentReconnectInFlight) return silentReconnectInFlight;
 
@@ -73,6 +70,6 @@ export async function initSession(): Promise<void> {
   void onCookiesExtracted((success) => {
     if (success) void refreshSession();
   });
-  // Igual que en web, la sesión puede caducar con el tiempo: re-chequear periódicamente.
+  // As on the web, the session can expire over time: re-check periodically.
   setInterval(refreshSession, 10 * 60 * 1000);
 }

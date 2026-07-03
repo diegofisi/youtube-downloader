@@ -1,12 +1,5 @@
-// Estado y scheduler de la cola de descargas (Fase 3 del refactor auditado).
-// Movido desde queue.ts para que la lógica más crítica de la app (enqueue/pump/
-// run/handleAuthFailure/reintentos por sesión) sea testeable sin DOM (Fase 4).
-// Regla: este módulo NO importa nada de DOM; la vista (ui/queue-view.ts) se
-// suscribe vía subscribe() y este módulo solo notifica cambios.
-// Decisión sobre toasts: se quedan aquí importando shared/ui/toast (opción
-// pragmática permitida por la auditoría). showToast es un efecto de UI pero no
-// toca el DOM de la cola ni crea acoplamiento state→view dentro del slice; en
-// tests se puede stubear el módulo de toast sin necesidad de DOM real.
+// Download queue state and scheduler, DOM-free so it stays testable; the view subscribes via subscribe().
+// Toasts are allowed here: showToast never touches queue DOM and can be stubbed in tests.
 import { bus } from '../../core/bus/event-bus';
 import { t } from '../../core/i18n';
 import { showToast } from '../../shared/ui/toast';
@@ -20,13 +13,13 @@ export type QStatus = 'queued' | 'downloading' | 'merging' | 'paused' | 'done' |
 
 export interface EnqueueItem {
   url: string;
-  /** Id del video (p. ej. id de YouTube); permite marcar "ya descargado" aunque cambie la URL. */
+  /** Video id (e.g. YouTube id); lets us mark "already downloaded" even if the URL changes. */
   videoId?: string;
   title: string;
   channel: string;
   grad: string;
   thumbnail?: string;
-  /** Duración en segundos (para el historial). */
+  /** Duration in seconds (for history). */
   duration?: number;
   fmt: string;
   options: DownloadOptions;
@@ -38,24 +31,22 @@ export interface QItem extends EnqueueItem {
   speed: string;
   eta: string;
   error?: string;
-  /** Carpeta donde quedó el archivo (la devuelve addHistory al completar). */
+  /** Folder where the file ended up (returned by addHistory on completion). */
   folder?: string;
-  /** Ruta final real del archivo descargado (la devuelve startDownload al completar). */
+  /** Actual final path of the downloaded file (returned by startDownload on completion). */
   filePath?: string;
-  /** true si lo pausamos nosotros por sesión caducada (no el usuario a mano). */
+  /** true if we paused it due to an expired session (not the user manually). */
   pausedByAuth?: boolean;
 }
 
 let items: QItem[] = [];
 let concurrency = 5;
 let seq = 0;
-/** Single-flight: evita lanzar varios intentos de reconexión si fallan varios items a la vez. */
+/** Single-flight: avoids launching several reconnect attempts when many items fail at once. */
 let authReconnectInFlight = false;
 
-// ---------- suscripción (desacople state → view) ----------
-// Cada sitio que antes llamaba render() ahora llama notify(); la vista se
-// registra con subscribe() y decide cómo pintar. Las notificaciones son
-// síncronas para conservar el orden exacto render→pump del código original.
+// ---------- subscription (state → view decoupling) ----------
+// Notifications are synchronous to preserve the original exact render→pump ordering.
 type Listener = () => void;
 const listeners: Listener[] = [];
 export function subscribe(fn: Listener): void {
@@ -65,7 +56,7 @@ function notify(): void {
   for (const fn of listeners) fn();
 }
 
-/** Snapshot de solo lectura para la vista (items se reasigna en remove/clear). */
+/** Read-only snapshot for the view (items is reassigned in remove/clear). */
 export function getItems(): readonly QItem[] {
   return items;
 }
@@ -105,9 +96,8 @@ function pump(): void {
 
 function run(it: QItem): void {
   it.status = 'downloading';
-  // No se resetea it.progress: al reanudar, yt-dlp retoma el archivo .part y
-  // conservamos el avance hasta que llegue el primer evento de progreso real.
-  // (Los items nuevos y los reintentos ya entran con progress = 0.)
+  // Don't reset it.progress: on resume yt-dlp continues the .part file, so keep
+  // the shown progress until the first real progress event arrives.
   notify();
   startDownload(it.url, it.options)
     .then(async (res) => {
@@ -119,7 +109,6 @@ function run(it: QItem): void {
       if (res.success) {
         it.status = 'done';
         it.progress = 100;
-        // Ruta final real del archivo descargado.
         const filePath = res.filePath;
         if (filePath) it.filePath = filePath;
         try {
@@ -131,12 +120,12 @@ function run(it: QItem): void {
           });
           it.folder = entry.folder;
         } catch {
-          // La descarga terminó bien; si el historial falla, no rompemos el flujo.
+          // Download succeeded; a history failure must not break the flow.
         }
         bus.emit('download:completed', { url: it.url, title: it.title, format: it.fmt, videoId: it.videoId });
       } else if (res.errorKind === 'auth') {
-        // Cookies caducadas/invalidadas: pausamos en vez de marcar error para no
-        // quemar el resto de la tanda (los que siguen en cola fallarían igual).
+        // Expired/invalidated cookies: pause instead of erroring so the rest of
+        // the batch isn't burned (queued items would fail the same way).
         it.status = 'paused';
         it.pausedByAuth = true;
         it.error = t(
@@ -167,7 +156,7 @@ function run(it: QItem): void {
     });
 }
 
-/** Tras la primera falla de auth intenta renovar la sesión en silencio (single-flight). */
+/** After the first auth failure, tries to silently renew the session (single-flight). */
 async function handleAuthFailure(): Promise<void> {
   if (authReconnectInFlight) return;
   authReconnectInFlight = true;
@@ -224,7 +213,7 @@ export function action(id: string, act: string): void {
     it.eta = '';
   } else if (act === 'resume' || act === 'retry') {
     it.status = 'queued';
-    if (act === 'retry') it.progress = 0; // reanudar conserva el avance (yt-dlp continúa el .part)
+    if (act === 'retry') it.progress = 0; // resume keeps progress (yt-dlp continues the .part file)
     it.error = undefined;
     it.pausedByAuth = false;
   } else if (act === 'cancel') {
@@ -233,9 +222,8 @@ export function action(id: string, act: string): void {
   } else if (act === 'remove') {
     items = items.filter((x) => x.id !== id);
   } else if (act === 'folder') {
-    // Abre la carpeta contenedora del ARCHIVO real si conocemos su ruta; si no,
-    // la carpeta del historial y, en último caso, la de descargas. (Es efecto de
-    // library/settings, no de DOM, por eso se queda en el state.)
+    // Open the real file's containing folder if known; else the history folder,
+    // else the downloads folder. Library/settings effect, not DOM, so it stays in state.
     const dir = (it.filePath && parentDir(it.filePath)) || it.folder;
     const p = dir ? Promise.resolve(dir) : getDownloadFolder();
     p.then((folder) => openHistoryFolder(folder)).catch(() =>
@@ -246,7 +234,7 @@ export function action(id: string, act: string): void {
   notify();
   pump();
 }
-/** Carpeta contenedora de una ruta (soporta separadores \ y /). */
+/** Containing folder of a path (supports both \ and / separators). */
 function parentDir(p: string): string | undefined {
   const i = Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/'));
   return i > 0 ? p.slice(0, i) : undefined;
@@ -260,21 +248,15 @@ export function move(id: string, dir: number): void {
   notify();
 }
 
-/**
- * Publica el nº de items "vivos" en el bus. Exportada porque el render de la
- * vista la llama al final (igual que el render original) además de pump():
- * el orden pump→emitCount→run→render→emitCount debe conservarse idéntico.
- */
+/** Publishes the live-item count on the bus. Exported because the view's render also calls
+ * it after pump(): the pump→emitCount→run→render→emitCount ordering must stay identical. */
 export function emitCount(): void {
   const n = items.filter((i) => ['downloading', 'queued', 'paused', 'merging'].includes(i.status)).length;
   bus.emit('queue:count', { active: n });
 }
 
-/**
- * Reencola todos los fallidos (botón "Reintentar fallidos"). Vive aquí y no en
- * la vista porque muta items; la vista solo la cablea al click.
- * Orden original conservado: render → pump → toast.
- */
+/** Re-queues all failed items ("Retry failed" button). Lives here because it mutates
+ * items; the view only wires the click. Original render → pump → toast order kept. */
 export function retryAllFailed(): void {
   items.forEach((i) => {
     if (i.status === 'error') {
@@ -292,10 +274,9 @@ export function retryAllFailed(): void {
   );
 }
 
-/** Limpia completados/cancelados (botón "Limpiar"). Muta items → vive en el state. */
+/** Clears done/canceled items ("Clear" button). Mutates items, so it lives in state. */
 export function clearFinished(): void {
-  // Solo saca de la lista los completados y cancelados; los 'error' se quedan
-  // porque tienen su propio "Reintentar fallidos".
+  // Only removes done/canceled; 'error' items stay — they have their own "Retry failed".
   items = items.filter((i) => i.status !== 'done' && i.status !== 'canceled');
   notify();
   pump();

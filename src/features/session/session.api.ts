@@ -11,10 +11,8 @@ export async function getSessionStatus(): Promise<SessionStatus> {
   return invoke<SessionStatus>('get_session_status');
 }
 
-/**
- * Nombre, handle y avatar de la cuenta de YouTube conectada.
- * Resuelve null si no hay sesión o YouTube no devuelve cuenta.
- */
+/** Name, handle and avatar of the connected YouTube account.
+ * Resolves null if there is no session or YouTube returns no account. */
 export async function getAccountInfo(): Promise<AccountInfo | null> {
   return invoke<AccountInfo | null>('get_account_info');
 }
@@ -23,10 +21,8 @@ export async function logoutSession(): Promise<void> {
   return invoke('logout');
 }
 
-/**
- * Intenta refrescar la sesión de YouTube sin interacción (ventana oculta).
- * Resuelve true si se re-extrajeron cookies; false si hace falta login manual.
- */
+/** Tries to refresh the YouTube session without interaction (hidden window).
+ * Resolves true if cookies were re-extracted; false if manual login is needed. */
 export async function refreshSessionSilent(): Promise<boolean> {
   return invoke<boolean>('refresh_session_silent');
 }

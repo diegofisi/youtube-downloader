@@ -1,6 +1,5 @@
-//! Extracción de cookies desde el webview de login y volcado a cookies.txt
-//! (formato Netscape). Par natural del parser de `service`: aquí se
-//! serializa lo que `service::parse_netscape` luego lee.
+//! Cookie extraction from the login webview into cookies.txt (Netscape
+//! format) — the write-side counterpart of `service::parse_netscape`.
 
 use tauri::webview::WebviewWindow;
 use tauri::{AppHandle, Url};
@@ -8,14 +7,14 @@ use tauri::{AppHandle, Url};
 use super::service;
 use crate::core::{fsx, paths};
 
-/// Lee las cookies del webview (varios dominios de Google/YouTube, incluidas
-/// las HttpOnly) y las guarda en cookies.txt. Devuelve cuántas se guardaron.
+/// Reads webview cookies (several Google/YouTube domains, HttpOnly included)
+/// and saves them to cookies.txt. Returns how many were saved.
 pub fn extract_and_save_cookies(
     webview_window: &WebviewWindow,
     app: &AppHandle,
 ) -> Result<usize, String> {
-    // Consultar varios dominios para capturar TODAS las cookies de sesion
-    // (incluidas las HttpOnly como LOGIN_INFO, SID, __Secure-3PSID...).
+    // Query several domains to capture ALL session cookies
+    // (including HttpOnly ones like LOGIN_INFO, SID, __Secure-3PSID...).
     let urls = [
         "https://www.youtube.com",
         "https://youtube.com",
@@ -60,7 +59,7 @@ pub fn extract_and_save_cookies(
                 _ => "0".to_string(),
             };
 
-            // Las cookies HttpOnly llevan el prefijo #HttpOnly_ (formato yt-dlp).
+            // HttpOnly cookies carry the #HttpOnly_ prefix (yt-dlp format).
             let domain_field = if cookie.http_only().unwrap_or(false) {
                 format!("#HttpOnly_{}", domain)
             } else {
@@ -81,8 +80,8 @@ pub fn extract_and_save_cookies(
         }
     }
 
-    // Única fuente de la ruta (antes commands hacía join("cookies.txt") a mano)
-    // + escritura atómica: nunca un cookies.txt a medias si algo muere aquí.
+    // Single source of the path + atomic write: never a half-written
+    // cookies.txt if something dies here.
     let cookies_path = service::get_cookies_path(&paths::app_dir(app));
     fsx::write_atomic(&cookies_path, &output)
         .map_err(|e| format!("No se pudo escribir cookies.txt: {}", e))?;

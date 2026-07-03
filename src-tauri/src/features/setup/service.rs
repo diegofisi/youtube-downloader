@@ -7,27 +7,26 @@ use tauri::{AppHandle, Emitter};
 use super::models::{DependencyStatus, SetupProgress};
 use crate::core::paths;
 
-// ── Versiones fijadas de dependencias ──────────────────────────────────────
-// Se descargan tags concretos (no `releases/latest`) para que la app no se
-// rompa si una versión nueva cambia el comportamiento sin haberla probado.
+// ── Pinned dependency versions ─────────────────────────────────────────────
+// Concrete tags are downloaded (not `releases/latest`) so an untested new
+// version can't silently break the app.
 
-// Versión probada — actualizar deliberadamente.
+// Tested version — update deliberately.
 const YTDLP_VERSION: &str = "2026.03.17";
 
-// Versión probada — actualizar deliberadamente.
+// Tested version — update deliberately.
 const DENO_VERSION: &str = "v2.9.1";
 
-// Versión probada — actualizar deliberadamente.
-// BtbN publica el tag estable "latest" con assets fijados por serie: este asset
-// está anclado a la rama 7.1 (solo recibe parches 7.1.x, no saltos de major).
+// Tested version — update deliberately. BtbN's stable "latest" tag ships assets
+// pinned per series: this one tracks the 7.1 branch (7.1.x patches only, no major jumps).
 const FFMPEG_WINDOWS_URL: &str =
     "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.1-latest-win64-gpl-7.1.zip";
 
-// Versión probada — actualizar deliberadamente.
-// evermeet.cx publica zips versionados; fijamos 7.1 (misma serie que Windows).
+// Tested version — update deliberately.
+// evermeet.cx publishes versioned zips; pinned to 7.1 (same series as Windows).
 const FFMPEG_MACOS_URL: &str = "https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip";
 
-/// Comprueba si las dependencias existen en el app_dir.
+/// Checks whether the dependencies exist in app_dir.
 pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
     let ytdlp = paths::has_binary(app_dir, "yt-dlp");
     let ffmpeg = paths::has_binary(app_dir, "ffmpeg");
@@ -41,7 +40,7 @@ pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
     }
 }
 
-/// Descarga las dependencias que falten.
+/// Downloads any missing dependencies.
 pub fn download_dependencies(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     fs::create_dir_all(app_dir).map_err(|e| format!("No se pudo crear directorio: {}", e))?;
 

@@ -6,7 +6,7 @@ export interface AppConfig {
   default_concurrency: number;
   /** "video" | "audio" */
   default_mode: string;
-  /** Plantilla de salida (sin ".%(ext)s"). */
+  /** Output template (without ".%(ext)s"). */
   default_template: string;
   default_subtitles: boolean;
   default_thumbnail: boolean;

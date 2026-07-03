@@ -1,34 +1,30 @@
 import { esc } from '../lib/html';
 
-/** Item de un menú anclado: icono opcional, etiqueta y acción al elegir. */
+/** Anchored-menu item: optional icon, label and on-pick action. */
 export interface AnchoredMenuItem {
   icon?: string;
   label: string;
-  /** Color del texto (y del icono, por herencia). Por defecto var(--text) con icono var(--text2). */
+  /** Text color (and icon, by inheritance). Defaults to var(--text) with var(--text2) icon. */
   color?: string;
   onPick: () => void;
 }
 
-/** Menú abierto (solo uno a la vez) y su botón ancla. */
+/** Open menu (only one at a time) and its anchor button. */
 let menu: HTMLElement | null = null;
 let menuAnchor: HTMLElement | null = null;
 
-/** Cierra el menú anclado abierto (si lo hay). Útil en los render() que repintan el grid. */
+/** Closes the open anchored menu (if any). Useful in render() calls that repaint the grid. */
 export function closeAnchoredMenu(): void {
   menu?.remove();
   menu = null;
   menuAnchor = null;
 }
 
-/**
- * Abre un menú desplegable anclado al rect de `anchor`: alineado a su borde
- * derecho, bajo el botón (encima si no cabe) y con clamp al viewport. Un
- * segundo click en el mismo ancla lo cierra (toggle). Se cierra con click
- * fuera, Escape o al elegir un item.
- */
+/** Opens a dropdown anchored to `anchor`'s rect: right-aligned, below the button (above if it
+ * doesn't fit), viewport-clamped. Same-anchor click toggles; outside click / Escape / pick close. */
 export function openAnchoredMenu(anchor: HTMLElement, items: AnchoredMenuItem[]): void {
   if (menuAnchor === anchor) {
-    closeAnchoredMenu(); // segundo click en el mismo botón: cerrar
+    closeAnchoredMenu(); // second click on the same button: close
     return;
   }
   closeAnchoredMenu();
@@ -54,8 +50,8 @@ export function openAnchoredMenu(anchor: HTMLElement, items: AnchoredMenuItem[])
     el.appendChild(b);
   }
   document.body.appendChild(el);
-  // Posicionar bajo el botón, alineado a su borde derecho; si no cabe, encima;
-  // siempre dentro del viewport (margen de 8px).
+  // Position below the button, aligned to its right edge; above if it doesn't
+  // fit; always inside the viewport (8px margin).
   const r = anchor.getBoundingClientRect();
   const mw = el.offsetWidth;
   const mh = el.offsetHeight;
@@ -67,7 +63,7 @@ export function openAnchoredMenu(anchor: HTMLElement, items: AnchoredMenuItem[])
   menuAnchor = anchor;
 }
 
-// Listeners globales registrados UNA sola vez a nivel de módulo: click fuera y Escape.
+// Global listeners registered ONCE at module level: outside click and Escape.
 document.addEventListener('click', (e) => {
   if (menu && !menu.contains(e.target as Node)) closeAnchoredMenu();
 });

@@ -10,8 +10,8 @@ use features::{download, library, preview, session, settings, setup};
 
 fn main() {
     tauri::Builder::default()
-        // Registro único de descargas activas (PID + flag cancelled por URL),
-        // accesible vía State<DownloadRegistry> en commands y services.
+        // Single registry of active downloads (PID + cancelled flag per URL),
+        // accessible via State<DownloadRegistry> in commands and services.
         .manage(DownloadRegistry::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
@@ -40,8 +40,8 @@ fn main() {
             setup::commands::download_dependencies,
         ])
         .on_window_event(|window, event| {
-            // Al cerrar la ventana principal, matar descargas en curso (yt-dlp/ffmpeg)
-            // para no dejar procesos huérfanos descargando en segundo plano.
+            // On main window close, kill in-flight downloads (yt-dlp/ffmpeg)
+            // so no orphan processes keep downloading in the background.
             if window.label() == "main" {
                 if let tauri::WindowEvent::Destroyed = event {
                     window.app_handle().state::<DownloadRegistry>().kill_all();

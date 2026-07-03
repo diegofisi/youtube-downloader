@@ -1,70 +1,70 @@
-# Testing: qué se testea aquí y cómo
+# Testing: what gets tested here and how
 
-Filosofía del repo (commit fase4: "tests de lo fragil"): se testea la lógica que se rompe en
-silencio, no el wiring. Hoy: 4 suites TS (queue.state, opts-model, paged-loader, format) y
-tests Rust embebidos en ytdlp, download/service, session/service y settings/models.
+Repo philosophy (fase4 commit: "tests de lo fragil"): test the logic that breaks silently,
+not the wiring. Today: 4 TS suites (queue.state, opts-model, paged-loader, format) and
+embedded Rust tests in ytdlp, download/service, session/service and settings/models.
 
-## Qué SÍ se testea ("lo frágil")
+## What DOES get tested ("the fragile parts")
 
-| Categoría | Ejemplos reales |
+| Category | Real examples |
 |---|---|
-| Parsers de texto externo | `parse_percent`/`parse_field` sobre líneas reales de yt-dlp; `parse_netscape` (cookies Netscape, `#HttpOnly_`, campos insuficientes) |
-| Clasificación de errores | `classify_error`: cada patrón de auth, case-insensitive, prioridad auth>cache, None para el resto |
-| Construcción de comandos | `YtdlpCmd::build` vía `Command::get_args`: `--encoding utf-8` al final, `--` antes de la URL, orden de args |
-| Retro-compatibilidad de datos | `AppConfig`: JSON vacío → defaults; config viejo conserva lo suyo; default de Rust == default de serde |
-| Máquinas de estado / schedulers | queue.state: dedupe, concurrencia, flujo de auth (pausar/reanudar), resume vs retry, clearFinished |
-| Lógica anti-race | paged-loader: resultados stale descartados, dedupe entre páginas, cursor 1-based |
-| Mapeos UI↔backend | opts-model: `av→video`, `4k→2160`, calidad desconocida→`auto`, overrides parciales |
-| Formateo puro | fmtDuration/fmtSize/timeAgo (bordes: 0, undefined, fracciones, >1 GB) |
-| Nombres/rutas | `template_with_suffix`, `path_with_suffix`, `expected_final_paths`, `sapisidhash` (formato) |
+| External-text parsers | `parse_percent`/`parse_field` over real yt-dlp lines; `parse_netscape` (Netscape cookies, `#HttpOnly_`, insufficient fields) |
+| Error classification | `classify_error`: every auth pattern, case-insensitive, auth>cache priority, None for the rest |
+| Command construction | `YtdlpCmd::build` via `Command::get_args`: `--encoding utf-8` at the end, `--` before the URL, arg order |
+| Data back-compat | `AppConfig`: empty JSON → defaults; old config keeps its values; Rust default == serde default |
+| State machines / schedulers | queue.state: dedupe, concurrency, auth flow (pause/resume), resume vs retry, clearFinished |
+| Anti-race logic | paged-loader: stale results discarded, dedupe across pages, 1-based cursor |
+| UI↔backend mappings | opts-model: `av→video`, `4k→2160`, unknown quality→`auto`, partial overrides |
+| Pure formatting | fmtDuration/fmtSize/timeAgo (edges: 0, undefined, fractions, >1 GB) |
+| Names/paths | `template_with_suffix`, `path_with_suffix`, `expected_final_paths`, `sapisidhash` (format) |
 
-## Qué NO se testea
+## What does NOT get tested
 
-- Wiring DOM de las vistas (initX, addEventListener, repintados): no hay tests de descargar.ts,
-  library-view, shell… Se valida con `npm run check` + uso.
-- Procesos reales (yt-dlp/ffmpeg), red, webview de login: nada lanza binarios en tests.
-- Los comandos Tauri en sí (los wrappers finos de commands.rs): se testea el service que llaman.
-- Estilos/HTML estático.
+- Views' DOM wiring (initX, addEventListener, repaints): no tests for descargar.ts,
+  library-view, shell… Validated via `npm run check` + usage.
+- Real processes (yt-dlp/ffmpeg), network, login webview: nothing launches binaries in tests.
+- The Tauri commands themselves (the thin commands.rs wrappers): the service they call is tested.
+- Styles/static HTML.
 
-## Patrones TS (vitest)
+## TS patterns (vitest)
 
-**Mock de fachadas + estado global de módulo** (queue.state.test.ts — el patrón más completo):
+**Facade mocks + module-global state** (queue.state.test.ts — the most complete pattern):
 
 ```ts
 const mocks = vi.hoisted(() => ({ startDownload: vi.fn(), showToast: vi.fn(), /* … */ }));
 vi.mock('../download', () => ({ startDownload: mocks.startDownload, cancelDownload: mocks.cancelDownload }));
 vi.mock('../../shared/ui/toast', () => ({ showToast: mocks.showToast }));
-// bus e i18n son puros: se usan REALES, no se mockean.
+// bus and i18n are pure: use the REAL ones, don't mock them.
 
 type QueueModule = typeof import('./queue.state');
 async function cargarCola(): Promise<QueueModule> { return await import('./queue.state'); }
 
 beforeEach(() => {
-  vi.resetModules();                       // el módulo tiene estado global (items/seq): importar fresco
+  vi.resetModules();                       // module has global state (items/seq): import fresh
   for (const m of Object.values(mocks)) m.mockReset();
 });
 ```
 
-**Drenar microtasks** de cadenas `.then`: `async function flush() { for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0)); }`.
-**Promesas controladas**: `mockReturnValue(new Promise(() => {}))` (descarga eterna) o capturar el
-`resolve` para terminar a voluntad.
+**Draining microtasks** from `.then` chains: `async function flush() { for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0)); }`.
+**Controlled promises**: `mockReturnValue(new Promise(() => {}))` (never-ending download) or capture
+the `resolve` to finish at will.
 
-**Entorno**: vitest.config.ts define dos proyectos — `dom` (jsdom) para `src/**/ui/**/*.test.ts` y
-`src/app/**`, `node` para el resto. Si un test necesita DOM, además del path se marca explícito:
+**Environment**: vitest.config.ts defines two projects — `dom` (jsdom) for `src/**/ui/**/*.test.ts` and
+`src/app/**`, `node` for the rest. If a test needs the DOM, mark it explicitly besides the path:
 
 ```ts
 // @vitest-environment jsdom
-// El loader cablea un botón "Ver más" real; jsdom aporta el document mínimo.
+// The loader wires a real "Ver más" button; jsdom provides the minimal document.
 …
-document.body.innerHTML = '<button id="btn-more">Ver más</button>';   // fixture mínima en beforeEach
+document.body.innerHTML = '<button id="btn-more">Ver más</button>';   // minimal fixture in beforeEach
 ```
 
-**Estado de módulo sin resetModules** (cuando basta limpiar): opts-model.test.ts borra
-`overrides` en `afterEach` (`for (const k of Object.keys(overrides)) delete overrides[k];`).
+**Module state without resetModules** (when cleanup suffices): opts-model.test.ts clears
+`overrides` in `afterEach` (`for (const k of Object.keys(overrides)) delete overrides[k];`).
 
-## Patrones Rust
+## Rust patterns
 
-**Tempdir de std con guard Drop** (sin crates de test) para FS real (session/service.rs):
+**std tempdir with a Drop guard** (no test crates) for real FS (session/service.rs):
 
 ```rust
 struct TempDir(PathBuf);
@@ -78,7 +78,7 @@ impl TempDir {
 impl Drop for TempDir { fn drop(&mut self) { let _ = std::fs::remove_dir_all(&self.0); } }
 ```
 
-**Inspeccionar un Command sin ejecutarlo** (core/ytdlp.rs):
+**Inspecting a Command without running it** (core/ytdlp.rs):
 
 ```rust
 fn args_de(cmd: &std::process::Command) -> Vec<String> {
@@ -88,18 +88,18 @@ let cmd = YtdlpCmd::new(Path::new("."), "https://youtu.be/x").build();
 assert_eq!(&args_de(&cmd)[n - 4..], ["--encoding", "utf-8", "--", "https://youtu.be/x"]);
 ```
 
-**Retro-compat serde** (settings/models.rs): deserializar `"{}"` y un JSON de la primera versión;
-un tercer test compara `AppConfig::default()` contra el default por serde ("si alguien cambia un
-default en un sitio y no en el otro, este test avisa").
+**Serde back-compat** (settings/models.rs): deserialize `"{}"` and a first-version JSON;
+a third test compares `AppConfig::default()` against the serde default ("if someone changes a
+default in one place and not the other, this test flags it").
 
-**Fixtures de líneas reales**: constantes con salida literal de yt-dlp
+**Real-line fixtures**: constants with literal yt-dlp output
 (`const LINEA_PROGRESO: &str = "[download]  45.2% of ~120.5MiB at 2.5MiB/s ETA 00:42";`).
 
-## Cómo correr
+## How to run
 
 ```
-npm test                    # vitest run (proyectos dom + node; passWithNoTests)
-cd src-tauri && cargo test  # tests Rust embebidos
+npm test                    # vitest run (dom + node projects; passWithNoTests)
+cd src-tauri && cargo test  # embedded Rust tests
 ```
-Al añadir lógica nueva: si cae en la tabla de "lo frágil", el test va en el MISMO PR; si es
-wiring de vista, no se fuerza un test.
+When adding new logic: if it falls into the "fragile" table, the test ships in the SAME PR; if
+it's view wiring, no test is forced.

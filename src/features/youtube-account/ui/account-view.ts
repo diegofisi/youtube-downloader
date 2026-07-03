@@ -25,21 +25,21 @@ const BENEFITS = [
   t('Sin extensiones ni copiar cookies a mano', 'No extensions or copying cookies by hand'),
 ];
 
-/** Tamaño de página para la paginación con "Ver más". */
+/** Page size for the "See more" pagination. */
 const PAGE = 50;
 
 let tab = 'wl';
 const sel = new Set<string>();
-/** Playlist abierta dentro de la pestaña "Playlists" (null = grid de playlists). */
+/** Playlist opened inside the "Playlists" tab (null = playlist grid). */
 let openPlaylist: { url: string; title: string } | null = null;
 
-/** Fuente actual: la pestaña activa, o la playlist abierta dentro de "Playlists". */
+/** Current source: the active tab, or the playlist opened inside "Playlists". */
 function currentSource(): { url: string; label: string } {
   if (tab === 'playlists' && openPlaylist) return { url: openPlaylist.url, label: openPlaylist.title };
   const cur = TABS.find((t) => t.key === tab)!;
   return { url: cur.url, label: cur.label };
 }
-/** ¿Estamos mostrando el grid de playlists (no sus videos)? */
+/** Are we showing the playlist grid (not its videos)? */
 function inPlaylistGrid(): boolean {
   return tab === 'playlists' && !openPlaylist;
 }
@@ -73,7 +73,7 @@ function renderTabs(): void {
   });
 }
 
-/** Estado vacío/error; con `showReconnect` añade el botón "Volver a iniciar sesión". */
+/** Empty/error state; with `showReconnect` adds the "Sign in again" button. */
 function emptyState(title: string, msg: string, showReconnect: boolean): string {
   return stateCard(
     title,
@@ -87,7 +87,7 @@ function wireEmptyReconnect(): void {
   document.getElementById('yt-empty-reconnect')?.addEventListener('click', openLogin);
 }
 
-/** Botón "← Volver a Playlists" (solo dentro de una playlist abierta). */
+/** "← Back to Playlists" button (only inside an opened playlist). */
 function backBtnHtml(): string {
   if (!openPlaylist) return '';
   return `<div style="grid-column:1/-1"><button id="yt-back" style="display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 14px;border-radius:9px;border:1px solid var(--border2);background:var(--panel);color:var(--text2);font-weight:600;font-size:12.5px">${t('← Volver a Playlists', '← Back to Playlists')}</button></div>`;
@@ -99,7 +99,7 @@ function wireBack(): void {
   });
 }
 
-/** Tarjeta de playlist (pestaña "Playlists"): estilo propio, se abre al hacer click. */
+/** Playlist card ("Playlists" tab): own styling, opens on click. */
 function playlistCard(v: VideoMeta): string {
   const grad = 'linear-gradient(135deg,#2d3a6b,#7a45c2)';
   const thumbInner = v.thumbnail
@@ -121,7 +121,7 @@ function playlistCard(v: VideoMeta): string {
 }
 
 function renderList(): void {
-  closeAnchoredMenu(); // el grid se re-renderiza con innerHTML: el ancla deja de existir
+  closeAnchoredMenu(); // the grid is re-rendered via innerHTML: the anchor node no longer exists
   const src = currentSource();
   const plGrid = inPlaylistGrid();
   const videos = loader.items;
@@ -173,7 +173,7 @@ async function loadTab(): Promise<void> {
   const src = currentSource();
   const seq = loader.begin();
   sel.clear();
-  // Título/contador correctos desde el arranque de la carga (antes se quedaba el anterior).
+  // Correct title/count from the start of the load (previously the old one lingered).
   $('yt-title').textContent = src.label;
   $('yt-count').textContent = '';
   $('btn-yt-download-sel').hidden = true;
@@ -183,7 +183,7 @@ async function loadTab(): Promise<void> {
   $('yt-list').innerHTML = backBtnHtml() + loadingCard(`${t('Cargando', 'Loading')} ${esc(src.label)}…`);
   wireBack();
   try {
-    if ((await loader.loadFirst(seq)) === 'stale') return; // cambió de tab/playlist mientras cargaba
+    if ((await loader.loadFirst(seq)) === 'stale') return; // tab/playlist changed while loading
     if (loader.items.length === 0) {
       await refreshSession();
       renderAccountCard();
@@ -241,11 +241,11 @@ async function loadTab(): Promise<void> {
 
 export function initAccount(): void {
   initAccountCard({
-    // Tras updateConnection con sesión activa: cargar el grid si está vacío.
+    // After updateConnection with an active session: load the grid if empty.
     onLoggedIn: () => {
       if (loader.items.length === 0) void loadTab();
     },
-    // Tras logout: limpiar el estado del grid.
+    // After logout: clear grid state.
     onLoggedOut: () => {
       loader.begin();
       sel.clear();
@@ -256,8 +256,8 @@ export function initAccount(): void {
   renderTabs();
   loader.wireMore();
 
-  // Botón secundario "Personalizar" junto a "Descargar seleccionados" (creado
-  // aquí para no tocar index.html): manda las urls elegidas a la vista Descargar.
+  // Secondary "Customize" button next to "Download selected" (created here to
+  // avoid touching index.html): sends the chosen urls to the Download view.
   const custBtn = document.createElement('button');
   custBtn.id = 'btn-yt-customize-sel';
   custBtn.className = 'acc-btn';
@@ -283,14 +283,14 @@ export function initAccount(): void {
       renderList();
     });
   });
-  // Un solo camino: session:changed cubre todas las transiciones (session:connected
-  // siempre viene acompañado de session:changed, así evitamos dos loadTab concurrentes).
+  // Single path: session:changed covers all transitions (session:connected always
+  // comes with session:changed, avoiding two concurrent loadTab calls).
   bus.on('session:changed', () => {
-    // Cualquier transición (logout, reconexión, caducidad) invalida la info
-    // cacheada de la cuenta; se re-pide solo si la sesión queda conectada.
+    // Any transition (logout, reconnect, expiry) invalidates the cached account
+    // info; it is re-fetched only if the session ends up connected.
     invalidateAccountInfo();
     if (isConnected()) {
-      loader.begin(); // al conectar, recargar la lista desde cero
+      loader.begin(); // on connect, reload the list from scratch
       openPlaylist = null;
     }
     void updateConnection();

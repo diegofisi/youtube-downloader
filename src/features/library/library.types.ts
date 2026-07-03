@@ -1,15 +1,15 @@
 export interface LibraryEntry {
   id: string;
-  /** Id del video (p. ej. id de YouTube), independiente de la URL exacta. */
+  /** Video id (e.g. YouTube id), independent of the exact URL. */
   videoId?: string;
   thumbnail?: string;
-  /** Duración en segundos. */
+  /** Duration in seconds. */
   duration?: number;
-  /** Ruta absoluta del archivo descargado (si se pudo capturar). */
+  /** Absolute path of the downloaded file (if it could be captured). */
   filePath?: string;
   url: string;
   title: string;
   format: string;
   folder: string;
-  date: number; // unix segundos
+  date: number; // unix seconds
 }

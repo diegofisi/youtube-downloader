@@ -10,8 +10,8 @@ pub fn get_history(app: AppHandle) -> Vec<LibraryEntry> {
     service::list(&app_dir)
 }
 
-// El comando mantiene los argumentos planos: son el contrato `invoke` con el
-// frontend (library.api.ts). Internamente se agrupan en `NewEntry`.
+// Flat arguments are the `invoke` contract with the frontend (library.api.ts).
+// Internally they are grouped into `NewEntry`.
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn add_history(
@@ -45,14 +45,13 @@ pub fn remove_history_item(app: AppHandle, id: String) -> Result<(), String> {
     service::remove(&app_dir, &id)
 }
 
-/// Borra el archivo de una entrada (papelera → permanente como fallback) y
-/// elimina la entrada del historial. Devuelve "trash" | "permanent" | "no_file".
+/// Deletes an entry's file (trash → permanent fallback) and removes the
+/// history entry. Returns "trash" | "permanent" | "no_file".
 #[tauri::command]
 pub async fn delete_history_file(app: AppHandle, id: String) -> Result<String, String> {
     let app_dir = paths::app_dir(&app);
-    // Enviar a la papelera es una operación COM de Windows que puede tardar
-    // cientos de ms; spawn_blocking evita congelar la UI (mismo patrón que
-    // start_download).
+    // Trashing is a Windows COM operation that can take hundreds of ms;
+    // spawn_blocking avoids freezing the UI (same pattern as start_download).
     tauri::async_runtime::spawn_blocking(move || service::delete_file(&app_dir, &id))
         .await
         .map_err(|e| format!("Error interno borrando archivo: {}", e))?

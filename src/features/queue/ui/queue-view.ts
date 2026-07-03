@@ -1,6 +1,5 @@
-// Render DOM de la cola (Fase 3 del refactor auditado). Movido desde queue.ts
-// para que el scheduler (queue.state.ts) sea testeable sin DOM. Esta vista
-// importa el state, nunca al revés: se registra con subscribe() y repinta.
+// Queue DOM rendering, split out so the scheduler (queue.state.ts) is testable without DOM.
+// This view imports the state, never the reverse: it registers via subscribe() and repaints.
 import { I } from '../../../shared/ui/icons';
 import { esc } from '../../../shared/lib/html';
 import { t } from '../../../core/i18n';
@@ -185,19 +184,18 @@ function render(): void {
   listEl
     .querySelectorAll<HTMLElement>('.q-down')
     .forEach((b) => b.addEventListener('click', () => move(b.dataset.id!, 1)));
-  // El render original terminaba con emitCount(); se conserva aquí (y no en el
-  // notify del state) para mantener idéntico el orden de emits en 'queue:count'.
+  // The original render ended with emitCount(); kept here (not in the state's
+  // notify) to preserve the exact 'queue:count' emit ordering.
   emitCount();
 }
 
 export function initQueueView(): void {
   void onProgress((d) => handleProgress(d.url, d.percent, d.speed, d.eta, d.status));
-  // La mutación de items (reintentar/limpiar) vive en el state; aquí solo se
-  // cablean los botones. El toast de "Reintentando" lo emite el propio state
-  // tras render+pump, igual que en el código original.
+  // Item mutation (retry/clear) lives in the state; only buttons are wired here.
+  // The "Retrying" toast is emitted by the state after render+pump, as originally.
   document.getElementById('btn-retry-all')?.addEventListener('click', retryAllFailed);
   document.getElementById('btn-clear-done')?.addEventListener('click', clearFinished);
-  // A partir de aquí cada cambio de estado repinta la vista.
+  // From here on, every state change repaints the view.
   subscribe(render);
   render();
 }

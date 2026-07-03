@@ -5,26 +5,25 @@ use sha1::{Digest, Sha1};
 
 use super::models::AccountInfo;
 
-/// User-Agent de navegador: única fuente, compartida por las ventanas de
-/// login (commands) y las peticiones autenticadas de este service.
+/// Browser User-Agent: single source, shared by the login windows (commands)
+/// and this service's authenticated requests.
 pub const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 pub fn get_cookies_path(app_dir: &Path) -> PathBuf {
     app_dir.join("cookies.txt")
 }
 
-/// Cookie de un cookies.txt en formato Netscape (solo los campos que usamos).
+/// Cookie from a Netscape-format cookies.txt (only the fields we use).
 struct CookieRecord<'a> {
     domain: &'a str,
     name: &'a str,
     value: &'a str,
-    /// Timestamp unix de expiración (0 = cookie de sesión / sin fecha).
+    /// Unix expiry timestamp (0 = session cookie / no date).
     expiry: i64,
 }
 
-/// Parser único del formato Netscape: línea → strip `#HttpOnly_` → split por
-/// tabs → 7+ campos. `session_status` y `parse_auth_cookies` son filtros
-/// sobre este iterador (antes duplicaban el bucle).
+/// Single Netscape-format parser: line → strip `#HttpOnly_` → split on tabs →
+/// 7+ fields. `session_status` and `parse_auth_cookies` filter this iterator.
 fn parse_netscape(content: &str) -> impl Iterator<Item = CookieRecord<'_>> {
     content.lines().filter_map(|raw| {
         let line = raw.trim();
@@ -48,13 +47,8 @@ fn parse_netscape(content: &str) -> impl Iterator<Item = CookieRecord<'_>> {
     })
 }
 
-/// Estado REAL de la sesión de YouTube según cookies.txt:
-/// - "connected": hay cookies de autenticación fuertes en `.youtube.com` y vigentes.
-/// - "expired": hay cookies de YouTube pero la auth falta o venció (re-login necesario).
-/// - "none": no hay archivo o no hay nada de YouTube.
-///
-/// Nota: exports del navegador suelen traer SAPISID solo en `.google.com`; yt-dlp
-/// necesita la auth en `.youtube.com`, por eso se valida ese dominio en concreto.
+/// REAL YouTube session state per cookies.txt: "connected" (valid strong auth cookies on `.youtube.com`), "expired" (YouTube cookies but auth missing/expired), "none" (no file / nothing from YouTube).
+/// Browser exports often carry SAPISID only on `.google.com`; yt-dlp needs the auth on `.youtube.com`, hence that exact domain check.
 pub fn session_status(app_dir: &Path) -> &'static str {
     let path = get_cookies_path(app_dir);
     let Ok(content) = fs::read_to_string(&path) else {
@@ -93,11 +87,8 @@ pub fn session_status(app_dir: &Path) -> &'static str {
     }
 }
 
-/// Parsea cookies.txt (formato Netscape) y devuelve:
-/// - el header `Cookie` con las cookies de youtube.com ÚNICAMENTE (mezclar las
-///   de google.com hace que YouTube degrade la respuesta de account_menu: a
-///   veces sin foto, a veces sin cuenta — verificado empíricamente), y
-/// - el valor de SAPISID (o __Secure-3PAPISID) para firmar SAPISIDHASH.
+/// Parses cookies.txt into the `Cookie` header with youtube.com cookies ONLY (mixing google.com ones degrades the account_menu response — verified empirically),
+/// plus the SAPISID (or __Secure-3PAPISID) value used to sign SAPISIDHASH.
 fn parse_auth_cookies(content: &str) -> (String, Option<String>) {
     let mut pairs: Vec<(String, String)> = Vec::new();
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -123,7 +114,7 @@ fn parse_auth_cookies(content: &str) -> (String, Option<String>) {
     (header, sapisid)
 }
 
-/// Firma SAPISIDHASH: SHA1("<ts> <SAPISID> https://www.youtube.com") en hex.
+/// SAPISIDHASH signature: hex SHA1("<ts> <SAPISID> https://www.youtube.com").
 fn sapisidhash(sapisid: &str, origin: &str) -> String {
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -139,11 +130,8 @@ fn sapisidhash(sapisid: &str, origin: &str) -> String {
     format!("SAPISIDHASH {}_{}", ts, hex)
 }
 
-/// Consulta el endpoint interno `account_menu` de YouTube para obtener nombre,
-/// handle y avatar de la cuenta conectada (autenticado con SAPISIDHASH).
-///
-/// Devuelve Ok(None) sin ruido si no hay cookies/SAPISID o la respuesta no
-/// trae cuenta. Solo es Err ante fallos inesperados de red/parseo.
+/// Queries YouTube's internal `account_menu` endpoint (SAPISIDHASH auth) for the connected account's name, handle and avatar.
+/// Ok(None) quietly when there are no cookies/SAPISID or no account in the response; Err only on unexpected network/parse failures.
 pub fn get_account_info(app_dir: &Path) -> Result<Option<AccountInfo>, String> {
     let path = get_cookies_path(app_dir);
     let Ok(content) = fs::read_to_string(&path) else {
@@ -173,7 +161,7 @@ pub fn get_account_info(app_dir: &Path) -> Result<Option<AccountInfo>, String> {
         .map_err(|e| format!("No se pudo consultar la cuenta: {}", e))?;
 
     if !resp.status().is_success() {
-        // 401/403 etc.: sesión inválida — la UI genérica sigue funcionando.
+        // 401/403 etc.: invalid session — the generic UI keeps working.
         return Ok(None);
     }
 
@@ -183,9 +171,8 @@ pub fn get_account_info(app_dir: &Path) -> Result<Option<AccountInfo>, String> {
     let json: serde_json::Value =
         serde_json::from_str(&body).map_err(|e| format!("Respuesta de cuenta ilegible: {}", e))?;
 
-    // Rutas verificadas empíricamente (2026-07):
-    // actions[0].openPopupAction.popup.multiPageMenuRenderer.header.activeAccountHeaderRenderer
-    //   .accountName.simpleText / .channelHandle.simpleText / .accountPhoto.thumbnails[N].url
+    // Paths verified empirically (2026-07): actions[0].openPopupAction.popup.multiPageMenuRenderer
+    //   .header.activeAccountHeaderRenderer.{accountName,channelHandle}.simpleText / .accountPhoto.thumbnails[N].url
     let Some(header) = json.pointer(
         "/actions/0/openPopupAction/popup/multiPageMenuRenderer/header/activeAccountHeaderRenderer",
     ) else {
@@ -204,7 +191,7 @@ pub fn get_account_info(app_dir: &Path) -> Result<Option<AccountInfo>, String> {
         .and_then(|v| v.as_str())
         .map(str::to_string);
 
-    // Thumbnail de ~88px o más: el más pequeño que llegue a 88, o el mayor disponible.
+    // Thumbnail of ~88px or more: the smallest reaching 88, else the largest available.
     let avatar_url = header
         .pointer("/accountPhoto/thumbnails")
         .and_then(|v| v.as_array())
@@ -225,9 +212,8 @@ pub fn get_account_info(app_dir: &Path) -> Result<Option<AccountInfo>, String> {
                 .map(|(_, u)| u.to_string())
         });
 
-    // Entregar la foto como data URL (descargada aquí, en base64): así el
-    // webview no depende de cargar yt3.ggpht.com por su cuenta (origen/referer).
-    // Si la descarga falla, se devuelve la URL cruda como último recurso.
+    // Deliver the photo as a base64 data URL so the webview doesn't have to load
+    // yt3.ggpht.com itself (origin/referer). Raw URL as last resort if the fetch fails.
     let avatar_url = avatar_url.map(|u| fetch_as_data_url(&client, &u).unwrap_or(u));
 
     Ok(Some(AccountInfo {
@@ -237,7 +223,7 @@ pub fn get_account_info(app_dir: &Path) -> Result<Option<AccountInfo>, String> {
     }))
 }
 
-/// Descarga una imagen y la devuelve como data URL base64 (None si falla).
+/// Downloads an image and returns it as a base64 data URL (None on failure).
 fn fetch_as_data_url(client: &reqwest::blocking::Client, url: &str) -> Option<String> {
     use base64::Engine;
     let resp = client.get(url).send().ok()?;
@@ -251,7 +237,7 @@ fn fetch_as_data_url(client: &reqwest::blocking::Client, url: &str) -> Option<St
         .unwrap_or("image/jpeg")
         .to_string();
     let bytes = resp.bytes().ok()?;
-    // Un avatar pesa unos KB; 2 MB de tope por sanidad.
+    // Avatars weigh a few KB; 2 MB cap for sanity.
     if bytes.is_empty() || bytes.len() > 2 * 1024 * 1024 {
         return None;
     }
@@ -259,7 +245,7 @@ fn fetch_as_data_url(client: &reqwest::blocking::Client, url: &str) -> Option<St
     Some(format!("data:{};base64,{}", content_type, b64))
 }
 
-/// Cierra la sesión eliminando cookies.txt.
+/// Logs out by deleting cookies.txt.
 pub fn logout(app_dir: &Path) -> Result<(), String> {
     let path = get_cookies_path(app_dir);
     if path.exists() {
@@ -272,7 +258,7 @@ pub fn logout(app_dir: &Path) -> Result<(), String> {
 mod tests {
     use super::*;
 
-    /// Línea Netscape válida: domain, flag, path, secure, expiry, name, value.
+    /// Valid Netscape line: domain, flag, path, secure, expiry, name, value.
     fn linea(domain: &str, expiry: &str, name: &str, value: &str) -> String {
         format!("{}\tTRUE\t/\tTRUE\t{}\t{}\t{}", domain, expiry, name, value)
     }
@@ -314,7 +300,7 @@ mod tests {
 
     #[test]
     fn parse_netscape_descarta_lineas_con_campos_insuficientes() {
-        // 6 campos (falta value) y una línea separada por espacios, no tabs.
+        // 6 fields (value missing) and a line split by spaces, not tabs.
         let contenido =
             ".youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\n.youtube.com TRUE / TRUE 0 SAPISID abc";
         assert_eq!(parse_netscape(contenido).count(), 0);
@@ -327,9 +313,9 @@ mod tests {
         assert_eq!(cookies[0].expiry, 0);
     }
 
-    // ---------- session_status (con cookies.txt real en un dir temporal) ----------
+    // ---------- session_status (real cookies.txt in a temp dir) ----------
 
-    /// Dir temporal único por test; se limpia al soltar el guard.
+    /// Per-test unique temp dir; cleaned up when the guard drops.
     struct TempDir(PathBuf);
     impl TempDir {
         fn new(tag: &str) -> Self {
@@ -365,7 +351,7 @@ mod tests {
     #[test]
     fn session_status_connected_con_cookie_fuerte_vigente() {
         let dir = TempDir::new("connected");
-        // expiry 0 = cookie de sesión: cuenta como vigente.
+        // expiry 0 = session cookie: counts as valid.
         let contenido = format!(
             "{}\n{}",
             linea(".youtube.com", "0", "LOGIN_INFO", "v"),
