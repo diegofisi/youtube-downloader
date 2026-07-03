@@ -8,6 +8,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import boundaries from 'eslint-plugin-boundaries';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   { ignores: ['dist/**', 'node_modules/**', 'src-tauri/**'] },
@@ -94,6 +95,91 @@ export default tseslint.config(
   {
     files: ['src/core/tauri/**/*.ts', 'src/**/*.api.ts'],
     rules: { 'no-restricted-imports': 'off' },
+  },
+
+  // ============ App React (src-react) — migración en curso ============
+  // Boundaries completas llegarán con más slices; por ahora: hooks de React,
+  // promesas sueltas y prohibición de imports entre features.
+  {
+    files: ['src-react/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.react.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+      // Acceso a Tauri encapsulado: invoke/onEvent solo desde api/ y stores/.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/shared/lib/tauri', '@tauri-apps/*', '@tauri-apps/*/*'],
+              message: 'El acceso a Tauri va encapsulado: solo api/[endpoint]/ y stores/ pueden usar invoke/onEvent.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Excepciones al encapsulado de Tauri en React: la fachada, el hook de eventos,
+  // los helpers de ventana y las capas api/stores de cada feature.
+  {
+    files: [
+      'src-react/shared/lib/tauri.ts',
+      'src-react/shared/lib/window.ts',
+      'src-react/shared/hooks/useTauriEvent.ts',
+      'src-react/features/**/api/**/*.{ts,tsx}',
+      'src-react/features/**/stores/**/*.{ts,tsx}',
+    ],
+    rules: { 'no-restricted-imports': 'off' },
+  },
+  // No-cross-feature-imports (regla simple hasta tener boundaries completas):
+  // settings solo puede importar de sí mismo, shared/ y las restricciones de arriba.
+  {
+    files: ['src-react/features/settings/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*', '@/features/*/**', '!@/features/settings', '!@/features/settings/**'],
+              message: 'Prohibido importar de otros features: crea un hook local (guideline §4.15).',
+            },
+            {
+              group: ['@/shared/lib/tauri', '@tauri-apps/*', '@tauri-apps/*/*'],
+              message: 'El acceso a Tauri va encapsulado: solo api/[endpoint]/ y stores/ pueden usar invoke/onEvent.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src-react/features/settings/api/**/*.{ts,tsx}', 'src-react/features/settings/stores/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*', '@/features/*/**', '!@/features/settings', '!@/features/settings/**'],
+              message: 'Prohibido importar de otros features: crea un hook local (guideline §4.15).',
+            },
+          ],
+        },
+      ],
+    },
   },
 
   // Deuda conocida y aceptada: dl-actions vive en shared/ pero orquesta fachadas

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src-react/*"]
+    }
+  },
+  "include": ["src-react/**/*.ts", "src-react/**/*.tsx"]
+}
