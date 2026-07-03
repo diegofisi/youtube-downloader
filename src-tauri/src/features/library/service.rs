@@ -42,13 +42,26 @@ fn write(app_dir: &Path, entries: &[LibraryEntry]) -> Result<(), String> {
     Ok(())
 }
 
-pub fn add(app_dir: &Path, url: String, title: String, format: String) -> Result<LibraryEntry, String> {
+pub fn add(
+    app_dir: &Path,
+    url: String,
+    title: String,
+    format: String,
+    video_id: Option<String>,
+    thumbnail: Option<String>,
+    duration: Option<f64>,
+    file_path: Option<String>,
+) -> Result<LibraryEntry, String> {
     let mut all = list(app_dir);
     let folder = settings::get_download_folder(app_dir)
         .to_string_lossy()
         .to_string();
     let entry = LibraryEntry {
         id: now_nanos().to_string(),
+        video_id,
+        thumbnail,
+        duration,
+        file_path,
         url,
         title,
         format,
@@ -66,6 +79,55 @@ pub fn remove(app_dir: &Path, id: &str) -> Result<(), String> {
     let mut all = list(app_dir);
     all.retain(|e| e.id != id);
     write(app_dir, &all)
+}
+
+/// Borra el archivo asociado a una entrada del historial (papelera si es
+/// posible; permanente como fallback) y SIEMPRE elimina la entrada al final.
+/// Devuelve "trash" | "permanent" | "no_file".
+pub fn delete_file(app_dir: &Path, id: &str) -> Result<String, String> {
+    let all = list(app_dir);
+    let entry = all.iter().find(|e| e.id == id);
+
+    let mut outcome = "no_file".to_string();
+    let mut delete_error: Option<String> = None;
+
+    if let Some(entry) = entry {
+        if let Some(fp) = entry.file_path.as_deref() {
+            let path = Path::new(fp);
+            if path.exists() {
+                match trash::delete(path) {
+                    Ok(()) => {
+                        println!("[library] Archivo enviado a la papelera: {}", fp);
+                        outcome = "trash".into();
+                    }
+                    Err(e) => {
+                        println!(
+                            "[library] trash::delete falló ({}). Intentando borrado permanente: {}",
+                            e, fp
+                        );
+                        match fs::remove_file(path) {
+                            Ok(()) => {
+                                println!("[library] Archivo borrado permanentemente: {}", fp);
+                                outcome = "permanent".into();
+                            }
+                            Err(e2) => {
+                                delete_error =
+                                    Some(format!("No se pudo borrar el archivo: {}", e2));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // La entrada del historial se elimina SIEMPRE, incluso si el borrado falló.
+    remove(app_dir, id)?;
+
+    match delete_error {
+        Some(e) => Err(e),
+        None => Ok(outcome),
+    }
 }
 
 pub fn clear(app_dir: &Path) -> Result<(), String> {
