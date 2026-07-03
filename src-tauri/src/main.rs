@@ -3,10 +3,16 @@
 mod core;
 mod features;
 
+use tauri::Manager;
+
+use crate::core::process::DownloadRegistry;
 use features::{download, library, preview, session, settings, setup};
 
 fn main() {
     tauri::Builder::default()
+        // Registro único de descargas activas (PID + flag cancelled por URL),
+        // accesible vía State<DownloadRegistry> en commands y services.
+        .manage(DownloadRegistry::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -38,7 +44,7 @@ fn main() {
             // para no dejar procesos huérfanos descargando en segundo plano.
             if window.label() == "main" {
                 if let tauri::WindowEvent::Destroyed = event {
-                    core::process::kill_all();
+                    window.app_handle().state::<DownloadRegistry>().kill_all();
                 }
             }
         })

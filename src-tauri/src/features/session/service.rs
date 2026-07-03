@@ -5,11 +5,47 @@ use sha1::{Digest, Sha1};
 
 use super::models::AccountInfo;
 
-/// User-Agent de navegador (mismo que usan las ventanas de login).
-const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+/// User-Agent de navegador: única fuente, compartida por las ventanas de
+/// login (commands) y las peticiones autenticadas de este service.
+pub const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 pub fn get_cookies_path(app_dir: &Path) -> PathBuf {
     app_dir.join("cookies.txt")
+}
+
+/// Cookie de un cookies.txt en formato Netscape (solo los campos que usamos).
+struct CookieRecord<'a> {
+    domain: &'a str,
+    name: &'a str,
+    value: &'a str,
+    /// Timestamp unix de expiración (0 = cookie de sesión / sin fecha).
+    expiry: i64,
+}
+
+/// Parser único del formato Netscape: línea → strip `#HttpOnly_` → split por
+/// tabs → 7+ campos. `session_status` y `parse_auth_cookies` son filtros
+/// sobre este iterador (antes duplicaban el bucle).
+fn parse_netscape(content: &str) -> impl Iterator<Item = CookieRecord<'_>> {
+    content.lines().filter_map(|raw| {
+        let line = raw.trim();
+        if line.is_empty() {
+            return None;
+        }
+        let line = line.strip_prefix("#HttpOnly_").unwrap_or(line);
+        if line.starts_with('#') {
+            return None;
+        }
+        let f: Vec<&str> = line.split('\t').collect();
+        if f.len() < 7 {
+            return None;
+        }
+        Some(CookieRecord {
+            domain: f[0],
+            name: f[5],
+            value: f[6],
+            expiry: f[4].parse().unwrap_or(0),
+        })
+    })
 }
 
 /// Estado REAL de la sesión de YouTube según cookies.txt:
@@ -34,27 +70,13 @@ pub fn session_status(app_dir: &Path) -> &'static str {
     let mut strong_valid = false;
     let mut strong_expired = false;
 
-    for raw in content.lines() {
-        let line = raw.trim();
-        if line.is_empty() {
-            continue;
-        }
-        let line = line.strip_prefix("#HttpOnly_").unwrap_or(line);
-        if line.starts_with('#') {
-            continue;
-        }
-        let f: Vec<&str> = line.split('\t').collect();
-        if f.len() < 7 {
-            continue;
-        }
-        if !f[0].contains("youtube.com") {
+    for c in parse_netscape(&content) {
+        if !c.domain.contains("youtube.com") {
             continue;
         }
         has_any_yt = true;
-        let name = f[5];
-        if STRONG.contains(&name) {
-            let exp: i64 = f[4].parse().unwrap_or(0);
-            if exp != 0 && exp < now {
+        if STRONG.contains(&c.name) {
+            if c.expiry != 0 && c.expiry < now {
                 strong_expired = true;
             } else {
                 strong_valid = true;
@@ -81,28 +103,15 @@ fn parse_auth_cookies(content: &str) -> (String, Option<String>) {
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut sapisid: Option<String> = None;
 
-    for raw in content.lines() {
-        let line = raw.trim();
-        if line.is_empty() {
+    for c in parse_netscape(content) {
+        if !c.domain.contains("youtube.com") {
             continue;
         }
-        let line = line.strip_prefix("#HttpOnly_").unwrap_or(line);
-        if line.starts_with('#') {
-            continue;
+        if seen.insert(c.name.to_string()) {
+            pairs.push((c.name.to_string(), c.value.to_string()));
         }
-        let f: Vec<&str> = line.split('\t').collect();
-        if f.len() < 7 {
-            continue;
-        }
-        let (domain, name, value) = (f[0], f[5], f[6]);
-        if !domain.contains("youtube.com") {
-            continue;
-        }
-        if seen.insert(name.to_string()) {
-            pairs.push((name.to_string(), value.to_string()));
-        }
-        if (name == "SAPISID" || name == "__Secure-3PAPISID") && sapisid.is_none() {
-            sapisid = Some(value.to_string());
+        if (c.name == "SAPISID" || c.name == "__Secure-3PAPISID") && sapisid.is_none() {
+            sapisid = Some(c.value.to_string());
         }
     }
 

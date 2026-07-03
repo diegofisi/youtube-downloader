@@ -1,7 +1,7 @@
 use tauri::AppHandle;
 
+use super::models::AppConfig;
 use super::service;
-use super::service::AppConfig;
 use crate::core::paths;
 
 #[tauri::command]

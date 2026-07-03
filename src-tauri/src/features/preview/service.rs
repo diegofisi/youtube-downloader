@@ -1,13 +1,9 @@
 use std::path::Path;
-use std::process::{Command, Stdio};
-
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 
 use serde_json::Value;
 
 use super::models::{AnalyzedEntry, PlaylistMeta, VideoMeta};
-use crate::core::paths;
+use crate::core::ytdlp::YtdlpCmd;
 use crate::features::session::service as session;
 
 /// Tope de entradas para Mezclas/radios (listas infinitas autogeneradas de YouTube).
@@ -62,54 +58,30 @@ fn run_dump_json(
     cap: Option<u32>,
     range: Option<(u32, u32)>,
 ) -> Result<Value, String> {
-    let ytdlp = paths::find_executable(app_dir, "yt-dlp")
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "yt-dlp".into());
-
-    let mut args: Vec<String> = vec![
-        "-J".into(),
-        "--flat-playlist".into(),
-        "--no-warnings".into(),
-        "--no-update".into(),
-        // El exe empaquetado de yt-dlp ignora PYTHONIOENCODING y, al escribir a una
-        // tubería, descarta los caracteres no representables en la página de códigos
-        // de Windows (p. ej. títulos en japonés) — el JSON llegaría degradado.
-        // Forzar UTF-8 en su salida.
-        "--encoding".into(),
-        "utf-8".into(),
-    ];
+    // El builder resuelve el binario y añade --encoding utf-8 y `-- <url>`.
+    let mut builder = YtdlpCmd::new(app_dir, url)
+        .arg("-J")
+        .arg("--flat-playlist")
+        .no_warnings()
+        .no_update();
 
     if let Some((start, end)) = range {
         // Rango explícito (paginación desde el frontend): sustituye al tope fijo.
-        args.push("--playlist-items".into());
-        args.push(format!("{}:{}", start, end));
+        builder = builder
+            .arg("--playlist-items")
+            .arg(format!("{}:{}", start, end));
     } else if let Some(c) = cap {
-        args.push("--playlist-end".into());
-        args.push(c.to_string());
+        builder = builder.arg("--playlist-end").arg(c.to_string());
     }
 
-    if let Some(deno) = paths::find_executable(app_dir, "deno") {
-        args.push("--extractor-args".into());
-        args.push(format!("youtube:js_runtimes=deno:{}", deno.to_string_lossy()));
-    }
+    // Cookies incondicionales (si existen): el preview siempre se beneficia
+    // de la sesión para contenidos privados/members-only.
+    builder = builder
+        .deno_runtime()
+        .cookies(&session::get_cookies_path(app_dir));
 
-    let cookies = session::get_cookies_path(app_dir);
-    if cookies.exists() {
-        args.push("--cookies".into());
-        args.push(cookies.to_string_lossy().into());
-    }
-
-    // `--` cierra las opciones: una URL con "-" inicial no se interpreta como flag.
-    args.push("--".into());
-    args.push(url.into());
-
-    let mut cmd = Command::new(&ytdlp);
-    cmd.args(&args).stdout(Stdio::piped()).stderr(Stdio::piped());
-
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x08000000);
-
-    let out = cmd
+    let out = builder
+        .build()
         .output()
         .map_err(|e| format!("No se pudo ejecutar yt-dlp: {}", e))?;
 
@@ -120,6 +92,11 @@ fn run_dump_json(
             .find(|l| l.trim_start().starts_with("ERROR:"))
             .map(|l| l.trim().trim_start_matches("ERROR:").trim().to_string())
             .unwrap_or_else(|| "No se pudo analizar la URL".into());
+        // TODO(error_kind): clasificar aquí los errores de auth ("Sign in to
+        // confirm", members-only, etc. — ver download::classify_error) y
+        // devolver un error estructurado {message, kind} en vez de String.
+        // NO cambiar el contrato todavía: el frontend de preview aún no
+        // ramifica por kind (cuando lo haga, unificar con DownloadResult).
         return Err(msg);
     }
 

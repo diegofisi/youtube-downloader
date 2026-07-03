@@ -1,83 +1,21 @@
-use std::collections::HashSet;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-
 use tauri::{AppHandle, Emitter};
 
 use super::models::{DownloadOptions, DownloadResult};
 use crate::core::models::ProgressData;
-use crate::core::{paths, process, ytdlp};
+use crate::core::process::{self, DownloadRegistry};
+use crate::core::ytdlp::{self, YtdlpCmd};
 use crate::features::session::service as session;
 use crate::features::settings::service as settings;
-
-/// URLs canceladas explícitamente por el usuario. Evita que el reintento
-/// automático (limpieza de cache por 403) "resucite" una descarga cancelada.
-static CANCELLED_URLS: Mutex<Option<HashSet<String>>> = Mutex::new(None);
-/// URLs con descarga en curso (espejo local del registro de core::process,
-/// necesario para poder marcar "cancelar todo").
-static ACTIVE_URLS: Mutex<Option<HashSet<String>>> = Mutex::new(None);
-
-fn track_start(url: &str) {
-    {
-        let mut guard = CANCELLED_URLS.lock().unwrap();
-        if let Some(set) = guard.as_mut() {
-            set.remove(url);
-        }
-    }
-    let mut guard = ACTIVE_URLS.lock().unwrap();
-    guard.get_or_insert_with(HashSet::new).insert(url.to_string());
-}
-
-fn track_end(url: &str) {
-    let mut guard = ACTIVE_URLS.lock().unwrap();
-    if let Some(set) = guard.as_mut() {
-        set.remove(url);
-    }
-}
-
-/// Marca una URL (o todas las activas, si `url` es None) como canceladas.
-/// Lo llama `cancel_download` ANTES de matar los procesos.
-pub fn mark_cancelled(url: Option<&str>) {
-    let mut guard = CANCELLED_URLS.lock().unwrap();
-    let cancelled = guard.get_or_insert_with(HashSet::new);
-    match url {
-        Some(u) => {
-            cancelled.insert(u.to_string());
-        }
-        None => {
-            let active = ACTIVE_URLS.lock().unwrap();
-            if let Some(set) = active.as_ref() {
-                for u in set.iter() {
-                    cancelled.insert(u.clone());
-                }
-            }
-        }
-    }
-}
-
-fn was_cancelled(url: &str) -> bool {
-    let guard = CANCELLED_URLS.lock().unwrap();
-    guard
-        .as_ref()
-        .map(|set| set.contains(url))
-        .unwrap_or(false)
-}
 
 fn get_output_dir(app_dir: &Path) -> PathBuf {
     let dir = settings::get_download_folder(app_dir);
     std::fs::create_dir_all(&dir).ok();
     dir
-}
-
-fn ytdlp_bin(app_dir: &Path) -> String {
-    paths::find_executable(app_dir, "yt-dlp")
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "yt-dlp".into())
 }
 
 /// Clasifica el texto de error de yt-dlp: "auth" (sesión/cookies inválidas),
@@ -110,15 +48,13 @@ const AUTH_ERROR_MSG: &str =
     "Sesión de YouTube caducada o inválida. Reconecta tu cuenta de YouTube para descargar este contenido.";
 
 /// Limpia el cache de yt-dlp (equivale a `yt-dlp --rm-cache-dir`).
+/// No usa YtdlpCmd porque no opera sobre una URL.
 fn clear_ytdlp_cache(app_dir: &Path) {
-    let bin = ytdlp_bin(app_dir);
-    let mut cmd = Command::new(&bin);
+    let mut cmd = Command::new(ytdlp::bin(app_dir));
     cmd.arg("--rm-cache-dir")
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    process::hide_console(&mut cmd);
 
     match cmd.status() {
         Ok(s) => println!("[download] Cache de yt-dlp limpiado (exit: {:?})", s.code()),
@@ -128,27 +64,28 @@ fn clear_ytdlp_cache(app_dir: &Path) {
 
 pub fn start(
     app: &AppHandle,
+    registry: &DownloadRegistry,
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
 ) -> DownloadResult {
-    track_start(url);
+    registry.begin(url);
 
     // Resolución de duplicados estilo Windows/macOS: si el archivo esperado ya
     // existe, se descarga con sufijo " (N)" en vez de que yt-dlp lo salte.
     let mut effective = options.clone();
-    if let Some(tpl) = resolve_duplicate_template(app_dir, url, options) {
+    if let Some(tpl) = resolve_duplicate_template(registry, app_dir, url, options) {
         effective.output_template = Some(tpl);
     }
 
     // La simulación tarda ~1-2s: si el usuario canceló mientras tanto, abortar.
-    if was_cancelled(url) {
-        track_end(url);
+    if registry.is_cancelled(url) {
+        registry.finish(url);
         return failure("Descarga cancelada por el usuario.".into(), Some("other"));
     }
 
-    let result = run_with_retry(app, app_dir, url, &effective);
-    track_end(url);
+    let result = run_with_retry(app, registry, app_dir, url, &effective);
+    registry.finish(url);
     result
 }
 
@@ -199,46 +136,33 @@ fn expected_final_paths(simulated: &Path, options: &DownloadOptions) -> Vec<Path
 /// Simula la descarga (`--print filename --no-download`) para conocer la ruta
 /// de salida esperada. Devuelve None si la simulación falla.
 fn simulate_filename(
+    registry: &DownloadRegistry,
     app_dir: &Path,
     output_dir: &Path,
     url: &str,
     options: &DownloadOptions,
 ) -> Option<PathBuf> {
-    let mut args: Vec<String> = options.to_ytdlp_args(output_dir);
-    args.push("--print".into());
-    args.push("filename".into());
-    args.push("--no-download".into());
-    args.push("--no-warnings".into());
-    args.push("--no-update".into());
-    // El exe empaquetado de yt-dlp ignora PYTHONIOENCODING y, al escribir a una
-    // tubería, descarta los caracteres no representables en la página de códigos
-    // de Windows (p. ej. títulos en japonés) — la ruta impresa no coincidiría
-    // con el archivo real. Forzar UTF-8 en su salida.
-    args.push("--encoding".into());
-    args.push("utf-8".into());
+    let mut builder = YtdlpCmd::new(app_dir, url)
+        .args(options.to_ytdlp_args(output_dir))
+        .arg("--print")
+        .arg("filename")
+        .arg("--no-download")
+        .no_warnings()
+        .no_update()
+        .stderr(Stdio::null());
 
-    match options.cookie_mode.as_str() {
-        "file" | "cookies" => {
-            let cookies_path = session::get_cookies_path(app_dir);
-            if cookies_path.exists() {
-                args.push("--cookies".into());
-                args.push(cookies_path.to_string_lossy().into());
-            }
-        }
-        _ => {}
+    if matches!(options.cookie_mode.as_str(), "file" | "cookies") {
+        builder = builder.cookies(&session::get_cookies_path(app_dir));
     }
 
-    args.push("--".into());
-    args.push(url.into());
+    // spawn (y no output()) para registrar el PID: así "cancelar" durante la
+    // simulación también mata este proceso (antes quedaba huérfano).
+    let child = builder.build().spawn().ok()?;
+    registry.set_pid(url, child.id());
+    let output = child.wait_with_output();
+    registry.clear_pid(url);
 
-    let bin = ytdlp_bin(app_dir);
-    let mut cmd = Command::new(&bin);
-    cmd.args(&args).stdout(Stdio::piped()).stderr(Stdio::null());
-
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-
-    let output = cmd.output().ok()?;
+    let output = output.ok()?;
     if !output.status.success() {
         return None;
     }
@@ -255,17 +179,18 @@ fn simulate_filename(
 /// Si el archivo destino ya existe, devuelve una plantilla con sufijo " (N)"
 /// (N = 1..20) cuyo resultado no exista aún. None = usar la plantilla original.
 fn resolve_duplicate_template(
+    registry: &DownloadRegistry,
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
 ) -> Option<String> {
-    if was_cancelled(url) {
+    if registry.is_cancelled(url) {
         return None;
     }
 
     let output_dir = get_output_dir(app_dir);
     println!("[download] Simulando nombre de salida para {} (~1-2s)...", url);
-    let simulated = match simulate_filename(app_dir, &output_dir, url, options) {
+    let simulated = match simulate_filename(registry, app_dir, &output_dir, url, options) {
         Some(p) => p,
         None => {
             println!("[download] Simulación de nombre fallida; se usa la plantilla original.");
@@ -302,12 +227,13 @@ fn resolve_duplicate_template(
 
 fn run_with_retry(
     app: &AppHandle,
+    registry: &DownloadRegistry,
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
 ) -> DownloadResult {
     // Primer intento.
-    let first = run_once(app, app_dir, url, options);
+    let first = run_once(app, registry, app_dir, url, options);
     let (exit_ok, error_text, file_path) = match first {
         Ok(triple) => triple,
         Err(result) => return result, // no se pudo lanzar yt-dlp
@@ -326,18 +252,22 @@ fn run_with_retry(
 
     // HTTP 403 / forbidden: cache de yt-dlp viciado -> limpiar y reintentar UNA vez,
     // salvo que el usuario haya cancelado la descarga.
-    if kind == Some("cache") && !was_cancelled(url) {
+    if kind == Some("cache") && !registry.is_cancelled(url) {
         println!(
             "[download] HTTP 403 detectado en {}. Limpiando cache de yt-dlp y reintentando (1/1)...",
             url
         );
         clear_ytdlp_cache(app_dir);
 
-        if was_cancelled(url) {
+        // Consultar cancelled justo antes del spawn: si el usuario canceló en
+        // la ventana sin PID, no se relanza. Y si cancela justo DESPUÉS de
+        // esta consulta, set_pid() lo detectará y matará el proceso (ver
+        // esquema anti-race en core::process).
+        if registry.is_cancelled(url) {
             return failure(error_text, Some("cache"));
         }
 
-        let retry = run_once(app, app_dir, url, options);
+        let retry = run_once(app, registry, app_dir, url, options);
         let (retry_ok, retry_error, retry_file_path) = match retry {
             Ok(triple) => triple,
             Err(result) => return result,
@@ -402,6 +332,7 @@ fn failure(message: String, kind: Option<&str>) -> DownloadResult {
 /// proceso llegó a lanzarse, o Err(DownloadResult) si ni siquiera se pudo ejecutar.
 fn run_once(
     app: &AppHandle,
+    registry: &DownloadRegistry,
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
@@ -409,60 +340,26 @@ fn run_once(
     let output_dir = get_output_dir(app_dir);
 
     // Args derivados de las opciones (formato/calidad/audio/subs/plantilla)
-    let mut args: Vec<String> = options.to_ytdlp_args(&output_dir);
+    // + comunes de descarga. El builder añade --encoding utf-8 y `-- <url>`.
+    let mut builder = YtdlpCmd::new(app_dir, url)
+        .args(options.to_ytdlp_args(&output_dir))
+        .arg("--newline")
+        .arg("--progress")
+        .no_update()
+        // Imprime por stdout la ruta final del archivo tras moverlo/postprocesarlo.
+        // OJO: --print implica --quiet, por eso se fuerza --no-quiet para no perder
+        // las líneas de progreso/[Merger] que ya parseamos.
+        .arg("--no-quiet")
+        .arg("--print")
+        .arg("after_move:filepath")
+        .ffmpeg_location()
+        .deno_runtime();
 
-    // Args comunes
-    args.push("--newline".into());
-    args.push("--progress".into());
-    args.push("--no-update".into());
-    // Imprime por stdout la ruta final del archivo tras moverlo/postprocesarlo.
-    // OJO: --print implica --quiet, por eso se fuerza --no-quiet para no perder
-    // las líneas de progreso/[Merger] que ya parseamos.
-    args.push("--no-quiet".into());
-    args.push("--print".into());
-    args.push("after_move:filepath".into());
-    // Sin esto, el exe de yt-dlp descarta caracteres no-ASCII al imprimir por
-    // tubería y la ruta capturada no coincide con el archivo real (ver
-    // simulate_filename).
-    args.push("--encoding".into());
-    args.push("utf-8".into());
-
-    if let Some(ffmpeg) = paths::find_executable(app_dir, "ffmpeg") {
-        if let Some(dir) = ffmpeg.parent() {
-            args.push("--ffmpeg-location".into());
-            args.push(dir.to_string_lossy().into());
-        }
+    if matches!(options.cookie_mode.as_str(), "file" | "cookies") {
+        builder = builder.cookies(&session::get_cookies_path(app_dir));
     }
 
-    if let Some(deno) = paths::find_executable(app_dir, "deno") {
-        args.push("--extractor-args".into());
-        args.push(format!("youtube:js_runtimes=deno:{}", deno.to_string_lossy()));
-    }
-
-    match options.cookie_mode.as_str() {
-        "file" | "cookies" => {
-            let cookies_path = session::get_cookies_path(app_dir);
-            if cookies_path.exists() {
-                args.push("--cookies".into());
-                args.push(cookies_path.to_string_lossy().into());
-            }
-        }
-        _ => {}
-    }
-
-    // `--` cierra las opciones: una URL que empiece con "-" no se interpreta como flag.
-    args.push("--".into());
-    args.push(url.into());
-
-    let bin = ytdlp_bin(app_dir);
-
-    let mut cmd = Command::new(&bin);
-    cmd.args(&args).stdout(Stdio::piped()).stderr(Stdio::piped());
-
-    #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-
-    let mut child = match cmd.spawn() {
+    let mut child = match builder.build().spawn() {
         Ok(child) => child,
         Err(e) => {
             return Err(DownloadResult {
@@ -477,8 +374,9 @@ fn run_once(
         }
     };
 
-    let pid = child.id();
-    process::register(url, pid);
+    // set_pid detecta un cancel ocurrido durante el spawn y mata el proceso
+    // bajo el mismo lock (cierre de la race del reintento post-cache).
+    registry.set_pid(url, child.id());
 
     let app_handle = app.clone();
     let last_error = Arc::new(Mutex::new(String::new()));
@@ -558,7 +456,9 @@ fn run_once(
 
     let exit_ok = child.wait().map(|s| s.success()).unwrap_or(false);
 
-    process::unregister(url);
+    // Solo se limpia el PID: la entrada (y su flag cancelled) vive hasta
+    // que start() llame a finish(), cubriendo el posible reintento.
+    registry.clear_pid(url);
 
     let error_text = last_error.lock().unwrap().clone();
     let file_path = final_path.lock().unwrap().clone();

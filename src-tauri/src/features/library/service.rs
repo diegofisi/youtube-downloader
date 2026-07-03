@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::models::LibraryEntry;
+use crate::core::fsx;
 use crate::features::settings::service as settings;
 
 fn history_path(app_dir: &Path) -> PathBuf {
@@ -35,11 +36,8 @@ fn write(app_dir: &Path, entries: &[LibraryEntry]) -> Result<(), String> {
     let path = history_path(app_dir);
     let content = serde_json::to_string_pretty(entries)
         .map_err(|e| format!("Error al serializar historial: {}", e))?;
-    // Escritura atómica: escribir a tmp y renombrar.
-    let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, content).map_err(|e| format!("Error al guardar historial: {}", e))?;
-    fs::rename(&tmp, &path).map_err(|e| format!("Error al guardar historial: {}", e))?;
-    Ok(())
+    // Escritura atómica (tmp + rename): ver core::fsx.
+    fsx::write_atomic(&path, content).map_err(|e| format!("Error al guardar historial: {}", e))
 }
 
 pub fn add(

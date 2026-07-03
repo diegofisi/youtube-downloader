@@ -1,9 +1,9 @@
-use std::io::Write;
 use tauri::webview::{PageLoadEvent, WebviewWindowBuilder};
 use tauri::{AppHandle, Emitter, Manager, Url};
 
 use super::models::AccountInfo;
 use super::service;
+use super::webview::extract_and_save_cookies;
 use crate::core::paths;
 
 #[tauri::command]
@@ -46,7 +46,7 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
     .title("YouTube - Iniciar sesion")
     .inner_size(1000.0, 700.0)
     .center()
-    .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+    .user_agent(service::BROWSER_UA)
     .on_page_load(|webview_window, payload| {
         if payload.event() == PageLoadEvent::Finished {
             let url = payload.url().to_string();
@@ -56,7 +56,7 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
                 let app_handle = webview_window.app_handle().clone();
 
                 tauri::async_runtime::spawn(async move {
-                    match extract_and_save_cookies(&ww, &app_handle).await {
+                    match extract_and_save_cookies(&ww, &app_handle) {
                         Ok(count) => {
                             println!("[login] {} cookies guardadas", count);
                             app_handle.emit("cookies-extracted", true).ok();
@@ -110,7 +110,7 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
     .title("YouTube - Reconexion silenciosa")
     .inner_size(1000.0, 700.0)
     .visible(false)
-    .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+    .user_agent(service::BROWSER_UA)
     .on_page_load(move |webview_window, payload| {
         if payload.event() == PageLoadEvent::Finished {
             let url = payload.url().to_string();
@@ -124,7 +124,7 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
                 let app_handle = webview_window.app_handle().clone();
 
                 tauri::async_runtime::spawn(async move {
-                    let ok = match extract_and_save_cookies(&ww, &app_handle).await {
+                    let ok = match extract_and_save_cookies(&ww, &app_handle) {
                         Ok(count) => {
                             println!("[silent-login] {} cookies refrescadas sin interacción", count);
                             app_handle.emit("cookies-extracted", true).ok();
@@ -169,86 +169,4 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
     }
 
     Ok(success)
-}
-
-async fn extract_and_save_cookies(
-    webview_window: &tauri::webview::WebviewWindow,
-    app: &AppHandle,
-) -> Result<usize, String> {
-    // Consultar varios dominios para capturar TODAS las cookies de sesion
-    // (incluidas las HttpOnly como LOGIN_INFO, SID, __Secure-3PSID...).
-    let urls = [
-        "https://www.youtube.com",
-        "https://youtube.com",
-        "https://accounts.google.com",
-        "https://www.google.com",
-    ];
-
-    let mut output = String::from("# Netscape HTTP Cookie File\n");
-    output.push_str("# Generado por YouTube Downloader (WebView login)\n\n");
-
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut count = 0;
-
-    for raw in urls {
-        let url: Url = match raw.parse() {
-            Ok(u) => u,
-            Err(_) => continue,
-        };
-        let cookies = webview_window.cookies_for_url(url).unwrap_or_default();
-
-        for cookie in cookies.iter() {
-            let domain = cookie.domain().unwrap_or(".youtube.com");
-            let path = cookie.path().unwrap_or("/");
-
-            let key = format!("{}|{}|{}", domain, path, cookie.name());
-            if !seen.insert(key) {
-                continue;
-            }
-
-            let include_subdomains = if domain.starts_with('.') {
-                "TRUE"
-            } else {
-                "FALSE"
-            };
-            let secure = if cookie.secure().unwrap_or(false) {
-                "TRUE"
-            } else {
-                "FALSE"
-            };
-            let expiry = match cookie.expires() {
-                Some(cookie::Expiration::DateTime(dt)) => dt.unix_timestamp().to_string(),
-                _ => "0".to_string(),
-            };
-
-            // Las cookies HttpOnly llevan el prefijo #HttpOnly_ (formato yt-dlp).
-            let domain_field = if cookie.http_only().unwrap_or(false) {
-                format!("#HttpOnly_{}", domain)
-            } else {
-                domain.to_string()
-            };
-
-            output.push_str(&format!(
-                "{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
-                domain_field,
-                include_subdomains,
-                path,
-                secure,
-                expiry,
-                cookie.name(),
-                cookie.value()
-            ));
-            count += 1;
-        }
-    }
-
-    let app_dir = paths::app_dir(app);
-    let cookies_path = app_dir.join("cookies.txt");
-
-    let mut file = std::fs::File::create(&cookies_path)
-        .map_err(|e| format!("No se pudo crear cookies.txt: {}", e))?;
-    file.write_all(output.as_bytes())
-        .map_err(|e| format!("No se pudo escribir cookies.txt: {}", e))?;
-
-    Ok(count)
 }

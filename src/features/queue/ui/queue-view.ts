@@ -1,232 +1,22 @@
-import { I } from '../../shared/ui/icons';
-import { esc } from '../../shared/lib/html';
-import { bus } from '../../core/bus/event-bus';
-import { t } from '../../core/i18n';
-import { showToast } from '../../shared/ui/toast';
-import { startDownload, cancelDownload, onProgress } from '../download';
-import { addHistory, openHistoryFolder } from '../library';
-import { getDownloadFolder } from '../settings';
-import { attemptSilentReconnect } from '../session';
-import type { DownloadOptions } from '../download';
+// Render DOM de la cola (Fase 3 del refactor auditado). Movido desde queue.ts
+// para que el scheduler (queue.state.ts) sea testeable sin DOM. Esta vista
+// importa el state, nunca al revés: se registra con subscribe() y repinta.
+import { I } from '../../../shared/ui/icons';
+import { esc } from '../../../shared/lib/html';
+import { t } from '../../../core/i18n';
+import { onProgress } from '../../download';
+import {
+  action,
+  clearFinished,
+  emitCount,
+  getItems,
+  handleProgress,
+  move,
+  retryAllFailed,
+  subscribe,
+} from '../queue.state';
+import type { QStatus } from '../queue.state';
 
-type QStatus = 'queued' | 'downloading' | 'merging' | 'paused' | 'done' | 'error' | 'canceled';
-
-export interface EnqueueItem {
-  url: string;
-  /** Id del video (p. ej. id de YouTube); permite marcar "ya descargado" aunque cambie la URL. */
-  videoId?: string;
-  title: string;
-  channel: string;
-  grad: string;
-  thumbnail?: string;
-  /** Duración en segundos (para el historial). */
-  duration?: number;
-  fmt: string;
-  options: DownloadOptions;
-}
-interface QItem extends EnqueueItem {
-  id: string;
-  status: QStatus;
-  progress: number;
-  speed: string;
-  eta: string;
-  error?: string;
-  /** Carpeta donde quedó el archivo (la devuelve addHistory al completar). */
-  folder?: string;
-  /** Ruta final real del archivo descargado (la devuelve startDownload al completar). */
-  filePath?: string;
-  /** true si lo pausamos nosotros por sesión caducada (no el usuario a mano). */
-  pausedByAuth?: boolean;
-}
-
-let items: QItem[] = [];
-let concurrency = 5;
-let seq = 0;
-/** Single-flight: evita lanzar varios intentos de reconexión si fallan varios items a la vez. */
-let authReconnectInFlight = false;
-
-export function setConcurrency(n: number): void {
-  concurrency = n <= 0 ? Infinity : n;
-  pump();
-}
-
-const PENDING_STATUSES: QStatus[] = ['queued', 'downloading', 'merging', 'paused'];
-
-export function enqueue(list: EnqueueItem[]): void {
-  for (const it of list) {
-    const dup = items.find((x) => x.url === it.url && PENDING_STATUSES.includes(x.status));
-    if (dup) {
-      showToast(t('Ya está en la cola', 'Already in the queue'), it.title, 'warn');
-      continue;
-    }
-    items.push({ ...it, id: `q${++seq}`, status: 'queued', progress: 0, speed: '', eta: '' });
-  }
-  render();
-  pump();
-}
-
-function activeCount(): number {
-  return items.filter((i) => i.status === 'downloading' || i.status === 'merging').length;
-}
-
-function pump(): void {
-  emitCount();
-  while (activeCount() < concurrency) {
-    const next = items.find((i) => i.status === 'queued');
-    if (!next) break;
-    run(next);
-  }
-}
-
-function run(it: QItem): void {
-  it.status = 'downloading';
-  // No se resetea it.progress: al reanudar, yt-dlp retoma el archivo .part y
-  // conservamos el avance hasta que llegue el primer evento de progreso real.
-  // (Los items nuevos y los reintentos ya entran con progress = 0.)
-  render();
-  startDownload(it.url, it.options)
-    .then(async (res) => {
-      if (it.status === 'canceled' || it.status === 'paused') {
-        render();
-        pump();
-        return;
-      }
-      if (res.success) {
-        it.status = 'done';
-        it.progress = 100;
-        // Ruta final real del archivo descargado.
-        const filePath = res.filePath;
-        if (filePath) it.filePath = filePath;
-        try {
-          const entry = await addHistory(it.url, it.title, it.fmt, {
-            videoId: it.videoId,
-            thumbnail: it.thumbnail,
-            duration: it.duration,
-            filePath,
-          });
-          it.folder = entry.folder;
-        } catch {
-          // La descarga terminó bien; si el historial falla, no rompemos el flujo.
-        }
-        bus.emit('download:completed', { url: it.url, title: it.title, format: it.fmt, videoId: it.videoId });
-      } else if (res.errorKind === 'auth') {
-        // Cookies caducadas/invalidadas: pausamos en vez de marcar error para no
-        // quemar el resto de la tanda (los que siguen en cola fallarían igual).
-        it.status = 'paused';
-        it.pausedByAuth = true;
-        it.error = t('Sesión caducada — se pausó para no fallar el resto', 'Session expired — paused to avoid failing the rest');
-        for (const q of items) {
-          if (q.status === 'queued') {
-            q.status = 'paused';
-            q.pausedByAuth = true;
-          }
-        }
-        handleAuthFailure();
-      } else {
-        it.status = 'error';
-        it.error = res.error ?? t('Error desconocido', 'Unknown error');
-      }
-      render();
-      pump();
-    })
-    .catch(() => {
-      if (it.status !== 'canceled' && it.status !== 'paused') {
-        it.status = 'error';
-        it.error = t('Error interno', 'Internal error');
-      }
-      render();
-      pump();
-    });
-}
-
-/** Tras la primera falla de auth intenta renovar la sesión en silencio (single-flight). */
-async function handleAuthFailure(): Promise<void> {
-  if (authReconnectInFlight) return;
-  authReconnectInFlight = true;
-  try {
-    const ok = await attemptSilentReconnect().catch(() => false);
-    if (ok) {
-      showToast(t('Sesión renovada', 'Session renewed'), t('Reanudando descargas pausadas.', 'Resuming paused downloads.'), 'done');
-      for (const it of items) {
-        if (it.status === 'paused' && it.pausedByAuth) {
-          it.status = 'queued';
-          it.pausedByAuth = false;
-          it.error = undefined;
-        }
-      }
-      render();
-      pump();
-    } else {
-      showToast(t('Tu sesión de YouTube caducó', 'Your YouTube session expired'), t('Reconecta en Mi YouTube y reanuda las descargas.', 'Reconnect in My YouTube and resume the downloads.'), 'warn');
-    }
-  } finally {
-    authReconnectInFlight = false;
-  }
-}
-
-function handleProgress(url: string, percent: number, speed: string, eta: string, status: string): void {
-  const it = items.find((i) => i.url === url && (i.status === 'downloading' || i.status === 'merging'));
-  if (!it) return;
-  if (status === 'processing') {
-    it.status = 'merging';
-  } else {
-    it.status = 'downloading';
-    it.progress = percent;
-    it.speed = speed;
-    it.eta = eta;
-  }
-  render();
-}
-
-function action(id: string, act: string): void {
-  const it = items.find((i) => i.id === id);
-  if (!it) return;
-  if (act === 'pause') {
-    void cancelDownload(it.url).catch(() => {});
-    it.status = 'paused';
-    it.speed = '';
-    it.eta = '';
-  } else if (act === 'resume' || act === 'retry') {
-    it.status = 'queued';
-    if (act === 'retry') it.progress = 0; // reanudar conserva el avance (yt-dlp continúa el .part)
-    it.error = undefined;
-    it.pausedByAuth = false;
-  } else if (act === 'cancel') {
-    void cancelDownload(it.url).catch(() => {});
-    it.status = 'canceled';
-  } else if (act === 'remove') {
-    items = items.filter((x) => x.id !== id);
-  } else if (act === 'folder') {
-    // Abre la carpeta contenedora del ARCHIVO real si conocemos su ruta; si no,
-    // la carpeta del historial y, en último caso, la de descargas.
-    const dir = (it.filePath && parentDir(it.filePath)) || it.folder;
-    const p = dir ? Promise.resolve(dir) : getDownloadFolder();
-    p.then((folder) => openHistoryFolder(folder)).catch(() => showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error'));
-    return;
-  }
-  render();
-  pump();
-}
-/** Carpeta contenedora de una ruta (soporta separadores \ y /). */
-function parentDir(p: string): string | undefined {
-  const i = Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/'));
-  return i > 0 ? p.slice(0, i) : undefined;
-}
-
-function move(id: string, dir: number): void {
-  const i = items.findIndex((x) => x.id === id);
-  const j = i + dir;
-  if (i < 0 || j < 0 || j >= items.length) return;
-  [items[i], items[j]] = [items[j], items[i]];
-  render();
-}
-
-function emitCount(): void {
-  const n = items.filter((i) => ['downloading', 'queued', 'paused', 'merging'].includes(i.status)).length;
-  bus.emit('queue:count', { active: n });
-}
-
-// ---------- render ----------
 const QMAP: Record<QStatus, { readonly label: string; color: string }> = {
   downloading: { get label() { return t('Descargando', 'Downloading'); }, color: 'var(--accent)' },
   merging: { get label() { return t('Procesando', 'Processing'); }, color: 'var(--info)' },
@@ -250,6 +40,7 @@ function actionBtn(icon: string, title: string, id: string, act: string, danger 
 }
 
 function render(): void {
+  const items = getItems();
   const listEl = document.getElementById('queue-list');
   const emptyEl = document.getElementById('queue-empty');
   const statsEl = document.getElementById('queue-stats');
@@ -339,29 +130,19 @@ function render(): void {
   listEl.querySelectorAll<HTMLElement>('.q-act').forEach((b) => b.addEventListener('click', () => action(b.dataset.id!, b.dataset.act!)));
   listEl.querySelectorAll<HTMLElement>('.q-up').forEach((b) => b.addEventListener('click', () => move(b.dataset.id!, -1)));
   listEl.querySelectorAll<HTMLElement>('.q-down').forEach((b) => b.addEventListener('click', () => move(b.dataset.id!, 1)));
+  // El render original terminaba con emitCount(); se conserva aquí (y no en el
+  // notify del state) para mantener idéntico el orden de emits en 'queue:count'.
   emitCount();
 }
 
 export function initQueueView(): void {
   onProgress((d) => handleProgress(d.url, d.percent, d.speed, d.eta, d.status));
-  document.getElementById('btn-retry-all')?.addEventListener('click', () => {
-    items.forEach((i) => {
-      if (i.status === 'error') {
-        i.status = 'queued';
-        i.progress = 0;
-        i.error = undefined;
-      }
-    });
-    render();
-    pump();
-    showToast(t('Reintentando', 'Retrying'), t('Recargando y reintentando fallidos.', 'Re-queuing and retrying failed items.'), 'info');
-  });
-  document.getElementById('btn-clear-done')?.addEventListener('click', () => {
-    // Solo saca de la lista los completados y cancelados; los 'error' se quedan
-    // porque tienen su propio "Reintentar fallidos".
-    items = items.filter((i) => i.status !== 'done' && i.status !== 'canceled');
-    render();
-    pump();
-  });
+  // La mutación de items (reintentar/limpiar) vive en el state; aquí solo se
+  // cablean los botones. El toast de "Reintentando" lo emite el propio state
+  // tras render+pump, igual que en el código original.
+  document.getElementById('btn-retry-all')?.addEventListener('click', retryAllFailed);
+  document.getElementById('btn-clear-done')?.addEventListener('click', clearFinished);
+  // A partir de aquí cada cambio de estado repinta la vista.
+  subscribe(render);
   render();
 }
