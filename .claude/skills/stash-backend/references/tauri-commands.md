@@ -1,32 +1,36 @@
 # FE↔BE contract: Tauri commands and events
 
+This table is the bridge between the Rust backend and the frontend. The frontend consumes
+commands through its typed invoke adapter layer (see stash-frontend data-flow); this file
+owns the contract itself: names, params, return shapes, serde case.
+
 ## Full table of current commands
 
-Params = keys of the object passed to `invoke` (real JS case). Wrapper = function in the slice's `*.api.ts`.
+Params = keys of the object the frontend passes to the invoke adapter (real JS case).
 
-| Command | Params (JS) | Returns | Wrapper |
-|---|---|---|---|
-| `open_youtube_login` | — | void | `session.api.ts::openYouTubeLogin` |
-| `refresh_session_silent` | — | `boolean` | `session.api.ts::refreshSessionSilent` |
-| `get_session_status` | — | `'none'\|'expired'\|'connected'` | `session.api.ts::getSessionStatus` |
-| `get_account_info` | — | `AccountInfo \| null` | `session.api.ts::getAccountInfo` |
-| `logout` | — | void | `session.api.ts::logoutSession` |
-| `open_downloads_folder` | — | void | `settings.api.ts::openDownloadsFolder` |
-| `get_download_folder` | — | `string` | `settings.api.ts::getDownloadFolder` |
-| `set_download_folder` | `{folder}` | `string` | `settings.api.ts::changeDownloadFolder` |
-| `get_settings` | — | `AppConfig` (snake_case, legacy) | `settings.api.ts::getSettings` |
-| `set_settings` | `{defaultQuality, defaultContainer, defaultAudioFormat, defaultConcurrency, defaultMode?, defaultTemplate?, defaultSubtitles?, defaultThumbnail?, clearLinksAfterPreview?}` | void | `settings.api.ts::setSettings` |
-| `start_download` | `{url, options: DownloadOptions}` | `DownloadResult` | `download.api.ts::startDownload` |
-| `cancel_download` | `{url: string \| null}` | `boolean` | `download.api.ts::cancelDownload` |
-| `analyze_urls` | `{urls, start?, end?}` (1-based range → `--playlist-items`) | `AnalyzedEntry[]` | `preview.api.ts::analyzeUrls` |
-| `get_history` | — | `LibraryEntry[]` | `library.api.ts::getHistory` |
-| `add_history` | `{url, title, format, videoId, thumbnail, duration, filePath}` (null when absent) | `LibraryEntry` | `library.api.ts::addHistory` |
-| `remove_history_item` | `{id}` | void | `library.api.ts::removeHistoryItem` |
-| `delete_history_file` | `{id}` | `'trash'\|'permanent'\|'no_file'` | `library.api.ts::deleteHistoryFile` |
-| `clear_history` | — | void | `library.api.ts::clearHistory` |
-| `open_history_folder` | `{folder}` | void | `library.api.ts::openHistoryFolder` |
-| `check_dependencies` | — | `DependencyStatus` | `setup.api.ts::checkDependencies` |
-| `download_dependencies` | — | void | `setup.api.ts::downloadDependencies` |
+| Command | Params (JS) | Returns |
+|---|---|---|
+| `open_youtube_login` | — | void |
+| `refresh_session_silent` | — | `boolean` |
+| `get_session_status` | — | `'none'\|'expired'\|'connected'` |
+| `get_account_info` | — | `AccountInfo \| null` |
+| `logout` | — | void |
+| `open_downloads_folder` | — | void |
+| `get_download_folder` | — | `string` |
+| `set_download_folder` | `{folder}` | `string` |
+| `get_settings` | — | `AppConfig` (snake_case, legacy) |
+| `set_settings` | `{defaultQuality, defaultContainer, defaultAudioFormat, defaultConcurrency, defaultMode?, defaultTemplate?, defaultSubtitles?, defaultThumbnail?, clearLinksAfterPreview?}` | void |
+| `start_download` | `{url, options: DownloadOptions}` | `DownloadResult` |
+| `cancel_download` | `{url: string \| null}` | `boolean` |
+| `analyze_urls` | `{urls, start?, end?}` (1-based range → `--playlist-items`) | `AnalyzedEntry[]` |
+| `get_history` | — | `LibraryEntry[]` |
+| `add_history` | `{url, title, format, videoId, thumbnail, duration, filePath}` (null when absent) | `LibraryEntry` |
+| `remove_history_item` | `{id}` | void |
+| `delete_history_file` | `{id}` | `'trash'\|'permanent'\|'no_file'` |
+| `clear_history` | — | void |
+| `open_history_folder` | `{folder}` | void |
+| `check_dependencies` | — | `DependencyStatus` |
+| `download_dependencies` | — | void |
 
 ## Serde rules (contract case)
 
@@ -43,26 +47,16 @@ Params = keys of the object passed to `invoke` (real JS case). Wrapper = functio
 
 ## Tauri events (backend → frontend)
 
-| Event | Payload | Emitter | FE wrapper |
-|---|---|---|---|
-| `download-progress` | `ProgressData {percent, speed, eta, status, url}` | download/service (stdout reader thread) | `download.api.ts::onProgress` |
-| `preview-progress` | `(done, total)` tuple — **LEGACY, do not imitate**: new events carry a struct | preview/commands (per analyzed URL) | `preview.api.ts::onPreviewProgress` |
-| `cookies-extracted` | `bool` | session/commands (login and silent login) | `session.api.ts::onCookiesExtracted` |
-| `setup-progress` | `SetupProgress {step, percent, message}` | setup/service (emit_progress) | `setup.api.ts::onSetupProgress` |
+| Event | Payload | Emitter (Rust) |
+|---|---|---|
+| `download-progress` | `ProgressData {percent, speed, eta, status, url}` | download/service (stdout reader thread) |
+| `preview-progress` | `(done, total)` tuple — **LEGACY, do not imitate**: new events carry a struct | preview/commands (per analyzed URL) |
+| `cookies-extracted` | `bool` | session/commands (login and silent login) |
+| `setup-progress` | `SetupProgress {step, percent, message}` | setup/service (emit_progress) |
 
-Names in **kebab-case**. Wrapper and consumer pattern:
-
-```ts
-// {slice}.api.ts — the only place that sees core/tauri/client
-export function on{X}(cb: (data: {Payload}) => void): Promise<UnlistenFn> {
-  return onEvent<{Payload}>('{event-name}', cb);
-}
-
-// consumer (view): subscribe, and RELEASE the unlisten when done
-const unlisten = await on{X}((p) => { /* … */ });
-try { /* work */ } finally { unlisten(); }   // descargar.ts::analyze
-// or in a long flow: store `unlisten` and call it in the finally/cleanup (settings-view.ts::btn-repair)
-```
+Names in **kebab-case**. In Rust: `app.emit("{event-name}", {Payload} { … })`. The frontend
+subscribes through its typed event adapter and owns the listener lifecycle (subscribe/release) —
+see stash-frontend data-flow.
 
 ## `spawn_blocking`: when and how
 
