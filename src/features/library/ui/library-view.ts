@@ -35,7 +35,12 @@ function openDelMenu(anchor: HTMLElement, e: LibraryEntry): void {
     },
   ];
   if (e.filePath) {
-    items.push({ icon: I.trash, label: t('Eliminar archivo', 'Delete file'), color: 'var(--danger)', onPick: () => deleteEntryFile(e) });
+    items.push({
+      icon: I.trash,
+      label: t('Eliminar archivo', 'Delete file'),
+      color: 'var(--danger)',
+      onPick: () => deleteEntryFile(e),
+    });
   }
   openAnchoredMenu(anchor, items);
 }
@@ -78,22 +83,23 @@ async function deleteEntryFile(e: LibraryEntry): Promise<void> {
 function render(): void {
   closeAnchoredMenu();
   const q = $<HTMLInputElement>('library-search').value.trim().toLowerCase();
-  const list = q ? entries.filter((e) => e.title.toLowerCase().includes(q) || e.url.toLowerCase().includes(q)) : entries;
+  const list = q
+    ? entries.filter((e) => e.title.toLowerCase().includes(q) || e.url.toLowerCase().includes(q))
+    : entries;
   const shown = list.slice(0, visibleCount);
   const hasMore = list.length > shown.length;
   $('library-empty').hidden = list.length > 0;
   $('library-count').textContent = hasMore
     ? t(`${shown.length} de ${list.length} elementos`, `${shown.length} of ${list.length} items`)
-    : t(
-        `${list.length} elemento${list.length === 1 ? '' : 's'}`,
-        `${list.length} item${list.length === 1 ? '' : 's'}`,
-      );
+    : t(`${list.length} elemento${list.length === 1 ? '' : 's'}`, `${list.length} item${list.length === 1 ? '' : 's'}`);
   const moreWrap = $('library-more-wrap');
   moreWrap.hidden = !hasMore;
   moreWrap.style.display = hasMore ? 'flex' : 'none';
   $('library-list').innerHTML = shown
     .map(
-      (e) => `<div data-id="${esc(e.id)}" style="display:flex;align-items:center;gap:13px;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:13px">
+      (
+        e,
+      ) => `<div data-id="${esc(e.id)}" style="display:flex;align-items:center;gap:13px;padding:11px;background:var(--panel);border:1px solid var(--border);border-radius:13px">
       <div style="position:relative;width:92px;height:52px;flex:none;border-radius:8px;overflow:hidden;background:${gradFor(e.id)}">
         ${e.thumbnail ? `<img src="${esc(e.thumbnail)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" alt="">` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">${I.play20}</div>`}
         ${e.duration ? `<span style="position:absolute;bottom:3px;right:3px;background:rgba(0,0,0,.78);color:#fff;font-size:9.5px;font-weight:600;padding:1px 4px;border-radius:4px;font-family:'JetBrains Mono',monospace">${fmtDuration(e.duration)}</span>` : ''}
@@ -119,9 +125,13 @@ function render(): void {
     .forEach((row) => {
       const id = row.dataset.id!;
       const e = entries.find((x) => x.id === id)!;
-      row.querySelector('.lib-open')?.addEventListener('click', () =>
-        openHistoryFolder(e.folder).catch(() => showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error')),
-      );
+      row
+        .querySelector('.lib-open')
+        ?.addEventListener('click', () =>
+          openHistoryFolder(e.folder).catch(() =>
+            showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error'),
+          ),
+        );
       row.querySelector<HTMLElement>('.lib-del')?.addEventListener('click', (ev) => {
         ev.stopPropagation();
         // Segundo click en el mismo tacho: el menú anclado hace toggle solo.
@@ -140,10 +150,10 @@ export function initLibrary(): void {
   // El historial lo escribe la cola (queue.ts) al completar, con videoId, miniatura
   // y duración; aquí solo refrescamos la vista. (Antes ambos escribían → duplicados.)
   bus.on('download:completed', () => {
-    refresh();
+    void refresh();
   });
   bus.on('nav:changed', ({ view }) => {
-    if (view === 'biblioteca') refresh();
+    if (view === 'biblioteca') void refresh();
   });
   $('library-search').addEventListener('input', () => {
     visibleCount = PAGE_SIZE;
@@ -154,7 +164,9 @@ export function initLibrary(): void {
     render();
   });
   $('btn-open-downloads').addEventListener('click', () =>
-    openDownloadsFolder().catch(() => showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error')),
+    openDownloadsFolder().catch(() =>
+      showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error'),
+    ),
   );
   $('btn-clear-history').addEventListener('click', async () => {
     if (
@@ -174,5 +186,5 @@ export function initLibrary(): void {
     render();
     showToast(t('Historial vaciado', 'History cleared'), '', 'info');
   });
-  refresh();
+  void refresh();
 }

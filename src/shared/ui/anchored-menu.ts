@@ -42,7 +42,9 @@ export function openAnchoredMenu(anchor: HTMLElement, items: AnchoredMenuItem[])
       it.color ?? 'var(--text)'
     };text-align:left`;
     b.innerHTML = `${
-      it.icon ? `<span style="display:flex;flex:none;color:${it.color ? 'currentColor' : 'var(--text2)'}">${it.icon}</span>` : ''
+      it.icon
+        ? `<span style="display:flex;flex:none;color:${it.color ? 'currentColor' : 'var(--text2)'}">${it.icon}</span>`
+        : ''
     }${esc(it.label)}`;
     b.addEventListener('click', (e) => {
       e.stopPropagation();

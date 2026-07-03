@@ -39,24 +39,47 @@ import { addRecentLinks, closeRecentPanel, initRecentLinks, isRecentPanelOpen, l
 
 // ---------- render options ----------
 const MODE_DEFS = () => [
-  { id: 'av', title: t('Video + audio', 'Video + audio'), sub: t('La opción más común', 'The most common option'), icon: I.film, bg: 'var(--infoSoft)', c: 'var(--info)' },
-  { id: 'video', title: t('Solo video', 'Video only'), sub: t('Sin pista de audio', 'No audio track'), icon: I.video, bg: 'var(--accentSoft)', c: 'var(--accent)' },
-  { id: 'audio', title: t('Solo audio', 'Audio only'), sub: t('MP3 / M4A / Opus', 'MP3 / M4A / Opus'), icon: I.music, bg: 'var(--successSoft)', c: 'var(--success)' },
+  {
+    id: 'av',
+    title: t('Video + audio', 'Video + audio'),
+    sub: t('La opción más común', 'The most common option'),
+    icon: I.film,
+    bg: 'var(--infoSoft)',
+    c: 'var(--info)',
+  },
+  {
+    id: 'video',
+    title: t('Solo video', 'Video only'),
+    sub: t('Sin pista de audio', 'No audio track'),
+    icon: I.video,
+    bg: 'var(--accentSoft)',
+    c: 'var(--accent)',
+  },
+  {
+    id: 'audio',
+    title: t('Solo audio', 'Audio only'),
+    sub: t('MP3 / M4A / Opus', 'MP3 / M4A / Opus'),
+    icon: I.music,
+    bg: 'var(--successSoft)',
+    c: 'var(--success)',
+  },
 ];
 
 function renderModeCards(): void {
-  $('mode-cards').innerHTML = MODE_DEFS().map((m) => {
-    const on = opts.mode === m.id;
-    return `<button data-mode="${m.id}" style="display:flex;align-items:center;gap:11px;padding:10px;border-radius:12px;border:1.5px solid ${
-      on ? 'var(--accent)' : 'var(--border)'
-    };background:${on ? 'var(--accentSoft)' : 'transparent'};text-align:left;transition:all .15s;width:100%">
+  $('mode-cards').innerHTML = MODE_DEFS()
+    .map((m) => {
+      const on = opts.mode === m.id;
+      return `<button data-mode="${m.id}" style="display:flex;align-items:center;gap:11px;padding:10px;border-radius:12px;border:1.5px solid ${
+        on ? 'var(--accent)' : 'var(--border)'
+      };background:${on ? 'var(--accentSoft)' : 'transparent'};text-align:left;transition:all .15s;width:100%">
       <span style="width:34px;height:34px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;background:${m.bg};color:${m.c}">${m.icon}</span>
       <span style="flex:1;text-align:left"><span style="display:block;font-weight:600;font-size:13px;color:var(--text)">${m.title}</span><span style="display:block;font-size:11px;color:var(--text2);margin-top:1px">${m.sub}</span></span>
       <span style="width:18px;height:18px;flex:none;border-radius:50%;border:2px solid ${
         on ? 'var(--accent)' : 'var(--border2)'
       };display:flex;align-items:center;justify-content:center">${on ? '<span style="width:9px;height:9px;border-radius:50%;background:var(--accent)"></span>' : ''}</span>
     </button>`;
-  }).join('');
+    })
+    .join('');
   $('mode-cards')
     .querySelectorAll<HTMLElement>('[data-mode]')
     .forEach((b) =>
@@ -73,16 +96,24 @@ function renderModeCards(): void {
 
 // ---------- download ----------
 async function analyze(): Promise<void> {
-  const urls = $<HTMLTextAreaElement>('url-input').value.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('http'));
+  const urls = $<HTMLTextAreaElement>('url-input')
+    .value.split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('http'));
   if (urls.length === 0) {
-    showToast(t('Sin enlaces', 'No links'), t('Pega al menos un enlace para previsualizar.', 'Paste at least one link to preview.'), 'warn');
+    showToast(
+      t('Sin enlaces', 'No links'),
+      t('Pega al menos un enlace para previsualizar.', 'Paste at least one link to preview.'),
+      'warn',
+    );
     return;
   }
   const btn = $<HTMLButtonElement>('btn-analyze');
   btn.disabled = true;
   const orig = btn.innerHTML;
   btn.innerHTML = `${I.spinner} ${t('Analizando…', 'Analyzing…')}`;
-  $('preview-list').innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:9px;padding:26px;color:var(--text2);font-size:12.5px">${I.spinner} ${t('Resolviendo metadatos de los enlaces…', 'Resolving link metadata…')}</div>`;
+  $('preview-list').innerHTML =
+    `<div style="display:flex;align-items:center;justify-content:center;gap:9px;padding:26px;color:var(--text2);font-size:12.5px">${I.spinner} ${t('Resolviendo metadatos de los enlaces…', 'Resolving link metadata…')}</div>`;
   $('preview-empty').hidden = true;
   const unlisten = await onPreviewProgress((done, total) => {
     btn.innerHTML = `${I.spinner} ${done}/${total}…`;
@@ -97,12 +128,16 @@ async function analyze(): Promise<void> {
     if (vids.length <= 20) {
       for (const v of vids) {
         const st = statusOf(v);
-        if (STATUS_META[st].downloadable && !(v as VideoMeta & { _dup?: boolean })._dup && st !== 'downloaded') sel.add(v.url);
+        if (STATUS_META[st].downloadable && !(v as VideoMeta & { _dup?: boolean })._dup && st !== 'downloaded')
+          sel.add(v.url);
       }
     } else {
       showToast(
         t('Lista grande', 'Large list'),
-        t(`${vids.length} videos — elige cuáles descargar (o "Seleccionar todo").`, `${vids.length} videos — choose which to download (or "Select all").`),
+        t(
+          `${vids.length} videos — elige cuáles descargar (o "Seleccionar todo").`,
+          `${vids.length} videos — choose which to download (or "Select all").`,
+        ),
         'info',
       );
     }
@@ -117,7 +152,8 @@ async function analyze(): Promise<void> {
       $('link-count').textContent = lineCountLabel(0);
     }
   } catch (e) {
-    $('preview-list').innerHTML = `<div style="padding:24px;text-align:center;color:var(--danger);font-size:13px">Error: ${esc(String(e))}</div>`;
+    $('preview-list').innerHTML =
+      `<div style="padding:24px;text-align:center;color:var(--danger);font-size:13px">Error: ${esc(String(e))}</div>`;
   } finally {
     unlisten();
     btn.disabled = false;
@@ -128,7 +164,11 @@ async function analyze(): Promise<void> {
 function startDownload(): void {
   const chosen = allVideos().filter((v) => sel.has(v.url) && STATUS_META[statusOf(v)].downloadable);
   if (chosen.length === 0) {
-    showToast(t('Nada seleccionado', 'Nothing selected'), t('Marca al menos un video descargable.', 'Check at least one downloadable video.'), 'warn');
+    showToast(
+      t('Nada seleccionado', 'Nothing selected'),
+      t('Marca al menos un video descargable.', 'Check at least one downloadable video.'),
+      'warn',
+    );
     return;
   }
   const cookieMode = getCookieMode();
@@ -154,7 +194,10 @@ function startDownload(): void {
   bus.emit('nav:goto', { view: 'cola' });
   showToast(
     t('Añadido a la cola', 'Added to queue'),
-    t(`${items.length} ${items.length === 1 ? 'video' : 'videos'} en proceso.`, `${items.length} ${items.length === 1 ? 'video' : 'videos'} in progress.`),
+    t(
+      `${items.length} ${items.length === 1 ? 'video' : 'videos'} en proceso.`,
+      `${items.length} ${items.length === 1 ? 'video' : 'videos'} in progress.`,
+    ),
     'done',
   );
 }
@@ -167,13 +210,62 @@ export function initDescargar(): void {
   renderModeCards();
   // La calidad repinta también la preview (los badges de tamaño dependen de ella).
   const paintQuality = () =>
-    renderChipGroup('quality', [['max', t('Máxima', 'Max')], ['4k', '4K'], ['1440p', '1440p'], ['1080p', '1080p'], ['720p', '720p'], ['480p', '480p']], () => opts.quality, (v) => (opts.quality = v), { after: () => { renderPreview(); refreshSummary(); } });
+    renderChipGroup(
+      'quality',
+      [
+        ['max', t('Máxima', 'Max')],
+        ['4k', '4K'],
+        ['1440p', '1440p'],
+        ['1080p', '1080p'],
+        ['720p', '720p'],
+        ['480p', '480p'],
+      ],
+      () => opts.quality,
+      (v) => (opts.quality = v),
+      {
+        after: () => {
+          renderPreview();
+          refreshSummary();
+        },
+      },
+    );
   const paintContainer = () =>
-    renderChipGroup('container', [['MP4', 'MP4'], ['MKV', 'MKV'], ['WebM', 'WebM']], () => opts.container, (v) => (opts.container = v), { after: refreshSummary });
+    renderChipGroup(
+      'container',
+      [
+        ['MP4', 'MP4'],
+        ['MKV', 'MKV'],
+        ['WebM', 'WebM'],
+      ],
+      () => opts.container,
+      (v) => (opts.container = v),
+      { after: refreshSummary },
+    );
   paintQuality();
   paintContainer();
-  renderChipGroup('audioFmt', [['MP3', 'MP3'], ['M4A', 'M4A'], ['Opus', 'Opus']], () => opts.audioFmt, (v) => (opts.audioFmt = v), { after: refreshSummary });
-  renderChipGroup('bitrate', [['128', '128'], ['192', '192'], ['256', '256'], ['320', '320']], () => opts.bitrate, (v) => (opts.bitrate = v), { after: refreshSummary });
+  renderChipGroup(
+    'audioFmt',
+    [
+      ['MP3', 'MP3'],
+      ['M4A', 'M4A'],
+      ['Opus', 'Opus'],
+    ],
+    () => opts.audioFmt,
+    (v) => (opts.audioFmt = v),
+    { after: refreshSummary },
+  );
+  renderChipGroup(
+    'bitrate',
+    [
+      ['128', '128'],
+      ['192', '192'],
+      ['256', '256'],
+      ['320', '320'],
+    ],
+    () => opts.bitrate,
+    (v) => (opts.bitrate = v),
+    { after: refreshSummary },
+  );
 
   // Aplicar los defaults de Ajustes (el mapeo de valores vive en el modelo;
   // aquí solo se repinta la UI que depende de ellos).
@@ -246,7 +338,10 @@ export function initDescargar(): void {
   // aunque la vista no esté visible; la navegación la hace el emisor.
   bus.on('descargar:prefill', ({ urls }) => {
     if (!urls.length) return;
-    const existing = urlInput.value.split('\n').map((l) => l.trim()).filter(Boolean);
+    const existing = urlInput.value
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     const known = new Set(existing);
     const added = urls.map((u) => u.trim()).filter((u) => u && !known.has(u) && known.add(u));
     urlInput.value = [...existing, ...added].join('\n');

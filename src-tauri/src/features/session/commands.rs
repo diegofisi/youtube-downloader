@@ -102,48 +102,51 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
     let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
     let tx_for_cb = std::sync::Arc::clone(&tx);
 
-    let build_result = WebviewWindowBuilder::new(
-        &app,
-        LABEL,
-        tauri::WebviewUrl::External(login_url),
-    )
-    .title("YouTube - Reconexion silenciosa")
-    .inner_size(1000.0, 700.0)
-    .visible(false)
-    .user_agent(service::BROWSER_UA)
-    .on_page_load(move |webview_window, payload| {
-        if payload.event() == PageLoadEvent::Finished {
-            let url = payload.url().to_string();
+    let build_result =
+        WebviewWindowBuilder::new(&app, LABEL, tauri::WebviewUrl::External(login_url))
+            .title("YouTube - Reconexion silenciosa")
+            .inner_size(1000.0, 700.0)
+            .visible(false)
+            .user_agent(service::BROWSER_UA)
+            .on_page_load(move |webview_window, payload| {
+                if payload.event() == PageLoadEvent::Finished {
+                    let url = payload.url().to_string();
 
-            if url.contains("youtube.com") && !url.contains("accounts.google.com") {
-                // Aterrizamos en YouTube sin interacción: la sesión sigue viva.
-                let sender = tx_for_cb.lock().unwrap().take();
-                let Some(sender) = sender else { return };
+                    if url.contains("youtube.com") && !url.contains("accounts.google.com") {
+                        // Aterrizamos en YouTube sin interacción: la sesión sigue viva.
+                        let sender = tx_for_cb.lock().unwrap().take();
+                        let Some(sender) = sender else { return };
 
-                let ww = webview_window.clone();
-                let app_handle = webview_window.app_handle().clone();
+                        let ww = webview_window.clone();
+                        let app_handle = webview_window.app_handle().clone();
 
-                tauri::async_runtime::spawn(async move {
-                    let ok = match extract_and_save_cookies(&ww, &app_handle) {
-                        Ok(count) => {
-                            println!("[silent-login] {} cookies refrescadas sin interacción", count);
-                            app_handle.emit("cookies-extracted", true).ok();
-                            true
-                        }
-                        Err(e) => {
-                            eprintln!("[silent-login] Error extrayendo cookies: {}", e);
-                            false
-                        }
-                    };
-                    sender.send(ok).ok();
-                });
-            }
-        }
-    })
-    .build();
+                        tauri::async_runtime::spawn(async move {
+                            let ok = match extract_and_save_cookies(&ww, &app_handle) {
+                                Ok(count) => {
+                                    println!(
+                                        "[silent-login] {} cookies refrescadas sin interacción",
+                                        count
+                                    );
+                                    app_handle.emit("cookies-extracted", true).ok();
+                                    true
+                                }
+                                Err(e) => {
+                                    eprintln!("[silent-login] Error extrayendo cookies: {}", e);
+                                    false
+                                }
+                            };
+                            sender.send(ok).ok();
+                        });
+                    }
+                }
+            })
+            .build();
 
     if let Err(e) = build_result {
-        return Err(format!("No se pudo crear ventana de login silencioso: {}", e));
+        return Err(format!(
+            "No se pudo crear ventana de login silencioso: {}",
+            e
+        ));
     }
 
     // Esperar el resultado con timeout (~20s) sin bloquear el runtime async.

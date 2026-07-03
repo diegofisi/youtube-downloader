@@ -32,7 +32,12 @@ export function timeAgo(ts: number): string {
 /** Fecha local corta (día, mes, hora:min) según el idioma activo; segundos unix. */
 export function fmtDate(secs: number): string {
   try {
-    return new Date(secs * 1000).toLocaleString(getLang(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return new Date(secs * 1000).toLocaleString(getLang(), {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return '';
   }

@@ -1,5 +1,18 @@
 use serde::{Deserialize, Serialize};
 
+/// Datos de una nueva entrada de historial (agrupa los parámetros de alta
+/// para evitar firmas con demasiados argumentos; ver `service::add`).
+#[derive(Debug, Clone)]
+pub struct NewEntry {
+    pub url: String,
+    pub title: String,
+    pub format: String,
+    pub video_id: Option<String>,
+    pub thumbnail: Option<String>,
+    pub duration: Option<f64>,
+    pub file_path: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryEntry {
     pub id: String,

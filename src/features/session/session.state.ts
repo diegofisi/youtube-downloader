@@ -70,8 +70,8 @@ export async function doLogout(): Promise<void> {
 
 export async function initSession(): Promise<void> {
   await refreshSession();
-  onCookiesExtracted((success) => {
-    if (success) refreshSession();
+  void onCookiesExtracted((success) => {
+    if (success) void refreshSession();
   });
   // Igual que en web, la sesión puede caducar con el tiempo: re-chequear periódicamente.
   setInterval(refreshSession, 10 * 60 * 1000);

@@ -29,11 +29,60 @@ export function openVideoOpts(url: string): void {
     const eff = { ...opts, ...(ovDraft || {}) };
     $('ov-video-block').hidden = eff.mode === 'audio';
     $('ov-audio-block').hidden = eff.mode !== 'audio';
-    renderChipsInto('ovMode', [['av', t('Video + audio', 'Video + audio')], ['video', t('Solo video', 'Video only')], ['audio', t('Solo audio', 'Audio only')]], eff.mode, (val) => setOv('mode', val));
-    renderChipsInto('ovQuality', [['max', t('Máxima', 'Max')], ['4k', '4K'], ['1440p', '1440p'], ['1080p', '1080p'], ['720p', '720p'], ['480p', '480p']], eff.quality, (val) => setOv('quality', val));
-    renderChipsInto('ovContainer', [['MP4', 'MP4'], ['MKV', 'MKV'], ['WebM', 'WebM']], eff.container, (val) => setOv('container', val));
-    renderChipsInto('ovAudioFmt', [['MP3', 'MP3'], ['M4A', 'M4A'], ['Opus', 'Opus']], eff.audioFmt, (val) => setOv('audioFmt', val));
-    renderChipsInto('ovBitrate', [['128', '128'], ['192', '192'], ['256', '256'], ['320', '320']], eff.bitrate, (val) => setOv('bitrate', val));
+    renderChipsInto(
+      'ovMode',
+      [
+        ['av', t('Video + audio', 'Video + audio')],
+        ['video', t('Solo video', 'Video only')],
+        ['audio', t('Solo audio', 'Audio only')],
+      ],
+      eff.mode,
+      (val) => setOv('mode', val),
+    );
+    renderChipsInto(
+      'ovQuality',
+      [
+        ['max', t('Máxima', 'Max')],
+        ['4k', '4K'],
+        ['1440p', '1440p'],
+        ['1080p', '1080p'],
+        ['720p', '720p'],
+        ['480p', '480p'],
+      ],
+      eff.quality,
+      (val) => setOv('quality', val),
+    );
+    renderChipsInto(
+      'ovContainer',
+      [
+        ['MP4', 'MP4'],
+        ['MKV', 'MKV'],
+        ['WebM', 'WebM'],
+      ],
+      eff.container,
+      (val) => setOv('container', val),
+    );
+    renderChipsInto(
+      'ovAudioFmt',
+      [
+        ['MP3', 'MP3'],
+        ['M4A', 'M4A'],
+        ['Opus', 'Opus'],
+      ],
+      eff.audioFmt,
+      (val) => setOv('audioFmt', val),
+    );
+    renderChipsInto(
+      'ovBitrate',
+      [
+        ['128', '128'],
+        ['192', '192'],
+        ['256', '256'],
+        ['320', '320'],
+      ],
+      eff.bitrate,
+      (val) => setOv('bitrate', val),
+    );
     // Avanzado: subs / miniatura / plantilla — también editan solo el borrador.
     // Se usa .onclick/.oninput (no addEventListener) para no acumular listeners
     // entre repintados y aperturas del modal.
@@ -79,7 +128,12 @@ export function closeVideoOpts(commit: boolean): void {
 }
 
 /** Chips del modal por-video: no se auto-repintan (paint() repinta todo el modal). */
-function renderChipsInto<T extends string>(group: string, list: [T, string][], curVal: string, onPick: (v: T) => void): void {
+function renderChipsInto<T extends string>(
+  group: string,
+  list: [T, string][],
+  curVal: string,
+  onPick: (v: T) => void,
+): void {
   renderChipGroup(group, list, () => curVal, onPick, { rerender: false });
 }
 

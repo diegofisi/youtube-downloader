@@ -90,8 +90,7 @@ export function createPagedLoader<T>(opts: PagedLoaderOptions<T>): PagedLoader<T
       accept(res);
       opts.onPage();
     } catch (e) {
-      if (seq === loadSeq)
-        showToast(t('No se pudieron cargar más', 'Could not load more'), String(e), 'error');
+      if (seq === loadSeq) showToast(t('No se pudieron cargar más', 'Could not load more'), String(e), 'error');
     } finally {
       loadingMore = false;
       btn.disabled = false;

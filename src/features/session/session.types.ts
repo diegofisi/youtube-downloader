@@ -4,4 +4,3 @@ export interface AccountInfo {
   handle: string | null;
   avatarUrl: string | null;
 }
-

@@ -9,7 +9,9 @@ export const chipStyle = (on: boolean, pad = '6px 11px'): string =>
 /** Botón de un grupo segmentado (estilo Ajustes: pieza elevada cuando está activa). */
 export const segStyle = (on: boolean): string =>
   `padding:6px 15px;border-radius:7px;font-size:12.5px;font-weight:600;${
-    on ? 'background:var(--panel);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)' : 'color:var(--text2);background:transparent'
+    on
+      ? 'background:var(--panel);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)'
+      : 'color:var(--text2);background:transparent'
   }`;
 
 /** Pista del interruptor on/off. */
@@ -19,7 +21,8 @@ export const toggleStyle = (on: boolean): string =>
   };justify-content:${on ? 'flex-end' : 'flex-start'};transition:all .18s`;
 
 /** Bolita blanca del interruptor. */
-export const knob = '<span style="width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>';
+export const knob =
+  '<span style="width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>';
 
 export interface ChipGroupOpts {
   /** Padding del chip (variante compacta de Ajustes: '5px 11px'). */
@@ -59,7 +62,9 @@ export function renderChipGroup<T extends string>(
 /** Pinta un grupo segmentado en el elemento con id `id` y se re-pinta al elegir. */
 export function renderSeg(id: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
   const el = $(id);
-  el.innerHTML = list.map(([v, l]) => `<button data-val="${v}" style="${segStyle(v === get())}">${l}</button>`).join('');
+  el.innerHTML = list
+    .map(([v, l]) => `<button data-val="${v}" style="${segStyle(v === get())}">${l}</button>`)
+    .join('');
   el.querySelectorAll<HTMLElement>('[data-val]').forEach((b) =>
     b.addEventListener('click', () => {
       set(b.dataset.val!);

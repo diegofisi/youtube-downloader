@@ -18,13 +18,48 @@ import {
 import type { QStatus } from '../queue.state';
 
 const QMAP: Record<QStatus, { readonly label: string; color: string }> = {
-  downloading: { get label() { return t('Descargando', 'Downloading'); }, color: 'var(--accent)' },
-  merging: { get label() { return t('Procesando', 'Processing'); }, color: 'var(--info)' },
-  queued: { get label() { return t('En cola', 'Queued'); }, color: 'var(--text2)' },
-  paused: { get label() { return t('Pausado', 'Paused'); }, color: 'var(--warn)' },
-  done: { get label() { return t('Completado', 'Completed'); }, color: 'var(--success)' },
-  error: { get label() { return t('Error', 'Error'); }, color: 'var(--danger)' },
-  canceled: { get label() { return t('Cancelado', 'Canceled'); }, color: 'var(--text3)' },
+  downloading: {
+    get label() {
+      return t('Descargando', 'Downloading');
+    },
+    color: 'var(--accent)',
+  },
+  merging: {
+    get label() {
+      return t('Procesando', 'Processing');
+    },
+    color: 'var(--info)',
+  },
+  queued: {
+    get label() {
+      return t('En cola', 'Queued');
+    },
+    color: 'var(--text2)',
+  },
+  paused: {
+    get label() {
+      return t('Pausado', 'Paused');
+    },
+    color: 'var(--warn)',
+  },
+  done: {
+    get label() {
+      return t('Completado', 'Completed');
+    },
+    color: 'var(--success)',
+  },
+  error: {
+    get label() {
+      return t('Error', 'Error');
+    },
+    color: 'var(--danger)',
+  },
+  canceled: {
+    get label() {
+      return t('Cancelado', 'Canceled');
+    },
+    color: 'var(--text3)',
+  },
 };
 
 function statBox(icon: string, bg: string, color: string, value: number, label: string): string {
@@ -65,7 +100,10 @@ function render(): void {
 
   if (subtitle)
     subtitle.textContent = items.length
-      ? t(`${active} activas · ${waiting} en espera · ${cnt.done} completadas`, `${active} active · ${waiting} waiting · ${cnt.done} completed`)
+      ? t(
+          `${active} activas · ${waiting} en espera · ${cnt.done} completadas`,
+          `${active} active · ${waiting} waiting · ${cnt.done} completed`,
+        )
       : t('Nada en la cola.', 'Nothing in the queue.');
   if (retryBtn) retryBtn.hidden = cnt.error === 0;
   if (clearDoneBtn) clearDoneBtn.hidden = cnt.done + cnt.canceled === 0;
@@ -78,7 +116,9 @@ function render(): void {
       let actions = '';
       if (it.status === 'downloading') {
         detail = [it.speed, it.eta ? `ETA ${it.eta}` : ''].filter(Boolean).join(' · ') || `${it.progress.toFixed(0)}%`;
-        actions = actionBtn(I.pause, t('Pausar', 'Pause'), it.id, 'pause') + actionBtn(I.x, t('Cancelar', 'Cancel'), it.id, 'cancel', true);
+        actions =
+          actionBtn(I.pause, t('Pausar', 'Pause'), it.id, 'pause') +
+          actionBtn(I.x, t('Cancelar', 'Cancel'), it.id, 'cancel', true);
       } else if (it.status === 'merging') {
         detail = t('Uniendo…', 'Merging…');
         actions = actionBtn(I.x, t('Cancelar', 'Cancel'), it.id, 'cancel', true);
@@ -87,18 +127,27 @@ function render(): void {
         actions = actionBtn(I.x, t('Quitar', 'Remove'), it.id, 'remove');
       } else if (it.status === 'paused') {
         detail = t('Pausado', 'Paused');
-        actions = actionBtn(I.play, t('Reanudar', 'Resume'), it.id, 'resume') + actionBtn(I.x, t('Cancelar', 'Cancel'), it.id, 'cancel', true);
+        actions =
+          actionBtn(I.play, t('Reanudar', 'Resume'), it.id, 'resume') +
+          actionBtn(I.x, t('Cancelar', 'Cancel'), it.id, 'cancel', true);
       } else if (it.status === 'done') {
         detail = t('Listo', 'Done');
         detailColor = 'var(--success)';
-        actions = actionBtn(I.folder, t('Abrir carpeta', 'Open folder'), it.id, 'folder') + actionBtn(I.x, t('Quitar de la lista', 'Remove from list'), it.id, 'remove');
+        actions =
+          actionBtn(I.folder, t('Abrir carpeta', 'Open folder'), it.id, 'folder') +
+          actionBtn(I.x, t('Quitar de la lista', 'Remove from list'), it.id, 'remove');
       } else {
         detail = it.status === 'error' ? 'Error' : t('Cancelado', 'Canceled');
         detailColor = 'var(--danger)';
-        actions = actionBtn(I.retry, t('Reintentar', 'Retry'), it.id, 'retry') + actionBtn(I.trash, t('Quitar de la lista', 'Remove from list'), it.id, 'remove');
+        actions =
+          actionBtn(I.retry, t('Reintentar', 'Retry'), it.id, 'retry') +
+          actionBtn(I.trash, t('Quitar de la lista', 'Remove from list'), it.id, 'remove');
       }
       const barW = it.status === 'done' || it.status === 'merging' ? 100 : it.progress;
-      const anim = it.status === 'downloading' ? 'background-image:linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%);background-size:28px 28px;animation:barflow .8s linear infinite;' : '';
+      const anim =
+        it.status === 'downloading'
+          ? 'background-image:linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%);background-size:28px 28px;animation:barflow .8s linear infinite;'
+          : '';
       const thumbInner = it.thumbnail
         ? `<img src="${esc(it.thumbnail)}" style="width:100%;height:100%;object-fit:cover" alt="">`
         : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:.85">${I.play20}</div>`;
@@ -127,16 +176,22 @@ function render(): void {
     })
     .join('');
 
-  listEl.querySelectorAll<HTMLElement>('.q-act').forEach((b) => b.addEventListener('click', () => action(b.dataset.id!, b.dataset.act!)));
-  listEl.querySelectorAll<HTMLElement>('.q-up').forEach((b) => b.addEventListener('click', () => move(b.dataset.id!, -1)));
-  listEl.querySelectorAll<HTMLElement>('.q-down').forEach((b) => b.addEventListener('click', () => move(b.dataset.id!, 1)));
+  listEl
+    .querySelectorAll<HTMLElement>('.q-act')
+    .forEach((b) => b.addEventListener('click', () => action(b.dataset.id!, b.dataset.act!)));
+  listEl
+    .querySelectorAll<HTMLElement>('.q-up')
+    .forEach((b) => b.addEventListener('click', () => move(b.dataset.id!, -1)));
+  listEl
+    .querySelectorAll<HTMLElement>('.q-down')
+    .forEach((b) => b.addEventListener('click', () => move(b.dataset.id!, 1)));
   // El render original terminaba con emitCount(); se conserva aquí (y no en el
   // notify del state) para mantener idéntico el orden de emits en 'queue:count'.
   emitCount();
 }
 
 export function initQueueView(): void {
-  onProgress((d) => handleProgress(d.url, d.percent, d.speed, d.eta, d.status));
+  void onProgress((d) => handleProgress(d.url, d.percent, d.speed, d.eta, d.status));
   // La mutación de items (reintentar/limpiar) vive en el state; aquí solo se
   // cablean los botones. El toast de "Reintentando" lo emite el propio state
   // tras render+pump, igual que en el código original.

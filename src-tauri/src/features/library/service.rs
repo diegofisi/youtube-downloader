@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::models::LibraryEntry;
+use super::models::{LibraryEntry, NewEntry};
 use crate::core::fsx;
 use crate::features::settings::service as settings;
 
@@ -40,29 +40,20 @@ fn write(app_dir: &Path, entries: &[LibraryEntry]) -> Result<(), String> {
     fsx::write_atomic(&path, content).map_err(|e| format!("Error al guardar historial: {}", e))
 }
 
-pub fn add(
-    app_dir: &Path,
-    url: String,
-    title: String,
-    format: String,
-    video_id: Option<String>,
-    thumbnail: Option<String>,
-    duration: Option<f64>,
-    file_path: Option<String>,
-) -> Result<LibraryEntry, String> {
+pub fn add(app_dir: &Path, new: NewEntry) -> Result<LibraryEntry, String> {
     let mut all = list(app_dir);
     let folder = settings::get_download_folder(app_dir)
         .to_string_lossy()
         .to_string();
     let entry = LibraryEntry {
         id: now_nanos().to_string(),
-        video_id,
-        thumbnail,
-        duration,
-        file_path,
-        url,
-        title,
-        format,
+        video_id: new.video_id,
+        thumbnail: new.thumbnail,
+        duration: new.duration,
+        file_path: new.file_path,
+        url: new.url,
+        title: new.title,
+        format: new.format,
         folder,
         date: now_secs(),
     };
@@ -135,7 +126,10 @@ pub fn clear(app_dir: &Path) -> Result<(), String> {
 pub fn open_path(path: &str) {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer").arg(path).spawn().ok();
+        std::process::Command::new("explorer")
+            .arg(path)
+            .spawn()
+            .ok();
     }
     #[cfg(target_os = "macos")]
     {
@@ -143,6 +137,9 @@ pub fn open_path(path: &str) {
     }
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open").arg(path).spawn().ok();
+        std::process::Command::new("xdg-open")
+            .arg(path)
+            .spawn()
+            .ok();
     }
 }

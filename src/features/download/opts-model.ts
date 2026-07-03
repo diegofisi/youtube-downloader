@@ -71,8 +71,16 @@ const SETTINGS_Q: Record<string, string> = {
 };
 const SETTINGS_C: Record<string, Opts['container']> = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
 // Mapeos UI → backend de contenedor y formato de audio (evitan casts sobre toLowerCase()).
-const CONTAINER_BACKEND: Record<Opts['container'], DownloadOptions['container']> = { MP4: 'mp4', MKV: 'mkv', WebM: 'webm' };
-const AUDIO_BACKEND: Record<Opts['audioFmt'], DownloadOptions['audioFormat']> = { MP3: 'mp3', M4A: 'm4a', Opus: 'opus' };
+const CONTAINER_BACKEND: Record<Opts['container'], DownloadOptions['container']> = {
+  MP4: 'mp4',
+  MKV: 'mkv',
+  WebM: 'webm',
+};
+const AUDIO_BACKEND: Record<Opts['audioFmt'], DownloadOptions['audioFormat']> = {
+  MP3: 'mp3',
+  M4A: 'm4a',
+  Opus: 'opus',
+};
 
 // Opciones efectivas de un video: globales + override parcial (evita
 // "undefined" si el override solo cambia algunos campos).

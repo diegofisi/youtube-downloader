@@ -11,11 +11,11 @@ import { initSettings } from './features/settings';
 
 applyStaticI18n();
 initShell();
-initSession();
+void initSession();
 initQueueView();
 initDescargar();
 initSearch();
 initAccount();
 initLibrary();
-initSettings();
-initOnboarding();
+void initSettings();
+void initOnboarding();

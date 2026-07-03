@@ -1,10 +1,7 @@
 import { invoke, onEvent, type UnlistenFn } from '../../core/tauri/client';
 import type { DownloadOptions, DownloadResult, ProgressData } from './download.types';
 
-export async function startDownload(
-  url: string,
-  options: DownloadOptions,
-): Promise<DownloadResult> {
+export async function startDownload(url: string, options: DownloadOptions): Promise<DownloadResult> {
   return invoke<DownloadResult>('start_download', { url, options });
 }
 

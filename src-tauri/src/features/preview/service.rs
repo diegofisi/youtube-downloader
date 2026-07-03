@@ -15,7 +15,11 @@ const FEED_CAP: u32 = 50;
 ///
 /// `range`: rango 1-based (start, end) para paginar playlists/feeds con
 /// `--playlist-items START:END`. Si es `None`, se aplican los topes por defecto.
-pub fn analyze(app_dir: &Path, url: &str, range: Option<(u32, u32)>) -> Result<AnalyzedEntry, String> {
+pub fn analyze(
+    app_dir: &Path,
+    url: &str,
+    range: Option<(u32, u32)>,
+) -> Result<AnalyzedEntry, String> {
     // Mezcla/radio (list=RD…, start_radio): infinita → topamos a 25 como en YouTube.
     // Feeds de cuenta (/feed/...): continuos → topamos a 50.
     // Playlists/canales reales: sin tope (todos los que encuentre).
@@ -201,7 +205,12 @@ fn str_field_or(v: &Value, key: &str, default: &str) -> String {
 }
 
 fn channel_field(v: &Value) -> String {
-    for key in ["channel", "uploader", "playlist_uploader", "playlist_channel"] {
+    for key in [
+        "channel",
+        "uploader",
+        "playlist_uploader",
+        "playlist_channel",
+    ] {
         let s = str_field(v, key);
         if !s.is_empty() {
             return s;

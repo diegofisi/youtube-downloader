@@ -174,8 +174,8 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
 
         if name == "ffmpeg" || name.ends_with("/ffmpeg") {
             let dest = app_dir.join("ffmpeg");
-            let mut outfile = fs::File::create(&dest)
-                .map_err(|e| format!("No se pudo crear ffmpeg: {}", e))?;
+            let mut outfile =
+                fs::File::create(&dest).map_err(|e| format!("No se pudo crear ffmpeg: {}", e))?;
             io::copy(&mut entry, &mut outfile).map_err(|e| format!("Error extrayendo: {}", e))?;
 
             #[cfg(unix)]
@@ -246,7 +246,10 @@ fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     fs::remove_file(&zip_path).ok();
 
     if !found {
-        return Err(format!("No se encontró {} en el archivo descargado", bin_name));
+        return Err(format!(
+            "No se encontró {} en el archivo descargado",
+            bin_name
+        ));
     }
 
     Ok(())

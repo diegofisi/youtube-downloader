@@ -2,16 +2,14 @@ import { getTheme, applyTheme, type Theme } from '../../../core/theme';
 import { getLang, setLang, t, type Lang } from '../../../core/i18n';
 import { bus } from '../../../core/bus/event-bus';
 import { getSettings, setSettings, getDownloadFolder, changeDownloadFolder } from '../settings.api';
-import type { AppConfig } from '../settings.types';
 import { checkDependencies, downloadDependencies, onSetupProgress } from '../../setup';
-import type { DependencyStatus } from '../../setup';
+import type { DependencyStatus, UnlistenFn } from '../../setup';
 import { setConcurrency } from '../../queue';
 import { showToast } from '../../../shared/ui/toast';
 import { I } from '../../../shared/ui/icons';
 import { esc } from '../../../shared/lib/html';
 import { $ } from '../../../shared/ui/dom';
 import { renderChipGroup, renderSeg, renderToggle } from '../../../shared/ui/controls';
-import type { UnlistenFn } from '../../../core/tauri/client';
 
 /** Chips de Ajustes: variante compacta (padding 5px 11px). */
 function renderChips(sel: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
@@ -37,7 +35,10 @@ function renderFixStatus(d: DependencyStatus): void {
     btn.style.color = '';
   } else {
     st.innerHTML = `<span style="color:var(--warn);display:flex;flex:none">${I.alert}</span><span style="color:var(--warn)">${esc(
-      t('Faltan componentes necesarios — usa "Comprobar y reparar"', 'Required components are missing — use "Check & repair"'),
+      t(
+        'Faltan componentes necesarios — usa "Comprobar y reparar"',
+        'Required components are missing — use "Check & repair"',
+      ),
     )}</span>`;
     // Resalta el botón cuando falta algo.
     btn.style.borderColor = 'var(--warn)';
@@ -120,30 +121,86 @@ export async function initSettings(): Promise<void> {
     });
 
   // Idioma: setLang persiste y recarga la app (el aviso está en la fila del HTML)
-  renderSeg('set-lang', [['es', 'Español'], ['en', 'English']], getLang, (v) => {
-    setLang(v as Lang);
-  });
-  renderSeg('set-theme', [['dark', t('Oscuro', 'Dark')], ['light', t('Claro', 'Light')]], getTheme, (v) => {
-    applyTheme(v as Theme);
-    bus.emit('theme:changed');
-  });
-  renderSeg('set-concurrency', [['5', '5'], ['10', '10'], ['20', '20'], ['50', '50'], ['0', t('Todos', 'All')]], () => conc, (v) => {
-    conc = v;
-    setConcurrency(parseInt(v, 10));
-    save();
-  });
-  renderChips('setQuality', [['auto', 'Auto'], ['max', t('Máx', 'Max')], ['2160', '4K'], ['1080', '1080p'], ['720', '720p'], ['480', '480p']], () => quality, (v) => {
-    quality = v;
-    save();
-  });
-  renderChips('setContainer', [['MP4', 'MP4'], ['MKV', 'MKV'], ['WEBM', 'WebM']], () => container, (v) => {
-    container = v;
-    save();
-  });
-  renderSeg('set-mode', [['video', t('Video + audio', 'Video + audio')], ['audio', t('Solo audio', 'Audio only')]], () => mode, (v) => {
-    mode = v;
-    save();
-  });
+  renderSeg(
+    'set-lang',
+    [
+      ['es', 'Español'],
+      ['en', 'English'],
+    ],
+    getLang,
+    (v) => {
+      setLang(v as Lang);
+    },
+  );
+  renderSeg(
+    'set-theme',
+    [
+      ['dark', t('Oscuro', 'Dark')],
+      ['light', t('Claro', 'Light')],
+    ],
+    getTheme,
+    (v) => {
+      applyTheme(v as Theme);
+      bus.emit('theme:changed');
+    },
+  );
+  renderSeg(
+    'set-concurrency',
+    [
+      ['5', '5'],
+      ['10', '10'],
+      ['20', '20'],
+      ['50', '50'],
+      ['0', t('Todos', 'All')],
+    ],
+    () => conc,
+    (v) => {
+      conc = v;
+      setConcurrency(parseInt(v, 10));
+      void save();
+    },
+  );
+  renderChips(
+    'setQuality',
+    [
+      ['auto', 'Auto'],
+      ['max', t('Máx', 'Max')],
+      ['2160', '4K'],
+      ['1080', '1080p'],
+      ['720', '720p'],
+      ['480', '480p'],
+    ],
+    () => quality,
+    (v) => {
+      quality = v;
+      void save();
+    },
+  );
+  renderChips(
+    'setContainer',
+    [
+      ['MP4', 'MP4'],
+      ['MKV', 'MKV'],
+      ['WEBM', 'WebM'],
+    ],
+    () => container,
+    (v) => {
+      container = v;
+      void save();
+    },
+  );
+  renderSeg(
+    'set-mode',
+    [
+      ['video', t('Video + audio', 'Video + audio')],
+      ['audio', t('Solo audio', 'Audio only')],
+    ],
+    () => mode,
+    (v) => {
+      mode = v;
+      void save();
+    },
+  );
 
   // Plantilla de nombre: guarda con debounce mientras se escribe y al perder foco
   const tpl = $<HTMLInputElement>('set-template');
@@ -156,24 +213,38 @@ export async function initSettings(): Promise<void> {
   });
   tpl.addEventListener('blur', () => {
     window.clearTimeout(tplTimer);
-    save();
+    void save();
   });
 
-  renderToggle('set-subs', () => subs, (v) => {
-    subs = v;
-    save();
-  });
-  renderToggle('set-thumb', () => thumb, (v) => {
-    thumb = v;
-    save();
-  });
-  renderToggle('set-clear-links', () => clearLinks, (v) => {
-    clearLinks = v;
-    save();
-  });
+  renderToggle(
+    'set-subs',
+    () => subs,
+    (v) => {
+      subs = v;
+      void save();
+    },
+  );
+  renderToggle(
+    'set-thumb',
+    () => thumb,
+    (v) => {
+      thumb = v;
+      void save();
+    },
+  );
+  renderToggle(
+    'set-clear-links',
+    () => clearLinks,
+    (v) => {
+      clearLinks = v;
+      void save();
+    },
+  );
 
   // Carpeta de descargas
-  getDownloadFolder().then((p) => ($('set-folder-path').textContent = p)).catch(() => {});
+  getDownloadFolder()
+    .then((p) => ($('set-folder-path').textContent = p))
+    .catch(() => {});
   $('set-change-folder').addEventListener('click', async () => {
     const p = await changeDownloadFolder();
     if (p) $('set-folder-path').textContent = p;

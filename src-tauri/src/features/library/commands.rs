@@ -1,6 +1,6 @@
 use tauri::AppHandle;
 
-use super::models::LibraryEntry;
+use super::models::{LibraryEntry, NewEntry};
 use super::service;
 use crate::core::paths;
 
@@ -10,6 +10,9 @@ pub fn get_history(app: AppHandle) -> Vec<LibraryEntry> {
     service::list(&app_dir)
 }
 
+// El comando mantiene los argumentos planos: son el contrato `invoke` con el
+// frontend (library.api.ts). Internamente se agrupan en `NewEntry`.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn add_history(
     app: AppHandle,
@@ -23,7 +26,16 @@ pub fn add_history(
 ) -> Result<LibraryEntry, String> {
     let app_dir = paths::app_dir(&app);
     service::add(
-        &app_dir, url, title, format, video_id, thumbnail, duration, file_path,
+        &app_dir,
+        NewEntry {
+            url,
+            title,
+            format,
+            video_id,
+            thumbnail,
+            duration,
+            file_path,
+        },
     )
 }
 

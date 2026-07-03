@@ -49,7 +49,10 @@ pub fn open_downloads_folder(app: AppHandle) {
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer").arg(&path).spawn().ok();
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .ok();
     }
     #[cfg(target_os = "macos")]
     {
@@ -57,7 +60,10 @@ pub fn open_downloads_folder(app: AppHandle) {
     }
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open").arg(&path).spawn().ok();
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .ok();
     }
 }
 

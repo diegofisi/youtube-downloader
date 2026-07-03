@@ -189,7 +189,10 @@ fn resolve_duplicate_template(
     }
 
     let output_dir = get_output_dir(app_dir);
-    println!("[download] Simulando nombre de salida para {} (~1-2s)...", url);
+    println!(
+        "[download] Simulando nombre de salida para {} (~1-2s)...",
+        url
+    );
     let simulated = match simulate_filename(registry, app_dir, &output_dir, url, options) {
         Some(p) => p,
         None => {
@@ -217,11 +220,16 @@ fn resolve_duplicate_template(
         let free = existing.iter().all(|p| !path_with_suffix(p, n).exists());
         if free {
             let tpl = template_with_suffix(&base_tpl, n);
-            println!("[download] Duplicado resuelto: se descargará con plantilla \"{}\"", tpl);
+            println!(
+                "[download] Duplicado resuelto: se descargará con plantilla \"{}\"",
+                tpl
+            );
             return Some(tpl);
         }
     }
-    println!("[download] No se encontró nombre libre tras 20 intentos; se usa la plantilla original.");
+    println!(
+        "[download] No se encontró nombre libre tras 20 intentos; se usa la plantilla original."
+    );
     None
 }
 
@@ -274,7 +282,10 @@ fn run_with_retry(
         };
 
         if retry_ok {
-            println!("[download] Reintento tras limpiar cache completado con éxito: {}", url);
+            println!(
+                "[download] Reintento tras limpiar cache completado con éxito: {}",
+                url
+            );
             return DownloadResult {
                 success: true,
                 error: None,
@@ -283,7 +294,10 @@ fn run_with_retry(
             };
         }
 
-        println!("[download] El reintento tras limpiar cache también falló: {}", url);
+        println!(
+            "[download] El reintento tras limpiar cache también falló: {}",
+            url
+        );
 
         if classify_error(&retry_error) == Some("auth") {
             return failure(AUTH_ERROR_MSG.to_string(), Some("auth"));
@@ -463,4 +477,149 @@ fn run_once(
     let error_text = last_error.lock().unwrap().clone();
     let file_path = final_path.lock().unwrap().clone();
     Ok((exit_ok, error_text, file_path))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---------- classify_error ----------
+
+    #[test]
+    fn classify_error_detecta_cada_patron_de_auth() {
+        let patrones = [
+            "Sign in to confirm you're not a bot",
+            "This video is available to this channel's members on level: X",
+            "Join this channel to get access to members-only content",
+            "The provided YouTube account cookies are no longer valid",
+            "Please sign in to view this video",
+            "confirm you are not a bot",
+            "HTTP Error 401: Unauthorized",
+        ];
+        for p in patrones {
+            assert_eq!(
+                classify_error(p),
+                Some("auth"),
+                "patrón no clasificado como auth: {}",
+                p
+            );
+        }
+    }
+
+    #[test]
+    fn classify_error_es_case_insensitive() {
+        assert_eq!(classify_error("SIGN IN TO CONFIRM your age"), Some("auth"));
+        assert_eq!(classify_error("http ERROR 403: FORBIDDEN"), Some("cache"));
+    }
+
+    #[test]
+    fn classify_error_detecta_cache_por_403_y_forbidden() {
+        assert_eq!(classify_error("HTTP Error 403: Forbidden"), Some("cache"));
+        assert_eq!(
+            classify_error("unable to download: Forbidden"),
+            Some("cache")
+        );
+        assert_eq!(
+            classify_error("fragment 3 not found, HTTP error 403"),
+            Some("cache")
+        );
+    }
+
+    #[test]
+    fn classify_error_auth_tiene_prioridad_sobre_cache() {
+        // Un error que menciona ambos: la sesión inválida es la causa raíz.
+        assert_eq!(
+            classify_error("HTTP Error 401 then forbidden"),
+            Some("auth")
+        );
+    }
+
+    #[test]
+    fn classify_error_devuelve_none_para_otros_errores() {
+        assert_eq!(classify_error("Video unavailable"), None);
+        assert_eq!(classify_error("HTTP Error 404: Not Found"), None);
+        assert_eq!(classify_error(""), None);
+    }
+
+    // ---------- template_with_suffix ----------
+
+    #[test]
+    fn template_with_suffix_inserta_antes_de_ext() {
+        assert_eq!(
+            template_with_suffix("%(title)s [%(id)s].%(ext)s", 1),
+            "%(title)s [%(id)s] (1).%(ext)s"
+        );
+    }
+
+    #[test]
+    fn template_with_suffix_sin_ext_agrega_al_final() {
+        assert_eq!(template_with_suffix("%(title)s", 3), "%(title)s (3)");
+    }
+
+    // ---------- path_with_suffix ----------
+
+    #[test]
+    fn path_with_suffix_con_extension() {
+        let p = PathBuf::from("C:/videos/mi video.mp4");
+        assert_eq!(
+            path_with_suffix(&p, 2),
+            PathBuf::from("C:/videos/mi video (2).mp4")
+        );
+    }
+
+    #[test]
+    fn path_with_suffix_sin_extension() {
+        let p = PathBuf::from("C:/videos/archivo");
+        assert_eq!(
+            path_with_suffix(&p, 1),
+            PathBuf::from("C:/videos/archivo (1)")
+        );
+    }
+
+    // ---------- expected_final_paths ----------
+
+    fn opciones(mode: &str) -> DownloadOptions {
+        DownloadOptions {
+            mode: mode.into(),
+            audio_format: "mp3".into(),
+            container: "mp4".into(),
+            ..DownloadOptions::default()
+        }
+    }
+
+    #[test]
+    fn expected_final_paths_modo_audio_agrega_extension_de_audio() {
+        let paths = expected_final_paths(Path::new("C:/dl/cancion.webm"), &opciones("audio"));
+        assert_eq!(
+            paths,
+            vec![
+                PathBuf::from("C:/dl/cancion.webm"),
+                PathBuf::from("C:/dl/cancion.mp3")
+            ]
+        );
+    }
+
+    #[test]
+    fn expected_final_paths_modo_video_agrega_contenedor() {
+        let paths = expected_final_paths(Path::new("C:/dl/video.webm"), &opciones("video"));
+        assert_eq!(
+            paths,
+            vec![
+                PathBuf::from("C:/dl/video.webm"),
+                PathBuf::from("C:/dl/video.mp4")
+            ]
+        );
+    }
+
+    #[test]
+    fn expected_final_paths_no_duplica_si_la_extension_ya_coincide() {
+        let paths = expected_final_paths(Path::new("C:/dl/video.mp4"), &opciones("video"));
+        assert_eq!(paths, vec![PathBuf::from("C:/dl/video.mp4")]);
+    }
+
+    #[test]
+    fn expected_final_paths_videoonly_solo_la_simulada() {
+        let paths = expected_final_paths(Path::new("C:/dl/video.webm"), &opciones("videoonly"));
+        assert_eq!(paths, vec![PathBuf::from("C:/dl/video.webm")]);
+    }
 }

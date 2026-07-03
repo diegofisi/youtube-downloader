@@ -57,9 +57,7 @@ function clientFilter(page: VideoMeta[]): VideoMeta[] {
   // aquí solo se descargan videos sueltos.
   const vids = page.filter((v) => !v.is_playlist);
   if (chip === 'shorts')
-    return vids.filter(
-      (v) => v.url.includes('/shorts/') || (v.duration != null && v.duration <= SHORTS_MAX_SECONDS),
-    );
+    return vids.filter((v) => v.url.includes('/shorts/') || (v.duration != null && v.duration <= SHORTS_MAX_SECONDS));
   return vids;
 }
 
@@ -80,7 +78,7 @@ function renderChips(): void {
   renderPillBar($('search-chips'), CHIPS, chip, (key) => {
     chip = key as ChipKey;
     renderChips();
-    if (query) doSearch(); // re-busca la query actual con el nuevo filtro
+    if (query) void doSearch(); // re-busca la query actual con el nuevo filtro
   });
 }
 
@@ -105,7 +103,8 @@ function renderList(): void {
 
   wireVideoCards($('search-list'), videos, {
     toggle: (url) => {
-      sel.has(url) ? sel.delete(url) : sel.add(url);
+      if (sel.has(url)) sel.delete(url);
+      else sel.add(url);
       renderList();
     },
     download: openDlMenu,
@@ -152,7 +151,7 @@ export function initSearch(): void {
   renderChips();
   $('btn-search-go').addEventListener('click', doSearch);
   $('search-input').addEventListener('keydown', (e) => {
-    if ((e as KeyboardEvent).key === 'Enter') doSearch();
+    if ((e as KeyboardEvent).key === 'Enter') void doSearch();
   });
   loader.wireMore();
   $('btn-search-download-sel').addEventListener('click', () => {

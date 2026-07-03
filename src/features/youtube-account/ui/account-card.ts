@@ -28,9 +28,7 @@ let hooks: AccountCardHooks = { onLoggedIn: () => {}, onLoggedOut: () => {} };
 
 /** Abre el login de YouTube con toast de error (login/reconexión). */
 export function openLogin(): void {
-  openYouTubeLogin().catch(() =>
-    showToast(t('No se pudo abrir el login', 'Could not open login'), '', 'error'),
-  );
+  openYouTubeLogin().catch(() => showToast(t('No se pudo abrir el login', 'Could not open login'), '', 'error'));
 }
 
 // ---------- info real de la cuenta (nombre, handle y avatar) ----------
@@ -143,7 +141,11 @@ async function handleLogout(): Promise<void> {
     hooks.onLoggedOut();
     $('yt-logged-out').hidden = false;
     $('yt-logged-in').hidden = true;
-    showToast(t('Sesión cerrada', 'Signed out'), t('Las cookies fueron eliminadas.', 'The cookies were deleted.'), 'done');
+    showToast(
+      t('Sesión cerrada', 'Signed out'),
+      t('Las cookies fueron eliminadas.', 'The cookies were deleted.'),
+      'done',
+    );
   } catch (e) {
     showToast(t('No se pudo cerrar sesión', 'Could not sign out'), String(e), 'error');
   }

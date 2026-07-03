@@ -71,3 +71,62 @@ impl Default for AppConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Contrato de retro-compatibilidad: un config.json viejo (sin los campos
+    // añadidos después) debe deserializar con los defaults de serde, nunca fallar.
+
+    #[test]
+    fn config_json_vacio_deserializa_con_todos_los_defaults() {
+        let cfg: AppConfig = serde_json::from_str("{}").unwrap();
+        assert_eq!(cfg.download_folder, "");
+        assert_eq!(cfg.default_quality, "auto");
+        assert_eq!(cfg.default_container, "mp4");
+        assert_eq!(cfg.default_audio_format, "mp3");
+        assert_eq!(cfg.default_concurrency, 5);
+        assert_eq!(cfg.default_mode, "video");
+        assert_eq!(cfg.default_template, "%(title)s [%(id)s]");
+        assert!(!cfg.default_subtitles);
+        assert!(cfg.default_thumbnail);
+        assert!(cfg.clear_links_after_preview);
+    }
+
+    #[test]
+    fn config_json_viejo_conserva_lo_suyo_y_rellena_los_campos_nuevos() {
+        // Formato de la primera versión: solo carpeta, calidad, contenedor,
+        // audio y concurrencia (sin modo/plantilla/subs/miniatura/clear_links).
+        let viejo = r#"{
+            "download_folder": "C:\\Descargas",
+            "default_quality": "1080",
+            "default_container": "mkv",
+            "default_audio_format": "m4a",
+            "default_concurrency": 2
+        }"#;
+        let cfg: AppConfig = serde_json::from_str(viejo).unwrap();
+        assert_eq!(cfg.download_folder, "C:\\Descargas");
+        assert_eq!(cfg.default_quality, "1080");
+        assert_eq!(cfg.default_container, "mkv");
+        assert_eq!(cfg.default_audio_format, "m4a");
+        assert_eq!(cfg.default_concurrency, 2);
+        // Campos nuevos → defaults.
+        assert_eq!(cfg.default_mode, "video");
+        assert_eq!(cfg.default_template, "%(title)s [%(id)s]");
+        assert!(!cfg.default_subtitles);
+        assert!(cfg.default_thumbnail);
+        assert!(cfg.clear_links_after_preview);
+    }
+
+    #[test]
+    fn el_default_de_rust_y_el_de_serde_coinciden() {
+        // Si alguien cambia un default en un sitio y no en el otro, este test avisa.
+        let por_serde: AppConfig = serde_json::from_str("{}").unwrap();
+        let por_rust = AppConfig::default();
+        assert_eq!(
+            serde_json::to_value(&por_serde).unwrap(),
+            serde_json::to_value(&por_rust).unwrap()
+        );
+    }
+}

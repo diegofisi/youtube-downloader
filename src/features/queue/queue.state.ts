@@ -139,14 +139,17 @@ function run(it: QItem): void {
         // quemar el resto de la tanda (los que siguen en cola fallarían igual).
         it.status = 'paused';
         it.pausedByAuth = true;
-        it.error = t('Sesión caducada — se pausó para no fallar el resto', 'Session expired — paused to avoid failing the rest');
+        it.error = t(
+          'Sesión caducada — se pausó para no fallar el resto',
+          'Session expired — paused to avoid failing the rest',
+        );
         for (const q of items) {
           if (q.status === 'queued') {
             q.status = 'paused';
             q.pausedByAuth = true;
           }
         }
-        handleAuthFailure();
+        void handleAuthFailure();
       } else {
         it.status = 'error';
         it.error = res.error ?? t('Error desconocido', 'Unknown error');
@@ -171,7 +174,11 @@ async function handleAuthFailure(): Promise<void> {
   try {
     const ok = await attemptSilentReconnect().catch(() => false);
     if (ok) {
-      showToast(t('Sesión renovada', 'Session renewed'), t('Reanudando descargas pausadas.', 'Resuming paused downloads.'), 'done');
+      showToast(
+        t('Sesión renovada', 'Session renewed'),
+        t('Reanudando descargas pausadas.', 'Resuming paused downloads.'),
+        'done',
+      );
       for (const it of items) {
         if (it.status === 'paused' && it.pausedByAuth) {
           it.status = 'queued';
@@ -182,7 +189,11 @@ async function handleAuthFailure(): Promise<void> {
       notify();
       pump();
     } else {
-      showToast(t('Tu sesión de YouTube caducó', 'Your YouTube session expired'), t('Reconecta en Mi YouTube y reanuda las descargas.', 'Reconnect in My YouTube and resume the downloads.'), 'warn');
+      showToast(
+        t('Tu sesión de YouTube caducó', 'Your YouTube session expired'),
+        t('Reconecta en Mi YouTube y reanuda las descargas.', 'Reconnect in My YouTube and resume the downloads.'),
+        'warn',
+      );
     }
   } finally {
     authReconnectInFlight = false;
@@ -227,7 +238,9 @@ export function action(id: string, act: string): void {
     // library/settings, no de DOM, por eso se queda en el state.)
     const dir = (it.filePath && parentDir(it.filePath)) || it.folder;
     const p = dir ? Promise.resolve(dir) : getDownloadFolder();
-    p.then((folder) => openHistoryFolder(folder)).catch(() => showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error'));
+    p.then((folder) => openHistoryFolder(folder)).catch(() =>
+      showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error'),
+    );
     return;
   }
   notify();
@@ -272,7 +285,11 @@ export function retryAllFailed(): void {
   });
   notify();
   pump();
-  showToast(t('Reintentando', 'Retrying'), t('Recargando y reintentando fallidos.', 'Re-queuing and retrying failed items.'), 'info');
+  showToast(
+    t('Reintentando', 'Retrying'),
+    t('Recargando y reintentando fallidos.', 'Re-queuing and retrying failed items.'),
+    'info',
+  );
 }
 
 /** Limpia completados/cancelados (botón "Limpiar"). Muta items → vive en el state. */

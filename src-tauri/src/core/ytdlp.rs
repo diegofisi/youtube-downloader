@@ -82,8 +82,10 @@ impl YtdlpCmd {
     pub fn deno_runtime(mut self) -> Self {
         if let Some(deno) = paths::find_executable(&self.app_dir, "deno") {
             self.args.push("--extractor-args".into());
-            self.args
-                .push(format!("youtube:js_runtimes=deno:{}", deno.to_string_lossy()));
+            self.args.push(format!(
+                "youtube:js_runtimes=deno:{}",
+                deno.to_string_lossy()
+            ));
         }
         self
     }
@@ -151,5 +153,106 @@ pub fn parse_field(s: &str, start_marker: &str, end_marker: &str) -> Option<Stri
     } else {
         let end = s[start..].find(end_marker).map(|i| start + i)?;
         Some(s[start..end].trim().to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const LINEA_PROGRESO: &str = "[download]  45.2% of ~120.5MiB at 2.5MiB/s ETA 00:42";
+
+    // ---------- parse_percent ----------
+
+    #[test]
+    fn parse_percent_extrae_el_porcentaje_de_una_linea_real() {
+        assert_eq!(parse_percent(LINEA_PROGRESO), Some(45.2));
+    }
+
+    #[test]
+    fn parse_percent_soporta_100_por_ciento() {
+        assert_eq!(
+            parse_percent("[download] 100% of 120.50MiB in 00:01:23 at 1.45MiB/s"),
+            Some(100.0)
+        );
+    }
+
+    #[test]
+    fn parse_percent_none_sin_signo_de_porcentaje() {
+        assert_eq!(parse_percent("[download] Destination: video.mp4"), None);
+        assert_eq!(parse_percent(""), None);
+    }
+
+    // ---------- parse_field ----------
+
+    #[test]
+    fn parse_field_extrae_velocidad_entre_marcadores() {
+        assert_eq!(
+            parse_field(LINEA_PROGRESO, "at ", " ETA"),
+            Some("2.5MiB/s".to_string())
+        );
+    }
+
+    #[test]
+    fn parse_field_con_end_vacio_toma_hasta_el_final() {
+        assert_eq!(
+            parse_field(LINEA_PROGRESO, "ETA ", ""),
+            Some("00:42".to_string())
+        );
+    }
+
+    #[test]
+    fn parse_field_none_si_falta_un_marcador() {
+        assert_eq!(
+            parse_field("[download] 45.2% of ~120.5MiB", "at ", " ETA"),
+            None
+        );
+        assert_eq!(parse_field("[download] at 2.5MiB/s", "at ", " ETA"), None);
+    }
+
+    // ---------- YtdlpCmd::build ----------
+
+    fn args_de(cmd: &std::process::Command) -> Vec<String> {
+        cmd.get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn build_fuerza_encoding_utf8_y_cierra_con_doble_guion_antes_de_la_url() {
+        let cmd = YtdlpCmd::new(Path::new("."), "https://youtu.be/x").build();
+        let args = args_de(&cmd);
+        let n = args.len();
+        assert_eq!(
+            &args[n - 4..],
+            ["--encoding", "utf-8", "--", "https://youtu.be/x"]
+        );
+    }
+
+    #[test]
+    fn build_una_url_que_parece_flag_queda_tras_el_doble_guion() {
+        let cmd = YtdlpCmd::new(Path::new("."), "-rf https://evil").build();
+        let args = args_de(&cmd);
+        let pos_sep = args.iter().position(|a| a == "--").unwrap();
+        assert_eq!(args[pos_sep + 1], "-rf https://evil");
+        assert_eq!(
+            pos_sep + 2,
+            args.len(),
+            "la URL debe ser el último argumento"
+        );
+    }
+
+    #[test]
+    fn build_conserva_los_args_del_llamador_antes_de_los_comunes() {
+        let cmd = YtdlpCmd::new(Path::new("."), "https://youtu.be/x")
+            .arg("--newline")
+            .no_update()
+            .no_warnings()
+            .build();
+        let args = args_de(&cmd);
+        let pos = |flag: &str| args.iter().position(|a| a == flag).unwrap();
+        assert!(pos("--newline") < pos("--encoding"));
+        assert!(pos("--no-update") < pos("--encoding"));
+        assert!(pos("--no-warnings") < pos("--encoding"));
     }
 }

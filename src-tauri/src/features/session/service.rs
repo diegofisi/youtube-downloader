@@ -180,8 +180,8 @@ pub fn get_account_info(app_dir: &Path) -> Result<Option<AccountInfo>, String> {
     let body = resp
         .text()
         .map_err(|e| format!("Respuesta de cuenta ilegible: {}", e))?;
-    let json: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| format!("Respuesta de cuenta ilegible: {}", e))?;
+    let json: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| format!("Respuesta de cuenta ilegible: {}", e))?;
 
     // Rutas verificadas empíricamente (2026-07):
     // actions[0].openPopupAction.popup.multiPageMenuRenderer.header.activeAccountHeaderRenderer
@@ -266,4 +266,142 @@ pub fn logout(app_dir: &Path) -> Result<(), String> {
         fs::remove_file(&path).map_err(|e| format!("No se pudo borrar cookies.txt: {}", e))?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Línea Netscape válida: domain, flag, path, secure, expiry, name, value.
+    fn linea(domain: &str, expiry: &str, name: &str, value: &str) -> String {
+        format!("{}\tTRUE\t/\tTRUE\t{}\t{}\t{}", domain, expiry, name, value)
+    }
+
+    // ---------- parse_netscape ----------
+
+    #[test]
+    fn parse_netscape_extrae_los_campos_de_una_linea_valida() {
+        let contenido = linea(".youtube.com", "1900000000", "SAPISID", "abc123");
+        let cookies: Vec<_> = parse_netscape(&contenido).collect();
+        assert_eq!(cookies.len(), 1);
+        assert_eq!(cookies[0].domain, ".youtube.com");
+        assert_eq!(cookies[0].name, "SAPISID");
+        assert_eq!(cookies[0].value, "abc123");
+        assert_eq!(cookies[0].expiry, 1900000000);
+    }
+
+    #[test]
+    fn parse_netscape_acepta_lineas_httponly() {
+        let contenido = format!(
+            "#HttpOnly_{}",
+            linea(".youtube.com", "0", "LOGIN_INFO", "xyz")
+        );
+        let cookies: Vec<_> = parse_netscape(&contenido).collect();
+        assert_eq!(cookies.len(), 1);
+        assert_eq!(cookies[0].domain, ".youtube.com");
+        assert_eq!(cookies[0].name, "LOGIN_INFO");
+    }
+
+    #[test]
+    fn parse_netscape_ignora_comentarios_y_lineas_vacias() {
+        let contenido = format!(
+            "# Netscape HTTP Cookie File\n\n# comentario\n{}\n",
+            linea(".youtube.com", "0", "PREF", "v")
+        );
+        let cookies: Vec<_> = parse_netscape(&contenido).collect();
+        assert_eq!(cookies.len(), 1);
+    }
+
+    #[test]
+    fn parse_netscape_descarta_lineas_con_campos_insuficientes() {
+        // 6 campos (falta value) y una línea separada por espacios, no tabs.
+        let contenido =
+            ".youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\n.youtube.com TRUE / TRUE 0 SAPISID abc";
+        assert_eq!(parse_netscape(contenido).count(), 0);
+    }
+
+    #[test]
+    fn parse_netscape_expiry_ilegible_se_trata_como_cookie_de_sesion() {
+        let contenido = linea(".youtube.com", "no-numerico", "SSID", "v");
+        let cookies: Vec<_> = parse_netscape(&contenido).collect();
+        assert_eq!(cookies[0].expiry, 0);
+    }
+
+    // ---------- session_status (con cookies.txt real en un dir temporal) ----------
+
+    /// Dir temporal único por test; se limpia al soltar el guard.
+    struct TempDir(PathBuf);
+    impl TempDir {
+        fn new(tag: &str) -> Self {
+            let dir =
+                std::env::temp_dir().join(format!("stash-test-{}-{}", tag, std::process::id()));
+            std::fs::create_dir_all(&dir).unwrap();
+            TempDir(dir)
+        }
+    }
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn escribir_cookies(dir: &TempDir, contenido: &str) {
+        std::fs::write(get_cookies_path(&dir.0), contenido).unwrap();
+    }
+
+    #[test]
+    fn session_status_none_sin_archivo() {
+        let dir = TempDir::new("none");
+        assert_eq!(session_status(&dir.0), "none");
+    }
+
+    #[test]
+    fn session_status_none_si_solo_hay_cookies_de_google() {
+        let dir = TempDir::new("google");
+        escribir_cookies(&dir, &linea(".google.com", "1900000000", "SAPISID", "v"));
+        assert_eq!(session_status(&dir.0), "none");
+    }
+
+    #[test]
+    fn session_status_connected_con_cookie_fuerte_vigente() {
+        let dir = TempDir::new("connected");
+        // expiry 0 = cookie de sesión: cuenta como vigente.
+        let contenido = format!(
+            "{}\n{}",
+            linea(".youtube.com", "0", "LOGIN_INFO", "v"),
+            linea(".youtube.com", "1900000000", "SAPISID", "v")
+        );
+        escribir_cookies(&dir, &contenido);
+        assert_eq!(session_status(&dir.0), "connected");
+    }
+
+    #[test]
+    fn session_status_expired_si_la_auth_vencio() {
+        let dir = TempDir::new("expired");
+        escribir_cookies(&dir, &linea(".youtube.com", "1000000", "SAPISID", "v"));
+        assert_eq!(session_status(&dir.0), "expired");
+    }
+
+    #[test]
+    fn session_status_expired_con_cookies_de_youtube_sin_auth() {
+        let dir = TempDir::new("weak");
+        escribir_cookies(&dir, &linea(".youtube.com", "0", "PREF", "v"));
+        assert_eq!(session_status(&dir.0), "expired");
+    }
+
+    // ---------- sapisidhash ----------
+
+    #[test]
+    fn sapisidhash_tiene_formato_ts_guionbajo_sha1_hex() {
+        let firma = sapisidhash("mi-sapisid", "https://www.youtube.com");
+        let resto = firma
+            .strip_prefix("SAPISIDHASH ")
+            .expect("debe empezar con 'SAPISIDHASH '");
+        let (ts, hex) = resto.split_once('_').expect("debe tener ts_hash");
+        assert!(ts.parse::<u64>().is_ok(), "timestamp no numérico: {}", ts);
+        assert_eq!(hex.len(), 40, "SHA1 hex debe tener 40 chars: {}", hex);
+        assert!(hex
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    }
 }

@@ -58,12 +58,48 @@ export function statusOf(v: VideoMeta): Status {
   return 'ok';
 }
 export const STATUS_META: Record<Status, { readonly label: string; color: string; downloadable: boolean }> = {
-  ok: { get label() { return t('Descargable', 'Downloadable'); }, color: 'var(--success)', downloadable: true },
-  members: { get label() { return t('De miembros · requiere sesión', 'Members-only · requires session'); }, color: 'var(--warn)', downloadable: true },
-  downloaded: { get label() { return t('Ya descargado', 'Already downloaded'); }, color: 'var(--info)', downloadable: true },
-  private: { get label() { return t('Privado · no disponible', 'Private · not available'); }, color: 'var(--text3)', downloadable: false },
-  region: { get label() { return t('Bloqueado por región', 'Region-blocked'); }, color: 'var(--warn)', downloadable: false },
-  error: { get label() { return t('No disponible', 'Not available'); }, color: 'var(--danger)', downloadable: false },
+  ok: {
+    get label() {
+      return t('Descargable', 'Downloadable');
+    },
+    color: 'var(--success)',
+    downloadable: true,
+  },
+  members: {
+    get label() {
+      return t('De miembros · requiere sesión', 'Members-only · requires session');
+    },
+    color: 'var(--warn)',
+    downloadable: true,
+  },
+  downloaded: {
+    get label() {
+      return t('Ya descargado', 'Already downloaded');
+    },
+    color: 'var(--info)',
+    downloadable: true,
+  },
+  private: {
+    get label() {
+      return t('Privado · no disponible', 'Private · not available');
+    },
+    color: 'var(--text3)',
+    downloadable: false,
+  },
+  region: {
+    get label() {
+      return t('Bloqueado por región', 'Region-blocked');
+    },
+    color: 'var(--warn)',
+    downloadable: false,
+  },
+  error: {
+    get label() {
+      return t('No disponible', 'Not available');
+    },
+    color: 'var(--danger)',
+    downloadable: false,
+  },
 };
 
 // ---------- flatten videos ----------
@@ -216,7 +252,8 @@ export function renderPreview(): void {
     card.querySelector('.pv-toggle')?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (v && !STATUS_META[statusOf(v)].downloadable) return;
-      sel.has(url) ? sel.delete(url) : sel.add(url);
+      if (sel.has(url)) sel.delete(url);
+      else sel.add(url);
       renderPreview();
     });
   });
@@ -236,8 +273,7 @@ export function renderPreview(): void {
   listEl.querySelectorAll<HTMLElement>('.pv-group-toggle').forEach((b) =>
     b.addEventListener('click', () => {
       const p = entries.find((e) => e.is_playlist && (e as PlaylistMeta).id === b.dataset.pl) as
-        | PlaylistMeta
-        | undefined;
+        PlaylistMeta | undefined;
       if (!p) return;
       const selectable = p.entries.filter((v) => STATUS_META[statusOf(v)].downloadable);
       const allSel = selectable.length > 0 && selectable.every((v) => sel.has(v.url));
@@ -253,7 +289,9 @@ export function renderPreview(): void {
   $('btn-select-all').hidden = false;
   const selectable = vids.filter((v) => STATUS_META[statusOf(v)].downloadable);
   const allOn = selectable.length > 0 && selectable.every((v) => sel.has(v.url));
-  $('btn-select-all').textContent = allOn ? t('Quitar selección', 'Clear selection') : t('Seleccionar todo', 'Select all');
+  $('btn-select-all').textContent = allOn
+    ? t('Quitar selección', 'Clear selection')
+    : t('Seleccionar todo', 'Select all');
   $('btn-filter-dl').setAttribute(
     'style',
     `font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;border:1.5px solid ${

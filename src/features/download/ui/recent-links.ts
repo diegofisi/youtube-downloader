@@ -47,7 +47,9 @@ function renderRecentPanel(): void {
   }
   const rows = items
     .map(
-      (r) => `<button class="rl-item hov" data-url="${esc(r.url)}" title="${esc(r.url)}" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;border-radius:8px;text-align:left">
+      (
+        r,
+      ) => `<button class="rl-item hov" data-url="${esc(r.url)}" title="${esc(r.url)}" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;border-radius:8px;text-align:left">
       <span style="flex:1;min-width:0;font-size:11.5px;color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.url)}</span>
       <span style="flex:none;font-size:10.5px;color:var(--text3)">${timeAgo(r.ts)}</span>
     </button>`,
@@ -61,7 +63,10 @@ function renderRecentPanel(): void {
     b.addEventListener('click', () => {
       // Añade el enlace al textarea sin duplicar líneas y actualiza el contador.
       const input = $<HTMLTextAreaElement>('url-input');
-      const lines = input.value.split('\n').map((l) => l.trim()).filter(Boolean);
+      const lines = input.value
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
       if (!lines.includes(b.dataset.url!)) lines.push(b.dataset.url!);
       input.value = lines.join('\n');
       $('link-count').textContent = lineCountLabel(lines.length);

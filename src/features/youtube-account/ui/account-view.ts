@@ -10,13 +10,7 @@ import { analyzeUrls } from '../../preview';
 import type { VideoMeta } from '../../preview';
 import { isConnected, refreshSession } from '../../session';
 import { t } from '../../../core/i18n';
-import {
-  initAccountCard,
-  invalidateAccountInfo,
-  renderAccountCard,
-  updateConnection,
-  openLogin,
-} from './account-card';
+import { initAccountCard, invalidateAccountInfo, renderAccountCard, updateConnection, openLogin } from './account-card';
 
 const TABS = [
   { key: 'wl', label: t('Ver más tarde', 'Watch later'), url: 'https://www.youtube.com/playlist?list=WL' },
@@ -62,7 +56,9 @@ const loader = createPagedLoader<VideoMeta>({
 
 function renderBenefits(): void {
   $('yt-benefits').innerHTML = BENEFITS.map(
-    (b) => `<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--panel);border:1px solid var(--border);border-radius:11px">
+    (
+      b,
+    ) => `<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--panel);border:1px solid var(--border);border-radius:11px">
       <span style="width:26px;height:26px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--successSoft);color:var(--success)">${I.check}</span>
       <span style="font-size:13px;color:var(--text)">${esc(b)}</span></div>`,
   ).join('');
@@ -73,7 +69,7 @@ function renderTabs(): void {
     tab = key;
     openPlaylist = null;
     renderTabs();
-    loadTab();
+    void loadTab();
   });
 }
 
@@ -99,7 +95,7 @@ function backBtnHtml(): string {
 function wireBack(): void {
   document.getElementById('yt-back')?.addEventListener('click', () => {
     openPlaylist = null;
-    loadTab();
+    void loadTab();
   });
 }
 
@@ -156,7 +152,7 @@ function renderList(): void {
           const v = videos.find((x) => x.url === card.dataset.plurl);
           if (!v) return;
           openPlaylist = { url: v.url, title: v.title };
-          loadTab();
+          void loadTab();
         });
       });
     return;
@@ -164,7 +160,8 @@ function renderList(): void {
 
   wireVideoCards($('yt-list'), videos, {
     toggle: (url) => {
-      sel.has(url) ? sel.delete(url) : sel.add(url);
+      if (sel.has(url)) sel.delete(url);
+      else sel.add(url);
       renderList();
     },
     download: openDlMenu,
@@ -236,8 +233,7 @@ async function loadTab(): Promise<void> {
         );
       wireEmptyReconnect();
     } else {
-      $('yt-list').innerHTML =
-        backBtnHtml() + emptyState(t('No se pudo cargar', 'Could not load'), msg, false);
+      $('yt-list').innerHTML = backBtnHtml() + emptyState(t('No se pudo cargar', 'Could not load'), msg, false);
     }
     wireBack();
   }
@@ -247,7 +243,7 @@ export function initAccount(): void {
   initAccountCard({
     // Tras updateConnection con sesión activa: cargar el grid si está vacío.
     onLoggedIn: () => {
-      if (loader.items.length === 0) loadTab();
+      if (loader.items.length === 0) void loadTab();
     },
     // Tras logout: limpiar el estado del grid.
     onLoggedOut: () => {
@@ -282,14 +278,10 @@ export function initAccount(): void {
 
   $('btn-yt-download-sel').addEventListener('click', () => {
     const items = loader.items.filter((v) => sel.has(v.url));
-    downloadSelected(
-      items,
-      t(`${items.length} videos en proceso.`, `${items.length} videos in progress.`),
-      () => {
-        sel.clear();
-        renderList();
-      },
-    );
+    downloadSelected(items, t(`${items.length} videos en proceso.`, `${items.length} videos in progress.`), () => {
+      sel.clear();
+      renderList();
+    });
   });
   // Un solo camino: session:changed cubre todas las transiciones (session:connected
   // siempre viene acompañado de session:changed, así evitamos dos loadTab concurrentes).
@@ -301,10 +293,10 @@ export function initAccount(): void {
       loader.begin(); // al conectar, recargar la lista desde cero
       openPlaylist = null;
     }
-    updateConnection();
+    void updateConnection();
   });
   bus.on('nav:changed', ({ view }) => {
-    if (view === 'youtube') updateConnection();
+    if (view === 'youtube') void updateConnection();
   });
-  updateConnection();
+  void updateConnection();
 }

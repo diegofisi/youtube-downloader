@@ -124,7 +124,9 @@ impl DownloadOptions {
         if self.mode == "videoonly" {
             // Sin pista de audio.
             return match height {
-                Some(h) => format!("bestvideo[height<={h}][ext={vext}]/bestvideo[height<={h}]/bestvideo"),
+                Some(h) => {
+                    format!("bestvideo[height<={h}][ext={vext}]/bestvideo[height<={h}]/bestvideo")
+                }
                 None => "bestvideo".into(),
             };
         }

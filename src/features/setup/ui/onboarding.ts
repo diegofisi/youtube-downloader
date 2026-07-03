@@ -23,20 +23,22 @@ const getSteps = () => [
 ];
 
 function renderSteps(doneCount: number): void {
-  $('onb-steps').innerHTML = getSteps().map((s, i) => {
-    const done = i < doneCount;
-    const active = i === doneCount;
-    const statusEl = done
-      ? `<span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--success);color:#04140C">${I.check}</span>`
-      : active
-        ? `<span style="color:var(--accent);display:flex">${I.spinner}</span>`
-        : `<span style="width:8px;height:8px;border-radius:50%;background:var(--border2)"></span>`;
-    return `<div style="display:flex;align-items:center;gap:13px;padding:13px 15px;background:var(--panel);border:1px solid var(--border);border-radius:13px">
+  $('onb-steps').innerHTML = getSteps()
+    .map((s, i) => {
+      const done = i < doneCount;
+      const active = i === doneCount;
+      const statusEl = done
+        ? `<span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--success);color:#04140C">${I.check}</span>`
+        : active
+          ? `<span style="color:var(--accent);display:flex">${I.spinner}</span>`
+          : `<span style="width:8px;height:8px;border-radius:50%;background:var(--border2)"></span>`;
+      return `<div style="display:flex;align-items:center;gap:13px;padding:13px 15px;background:var(--panel);border:1px solid var(--border);border-radius:13px">
       <span style="width:30px;height:30px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--panel2);color:${done ? 'var(--success)' : 'var(--text2)'}">${s.icon}</span>
       <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px">${s.name}</div><div style="font-size:11.5px;color:var(--text2)">${s.desc}</div></div>
       ${statusEl}
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -50,7 +52,7 @@ export async function initOnboarding(): Promise<void> {
   finish.addEventListener('click', () => {
     if (retryMode) {
       retryMode = false;
-      runInstall();
+      void runInstall();
     } else {
       done();
     }
