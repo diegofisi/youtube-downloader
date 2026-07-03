@@ -38,6 +38,14 @@ export async function logoutSession(): Promise<void> {
   return invoke('logout');
 }
 
+/**
+ * Intenta refrescar la sesión de YouTube sin interacción (ventana oculta).
+ * Resuelve true si se re-extrajeron cookies; false si hace falta login manual.
+ */
+export async function refreshSessionSilent(): Promise<boolean> {
+  return invoke<boolean>('refresh_session_silent');
+}
+
 export function onCookiesExtracted(cb: (success: boolean) => void): Promise<UnlistenFn> {
   return onEvent<boolean>('cookies-extracted', cb);
 }

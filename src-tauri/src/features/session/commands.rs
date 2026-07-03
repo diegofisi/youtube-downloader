@@ -80,6 +80,100 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Intenta refrescar la sesión de YouTube SIN interacción del usuario.
+///
+/// Abre una ventana oculta con la URL de login pasivo: si el perfil persistente
+/// del webview aún tiene la sesión de Google viva, Google redirige directo a
+/// youtube.com y podemos re-extraer cookies frescas. Si tras ~20s seguimos en
+/// accounts.google.com (pide interacción), resolvemos `false`.
+#[tauri::command]
+pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
+    const LABEL: &str = "youtube-login-silent";
+
+    // No duplicar: si quedó una ventana anterior, cerrarla antes de reintentar.
+    if let Some(existing) = app.get_webview_window(LABEL) {
+        existing.close().ok();
+    }
+
+    let login_url: Url = "https://accounts.google.com/ServiceLogin?service=youtube&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2F"
+        .parse()
+        .map_err(|e| format!("URL inválida: {}", e))?;
+
+    // Canal para esperar el resultado desde el callback on_page_load.
+    // El Sender va dentro de un Mutex<Option<..>> para consumirlo una sola vez.
+    let (tx, rx) = std::sync::mpsc::channel::<bool>();
+    let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
+    let tx_for_cb = std::sync::Arc::clone(&tx);
+
+    let build_result = WebviewWindowBuilder::new(
+        &app,
+        LABEL,
+        tauri::WebviewUrl::External(login_url),
+    )
+    .title("YouTube - Reconexion silenciosa")
+    .inner_size(1000.0, 700.0)
+    .visible(false)
+    .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+    .on_page_load(move |webview_window, payload| {
+        if payload.event() == PageLoadEvent::Finished {
+            let url = payload.url().to_string();
+
+            if url.contains("youtube.com") && !url.contains("accounts.google.com") {
+                // Aterrizamos en YouTube sin interacción: la sesión sigue viva.
+                let sender = tx_for_cb.lock().unwrap().take();
+                let Some(sender) = sender else { return };
+
+                let ww = webview_window.clone();
+                let app_handle = webview_window.app_handle().clone();
+
+                tauri::async_runtime::spawn(async move {
+                    let ok = match extract_and_save_cookies(&ww, &app_handle).await {
+                        Ok(count) => {
+                            println!("[silent-login] {} cookies refrescadas sin interacción", count);
+                            app_handle.emit("cookies-extracted", true).ok();
+                            true
+                        }
+                        Err(e) => {
+                            eprintln!("[silent-login] Error extrayendo cookies: {}", e);
+                            false
+                        }
+                    };
+                    sender.send(ok).ok();
+                });
+            }
+        }
+    })
+    .build();
+
+    if let Err(e) = build_result {
+        return Err(format!("No se pudo crear ventana de login silencioso: {}", e));
+    }
+
+    // Esperar el resultado con timeout (~20s) sin bloquear el runtime async.
+    let outcome = tauri::async_runtime::spawn_blocking(move || {
+        rx.recv_timeout(std::time::Duration::from_secs(20))
+    })
+    .await;
+
+    let success = match outcome {
+        Ok(Ok(ok)) => ok,
+        // Timeout o canal cerrado: no aterrizó en youtube.com (pide interacción).
+        _ => {
+            println!("[silent-login] Timeout: la sesión de Google requiere interacción");
+            false
+        }
+    };
+
+    // Invalidar el sender para que un aterrizaje tardío no haga trabajo extra.
+    tx.lock().unwrap().take();
+
+    if let Some(win) = app.get_webview_window(LABEL) {
+        win.close().ok();
+    }
+
+    Ok(success)
+}
+
 async fn extract_and_save_cookies(
     webview_window: &tauri::webview::WebviewWindow,
     app: &AppHandle,
