@@ -6,34 +6,23 @@ export function getSettings(): Promise<AppConfig> {
   return invoke<AppConfig>('get_settings');
 }
 
-export interface SettingsExtra {
+/** Set completo de ajustes persistentes (comando set_settings). */
+export interface SettingsUpdate {
+  defaultQuality: string;
+  defaultContainer: string;
+  defaultAudioFormat: string;
+  defaultConcurrency: number;
   /** "video" | "audio" */
-  defaultMode?: string;
+  defaultMode: string;
   /** Plantilla de salida (sin ".%(ext)s"). */
-  defaultTemplate?: string;
-  defaultSubtitles?: boolean;
-  defaultThumbnail?: boolean;
-  clearLinksAfterPreview?: boolean;
+  defaultTemplate: string;
+  defaultSubtitles: boolean;
+  defaultThumbnail: boolean;
+  clearLinksAfterPreview: boolean;
 }
 
-export function setSettings(
-  defaultQuality: string,
-  defaultContainer: string,
-  defaultAudioFormat: string,
-  defaultConcurrency: number,
-  extra: SettingsExtra = {},
-): Promise<void> {
-  return invoke('set_settings', {
-    defaultQuality,
-    defaultContainer,
-    defaultAudioFormat,
-    defaultConcurrency,
-    defaultMode: extra.defaultMode ?? null,
-    defaultTemplate: extra.defaultTemplate ?? null,
-    defaultSubtitles: extra.defaultSubtitles ?? null,
-    defaultThumbnail: extra.defaultThumbnail ?? null,
-    clearLinksAfterPreview: extra.clearLinksAfterPreview ?? null,
-  });
+export function setSettings(update: SettingsUpdate): Promise<void> {
+  return invoke('set_settings', { ...update });
 }
 
 export async function openDownloadsFolder(): Promise<void> {

@@ -165,6 +165,7 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
     let mut archive =
         zip::ZipArchive::new(file).map_err(|e| format!("No se pudo leer zip: {}", e))?;
 
+    let mut found = false;
     for i in 0..archive.len() {
         let mut entry = archive
             .by_index(i)
@@ -182,11 +183,17 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
                 use std::os::unix::fs::PermissionsExt;
                 fs::set_permissions(&dest, fs::Permissions::from_mode(0o755)).ok();
             }
+            found = true;
             break;
         }
     }
 
     fs::remove_file(&zip_path).ok();
+
+    if !found {
+        return Err("No se encontró ffmpeg en el archivo descargado".to_string());
+    }
+
     Ok(())
 }
 

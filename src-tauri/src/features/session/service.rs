@@ -3,31 +3,13 @@ use std::path::{Path, PathBuf};
 
 use sha1::{Digest, Sha1};
 
-use super::models::{AccountInfo, CookieResult};
+use super::models::AccountInfo;
 
 /// User-Agent de navegador (mismo que usan las ventanas de login).
 const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 pub fn get_cookies_path(app_dir: &Path) -> PathBuf {
     app_dir.join("cookies.txt")
-}
-
-pub fn validate_cookie_content(content: &str) -> &'static str {
-    let has_header = content.contains("# Netscape HTTP Cookie File")
-        || content.contains("# HTTP Cookie File");
-
-    // Cookies que indican una sesion iniciada en YouTube/Google.
-    let has_auth = ["LOGIN_INFO", "SAPISID", "__Secure-3PSID", "__Secure-1PSID"]
-        .iter()
-        .any(|name| content.contains(name));
-
-    if content.contains("youtube.com") || has_auth {
-        "youtube"
-    } else if has_header {
-        "generic"
-    } else {
-        "invalid"
-    }
 }
 
 /// Estado REAL de la sesión de YouTube según cookies.txt:
@@ -275,51 +257,4 @@ pub fn logout(app_dir: &Path) -> Result<(), String> {
         fs::remove_file(&path).map_err(|e| format!("No se pudo borrar cookies.txt: {}", e))?;
     }
     Ok(())
-}
-
-pub fn check(app_dir: &Path) -> CookieResult {
-    let cookies_path = get_cookies_path(app_dir);
-
-    if !cookies_path.exists() {
-        return CookieResult::new("none");
-    }
-
-    match fs::read_to_string(&cookies_path) {
-        Ok(content) => {
-            let status = validate_cookie_content(&content);
-            CookieResult::new(status).with_path(&cookies_path.to_string_lossy())
-        }
-        Err(_) => CookieResult::new("error"),
-    }
-}
-
-pub fn load(app_dir: &Path, source_path: &str) -> CookieResult {
-    let cookies_path = get_cookies_path(app_dir);
-    let source = Path::new(source_path);
-
-    if !source.exists() {
-        return CookieResult {
-            status: "error".to_string(),
-            path: None,
-            message: Some("El archivo no existe".to_string()),
-        };
-    }
-
-    if source.canonicalize().ok() != cookies_path.canonicalize().ok() {
-        if let Err(e) = fs::copy(source, &cookies_path) {
-            return CookieResult {
-                status: "error".to_string(),
-                path: None,
-                message: Some(format!("No se pudo copiar el archivo: {}", e)),
-            };
-        }
-    }
-
-    match fs::read_to_string(&cookies_path) {
-        Ok(content) => {
-            let status = validate_cookie_content(&content);
-            CookieResult::new(status).with_path(&cookies_path.to_string_lossy())
-        }
-        Err(_) => CookieResult::new("error"),
-    }
 }

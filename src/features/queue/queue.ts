@@ -3,7 +3,7 @@ import { bus } from '../../core/bus/event-bus';
 import { t } from '../../core/i18n';
 import { showToast } from '../../shared/ui/toast';
 import { startDownload, cancelDownload, onProgress } from '../download/download.api';
-import { addHistory, openHistoryFolder, type AddHistoryMeta } from '../library/library.api';
+import { addHistory, openHistoryFolder } from '../library/library.api';
 import { getDownloadFolder } from '../settings/settings.api';
 import { attemptSilentReconnect } from '../session';
 import type { DownloadOptions } from '../download/download.types';
@@ -93,9 +93,8 @@ function run(it: QItem): void {
       if (res.success) {
         it.status = 'done';
         it.progress = 100;
-        // Ruta final real del archivo (contrato nuevo de startDownload); el cast
-        // es local por si el tipo de download.api aún no publica `filePath`.
-        const filePath = (res as { filePath?: string }).filePath;
+        // Ruta final real del archivo descargado.
+        const filePath = res.filePath;
         if (filePath) it.filePath = filePath;
         try {
           const entry = await addHistory(it.url, it.title, it.fmt, {
@@ -103,13 +102,13 @@ function run(it: QItem): void {
             thumbnail: it.thumbnail,
             duration: it.duration,
             filePath,
-          } as AddHistoryMeta);
+          });
           it.folder = entry.folder;
         } catch {
           // La descarga terminó bien; si el historial falla, no rompemos el flujo.
         }
         bus.emit('download:completed', { url: it.url, title: it.title, format: it.fmt, videoId: it.videoId });
-      } else if ((res as { errorKind?: string }).errorKind === 'auth') {
+      } else if (res.errorKind === 'auth') {
         // Cookies caducadas/invalidadas: pausamos en vez de marcar error para no
         // quemar el resto de la tanda (los que siguen en cola fallarían igual).
         it.status = 'paused';
@@ -182,7 +181,7 @@ function action(id: string, act: string): void {
   const it = items.find((i) => i.id === id);
   if (!it) return;
   if (act === 'pause') {
-    cancelDownload(it.url);
+    void cancelDownload(it.url).catch(() => {});
     it.status = 'paused';
     it.speed = '';
     it.eta = '';
@@ -192,7 +191,7 @@ function action(id: string, act: string): void {
     it.error = undefined;
     it.pausedByAuth = false;
   } else if (act === 'cancel') {
-    cancelDownload(it.url);
+    void cancelDownload(it.url).catch(() => {});
     it.status = 'canceled';
   } else if (act === 'remove') {
     items = items.filter((x) => x.id !== id);

@@ -1,8 +1,7 @@
 import { getTheme, applyTheme, type Theme } from '../../../core/theme';
 import { getLang, setLang, t, type Lang } from '../../../core/i18n';
 import { bus } from '../../../core/bus/event-bus';
-import { invoke } from '../../../core/tauri/client';
-import { getSettings, getDownloadFolder, changeDownloadFolder } from '../settings.api';
+import { getSettings, setSettings, getDownloadFolder, changeDownloadFolder } from '../settings.api';
 import type { AppConfig } from '../settings.types';
 import { checkDependencies, downloadDependencies, onSetupProgress } from '../../setup/setup.api';
 import type { DependencyStatus } from '../../setup/setup.types';
@@ -149,11 +148,8 @@ export async function initSettings(): Promise<void> {
   let clearLinks = cfg.clear_links_after_preview ?? true;
   setConcurrency(cfg.default_concurrency ?? 5);
 
-  // Enviamos el set completo vía invoke (set_settings): setSettings de settings.api
-  // aún expone solo los 4 campos antiguos; los args extra son inocuos si el
-  // backend todavía no los declara.
   const save = () =>
-    invoke('set_settings', {
+    setSettings({
       defaultQuality: quality,
       defaultContainer: container.toLowerCase(),
       defaultAudioFormat: cfg.default_audio_format || 'mp3',
@@ -171,7 +167,7 @@ export async function initSettings(): Promise<void> {
   });
   renderSeg('set-theme', [['dark', t('Oscuro', 'Dark')], ['light', t('Claro', 'Light')]], getTheme, (v) => {
     applyTheme(v as Theme);
-    bus.emit('theme:changed', {});
+    bus.emit('theme:changed');
   });
   renderSeg('set-concurrency', [['5', '5'], ['10', '10'], ['20', '20'], ['50', '50'], ['0', t('Todos', 'All')]], () => conc, (v) => {
     conc = v;

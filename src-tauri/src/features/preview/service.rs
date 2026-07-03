@@ -36,6 +36,26 @@ pub fn analyze(app_dir: &Path, url: &str, range: Option<(u32, u32)>) -> Result<A
     Ok(map_entry(&json, url))
 }
 
+/// Entrada de error para una URL que no se pudo analizar: el frontend la
+/// detecta por `availability = "error: …"` (mapeo de dominio, vive aquí y no
+/// en el command).
+pub fn error_entry(url: &str, msg: &str) -> AnalyzedEntry {
+    AnalyzedEntry::Video(VideoMeta {
+        id: String::new(),
+        url: url.to_string(),
+        title: url.to_string(),
+        channel: String::new(),
+        duration: None,
+        thumbnail: None,
+        view_count: None,
+        availability: Some(format!("error: {}", msg)),
+        size_bytes: None,
+        playlist_count: None,
+        flat: false,
+        is_playlist: false,
+    })
+}
+
 fn run_dump_json(
     app_dir: &Path,
     url: &str,
@@ -51,6 +71,12 @@ fn run_dump_json(
         "--flat-playlist".into(),
         "--no-warnings".into(),
         "--no-update".into(),
+        // El exe empaquetado de yt-dlp ignora PYTHONIOENCODING y, al escribir a una
+        // tubería, descarta los caracteres no representables en la página de códigos
+        // de Windows (p. ej. títulos en japonés) — el JSON llegaría degradado.
+        // Forzar UTF-8 en su salida.
+        "--encoding".into(),
+        "utf-8".into(),
     ];
 
     if let Some((start, end)) = range {

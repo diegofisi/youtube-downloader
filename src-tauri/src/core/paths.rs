@@ -23,10 +23,17 @@ pub fn app_dir(app: &AppHandle) -> PathBuf {
         }
         app.path().resource_dir().unwrap_or(exe_dir.to_path_buf())
     } else {
-        let data_dir = app
-            .path()
-            .app_local_data_dir()
-            .expect("No se pudo obtener directorio de datos de la app");
+        // Sin expect: si el resolver de Tauri falla (entorno raro, perfil roto),
+        // caemos a un directorio temporal escribible en vez de panicar en cada
+        // comando. El dir del ejecutable no sirve de fallback: en release suele
+        // ser Program Files (solo lectura).
+        let data_dir = app.path().app_local_data_dir().unwrap_or_else(|e| {
+            eprintln!(
+                "No se pudo obtener el directorio de datos de la app ({}); usando temp como fallback",
+                e
+            );
+            std::env::temp_dir().join("stash")
+        });
         std::fs::create_dir_all(&data_dir).ok();
         data_dir
     }

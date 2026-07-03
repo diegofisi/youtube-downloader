@@ -11,7 +11,8 @@ export interface ProgressData {
   percent: number;
   speed: string;
   eta: string;
-  status: 'downloading' | 'processing' | 'finished' | 'error';
+  /** Rust solo emite estos dos estados; el fin (éxito/error) se infiere del resultado de start_download. */
+  status: 'downloading' | 'processing';
   url: string;
 }
 

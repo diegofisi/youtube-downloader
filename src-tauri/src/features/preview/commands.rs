@@ -1,6 +1,6 @@
 use tauri::{AppHandle, Emitter};
 
-use super::models::{AnalyzedEntry, VideoMeta};
+use super::models::AnalyzedEntry;
 use super::service;
 use crate::core::paths;
 
@@ -25,23 +25,8 @@ pub async fn analyze_urls(
         let mut out: Vec<AnalyzedEntry> = Vec::with_capacity(total);
 
         for (i, url) in urls.iter().enumerate() {
-            let entry = match service::analyze(&app_dir, url, range) {
-                Ok(e) => e,
-                Err(msg) => AnalyzedEntry::Video(VideoMeta {
-                    id: String::new(),
-                    url: url.clone(),
-                    title: url.clone(),
-                    channel: String::new(),
-                    duration: None,
-                    thumbnail: None,
-                    view_count: None,
-                    availability: Some(format!("error: {}", msg)),
-                    size_bytes: None,
-                    playlist_count: None,
-                    flat: false,
-                    is_playlist: false,
-                }),
-            };
+            let entry = service::analyze(&app_dir, url, range)
+                .unwrap_or_else(|msg| service::error_entry(url, &msg));
             out.push(entry);
             let _ = app.emit("preview-progress", (i + 1, total));
         }
@@ -50,13 +35,4 @@ pub async fn analyze_urls(
     })
     .await
     .map_err(|e| format!("Error interno analizando URLs: {}", e))
-}
-
-/// Metadatos completos de un solo video (para resolución bajo demanda).
-#[tauri::command]
-pub async fn get_video_metadata(app: AppHandle, url: String) -> Result<AnalyzedEntry, String> {
-    let app_dir = paths::app_dir(&app);
-    tauri::async_runtime::spawn_blocking(move || service::analyze(&app_dir, &url, None))
-        .await
-        .map_err(|e| format!("Error interno resolviendo metadatos: {}", e))?
 }

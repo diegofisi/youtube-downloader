@@ -26,9 +26,9 @@ export async function refreshSession(): Promise<SessionStatus> {
   try {
     const prev = status;
     status = await getSessionStatus();
-    if (status === 'connected' && prev !== 'connected') bus.emit('session:connected', {});
-    if (status === 'expired' && prev !== 'expired') bus.emit('session:expired', undefined);
-    if (status !== prev) bus.emit('session:changed', undefined);
+    if (status === 'connected' && prev !== 'connected') bus.emit('session:connected');
+    if (status === 'expired' && prev !== 'expired') bus.emit('session:expired');
+    if (status !== prev) bus.emit('session:changed');
   } catch {
     /* noop */
   }
@@ -65,7 +65,7 @@ export function attemptSilentReconnect(): Promise<boolean> {
 export async function doLogout(): Promise<void> {
   await logoutSession();
   status = 'none';
-  bus.emit('session:changed', undefined);
+  bus.emit('session:changed');
 }
 
 export async function initSession(): Promise<void> {

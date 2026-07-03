@@ -2,21 +2,9 @@ use std::io::Write;
 use tauri::webview::{PageLoadEvent, WebviewWindowBuilder};
 use tauri::{AppHandle, Emitter, Manager, Url};
 
-use super::models::{AccountInfo, CookieResult};
+use super::models::AccountInfo;
 use super::service;
 use crate::core::paths;
-
-#[tauri::command]
-pub fn check_cookies(app: AppHandle) -> CookieResult {
-    let app_dir = paths::app_dir(&app);
-    service::check(&app_dir)
-}
-
-#[tauri::command]
-pub fn load_cookies(app: AppHandle, path: String) -> CookieResult {
-    let app_dir = paths::app_dir(&app);
-    service::load(&app_dir, &path)
-}
 
 #[tauri::command]
 pub fn get_session_status(app: AppHandle) -> String {

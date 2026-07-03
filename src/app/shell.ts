@@ -3,6 +3,7 @@ import { getTheme, applyTheme } from '../core/theme';
 import { bus } from '../core/bus/event-bus';
 import { minimizeWindow, toggleMaximizeWindow, closeWindow } from '../core/tauri/window';
 import { openYouTubeLogin } from '../features/session';
+import { showToast } from '../shared/ui/toast';
 import { t } from '../core/i18n';
 
 export type ViewId = 'descargar' | 'buscar' | 'youtube' | 'cola' | 'biblioteca' | 'ajustes';
@@ -48,7 +49,7 @@ export function initShell(): void {
   renderTheme();
   themeBtn.addEventListener('click', () => {
     applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
-    bus.emit('theme:changed', {});
+    bus.emit('theme:changed');
   });
   // Repinta el icono cuando el tema cambia desde cualquier sitio (p. ej. Ajustes).
   // Solo escucha y repinta: no vuelve a emitir, así no hay bucle.
@@ -120,7 +121,7 @@ export function initShell(): void {
   document.getElementById('banner-reconnect')?.addEventListener('click', () => {
     document.getElementById('session-banner')!.hidden = true;
     navigate('youtube');
-    openYouTubeLogin();
+    openYouTubeLogin().catch(() => showToast(t('No se pudo abrir el login', 'Could not open login'), '', 'error'));
   });
 
   navigate('descargar');

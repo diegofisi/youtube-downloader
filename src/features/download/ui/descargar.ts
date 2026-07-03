@@ -1,7 +1,6 @@
 import { I, esc } from '../../../app/icons';
 import { bus } from '../../../core/bus/event-bus';
 import { t } from '../../../core/i18n';
-import { router } from '../../../app/shell';
 import { showToast } from '../../../shared/ui/toast';
 import { analyzeUrls, onPreviewProgress } from '../../preview/preview.api';
 import type { AnalyzedEntry, VideoMeta, PlaylistMeta } from '../../preview/preview.types';
@@ -16,8 +15,8 @@ import type { DownloadOptions } from '../download.types';
 interface Opts {
   mode: 'av' | 'video' | 'audio';
   quality: string; // max|4k|1440p|1080p|720p|480p
-  container: string; // MP4|MKV|WebM
-  audioFmt: string; // MP3|M4A|Opus
+  container: 'MP4' | 'MKV' | 'WebM';
+  audioFmt: 'MP3' | 'M4A' | 'Opus';
   bitrate: string; // 320...
   subs: boolean;
   thumb: boolean;
@@ -74,14 +73,17 @@ const SETTINGS_Q: Record<string, string> = {
   '720': '720p',
   '480': '480p',
 };
-const SETTINGS_C: Record<string, string> = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
+const SETTINGS_C: Record<string, Opts['container']> = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
+// Mapeos UI → backend de contenedor y formato de audio (evitan casts sobre toLowerCase()).
+const CONTAINER_BACKEND: Record<Opts['container'], DownloadOptions['container']> = { MP4: 'mp4', MKV: 'mkv', WebM: 'webm' };
+const AUDIO_BACKEND: Record<Opts['audioFmt'], DownloadOptions['audioFormat']> = { MP3: 'mp3', M4A: 'm4a', Opus: 'opus' };
 
 export function optsToBackend(o: Opts, cookieMode: string): DownloadOptions {
   return {
     mode: o.mode === 'audio' ? 'audio' : o.mode === 'video' ? 'videoonly' : 'video',
     quality: Q_BACKEND[o.quality] ?? 'auto',
-    container: o.container.toLowerCase() as DownloadOptions['container'],
-    audioFormat: o.audioFmt.toLowerCase() as DownloadOptions['audioFormat'],
+    container: CONTAINER_BACKEND[o.container],
+    audioFormat: AUDIO_BACKEND[o.audioFmt],
     audioBitrate: parseInt(o.bitrate, 10) || 0,
     subtitles: o.subs,
     subLangs: 'es,en',
@@ -215,15 +217,17 @@ function renderModeCards(): void {
     );
 }
 
-function renderChips(groupSel: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
+function renderChips<T extends string>(groupSel: string, list: [T, string][], get: () => string, set: (v: T) => void): void {
   const el = document.querySelector<HTMLElement>(`[data-group="${groupSel}"]`);
   if (!el) return;
   el.innerHTML = list
     .map(([v, l]) => `<button data-val="${v}" style="${chipStyle(v === get())}">${l}</button>`)
     .join('');
-  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b) =>
+  // El valor se toma de `list` por índice (mismo orden que el innerHTML) para
+  // conservar el tipo literal T sin castear dataset.val (que siempre es string).
+  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b, i) =>
     b.addEventListener('click', () => {
-      set(b.dataset.val!);
+      set(list[i][0]);
       renderChips(groupSel, list, get, set);
       if (groupSel === 'quality') renderPreview();
       refreshSummary();
@@ -558,8 +562,10 @@ function openVideoOpts(url: string): void {
     };
     $('ov-clear').hidden = Object.keys(ovDraft || {}).length === 0;
   };
-  const setOv = (k: keyof Opts, val: string) => {
-    ovDraft = { ...(ovDraft || {}), [k]: val };
+  const setOv = <K extends keyof Opts>(k: K, val: Opts[K]) => {
+    const draft: Partial<Opts> = { ...(ovDraft || {}) };
+    draft[k] = val;
+    ovDraft = draft;
     paint();
   };
   paint();
@@ -574,11 +580,12 @@ function closeVideoOpts(commit: boolean): void {
   $('ov-overlay').hidden = true;
   renderPreview(); // resincroniza icono de engranaje y badge de override
 }
-function renderChipsInto(group: string, list: [string, string][], curVal: string, onPick: (v: string) => void): void {
+function renderChipsInto<T extends string>(group: string, list: [T, string][], curVal: string, onPick: (v: T) => void): void {
   const el = document.querySelector<HTMLElement>(`[data-group="${group}"]`);
   if (!el) return;
   el.innerHTML = list.map(([v, l]) => `<button data-val="${v}" style="${chipStyle(v === curVal)}">${l}</button>`).join('');
-  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b) => b.addEventListener('click', () => onPick(b.dataset.val!)));
+  // Igual que renderChips: el valor sale de `list` por índice para conservar T.
+  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b, i) => b.addEventListener('click', () => onPick(list[i][0])));
 }
 
 // ---------- download ----------

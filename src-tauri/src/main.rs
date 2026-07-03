@@ -11,8 +11,6 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
-            session::commands::check_cookies,
-            session::commands::load_cookies,
             session::commands::open_youtube_login,
             session::commands::refresh_session_silent,
             session::commands::get_session_status,
@@ -26,7 +24,6 @@ fn main() {
             download::commands::start_download,
             download::commands::cancel_download,
             preview::commands::analyze_urls,
-            preview::commands::get_video_metadata,
             library::commands::get_history,
             library::commands::add_history,
             library::commands::remove_history_item,

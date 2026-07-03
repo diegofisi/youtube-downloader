@@ -3,17 +3,9 @@ import { t, getLang } from '../../../core/i18n';
 import { bus } from '../../../core/bus/event-bus';
 import { showToast } from '../../../shared/ui/toast';
 import { showModal } from '../../../shared/ui/modal';
-import { getHistory, removeHistoryItem, clearHistory, openHistoryFolder } from '../library.api';
-import * as libraryApi from '../library.api';
+import { getHistory, removeHistoryItem, clearHistory, openHistoryFolder, deleteHistoryFile } from '../library.api';
 import { openDownloadsFolder } from '../../settings/settings.api';
 import type { LibraryEntry } from '../library.types';
-
-/** Contratos en publicación (otro agente): cuando library.api exporte
- *  deleteHistoryFile y LibraryEntry tenga filePath, estos casts sobran. */
-type DeleteFileResult = 'trash' | 'permanent' | 'no_file';
-const deleteHistoryFile = (id: string): Promise<DeleteFileResult> =>
-  (libraryApi as unknown as { deleteHistoryFile: (id: string) => Promise<DeleteFileResult> }).deleteHistoryFile(id);
-const filePathOf = (e: LibraryEntry): string | undefined => (e as { filePath?: string }).filePath;
 
 let entries: LibraryEntry[] = [];
 const PAGE_SIZE = 50;
@@ -86,12 +78,16 @@ function openDelMenu(anchor: HTMLElement, e: LibraryEntry): void {
     'position:fixed;z-index:900;min-width:196px;padding:5px;display:flex;flex-direction:column;gap:1px;background:var(--panel);border:1px solid var(--border);border-radius:11px;box-shadow:0 10px 28px rgba(0,0,0,.4)';
   menu.appendChild(
     menuItem(I.x, t('Quitar de la lista', 'Remove from list'), 'var(--text)', async () => {
-      await removeHistoryItem(e.id);
-      entries = entries.filter((x) => x.id !== e.id);
-      render();
+      try {
+        await removeHistoryItem(e.id);
+        entries = entries.filter((x) => x.id !== e.id);
+        render();
+      } catch {
+        showToast(t('No se pudo quitar del historial', 'Could not remove from history'), '', 'error');
+      }
     }),
   );
-  if (filePathOf(e)) {
+  if (e.filePath) {
     menu.appendChild(menuItem(I.trash, t('Eliminar archivo', 'Delete file'), 'var(--danger)', () => deleteEntryFile(e)));
   }
   document.body.appendChild(menu);
@@ -184,7 +180,9 @@ function render(): void {
     .forEach((row) => {
       const id = row.dataset.id!;
       const e = entries.find((x) => x.id === id)!;
-      row.querySelector('.lib-open')?.addEventListener('click', () => openHistoryFolder(e.folder));
+      row.querySelector('.lib-open')?.addEventListener('click', () =>
+        openHistoryFolder(e.folder).catch(() => showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error')),
+      );
       row.querySelector<HTMLElement>('.lib-del')?.addEventListener('click', (ev) => {
         ev.stopPropagation();
         const btn = ev.currentTarget as HTMLElement;
@@ -222,7 +220,9 @@ export function initLibrary(): void {
     visibleCount += PAGE_SIZE;
     render();
   });
-  $('btn-open-downloads').addEventListener('click', () => openDownloadsFolder());
+  $('btn-open-downloads').addEventListener('click', () =>
+    openDownloadsFolder().catch(() => showToast(t('No se pudo abrir la carpeta', 'Could not open the folder'), '', 'error')),
+  );
   $('btn-clear-history').addEventListener('click', async () => {
     if (
       !(await showModal(
