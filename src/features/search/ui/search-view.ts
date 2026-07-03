@@ -78,7 +78,8 @@ function renderList(): void {
     ? `${videos.length} ${videos.length === 1 ? t('resultado', 'result') : t('resultados', 'results')}`
     : '';
 
-  $('search-more-wrap').hidden = !loader.hasMore || videos.length === 0;
+  // Keep "See more" reachable even with 0 kept items (page fully filtered client-side).
+  $('search-more-wrap').hidden = !loader.hasMore;
 
   const nSel = videos.filter((v) => sel.has(v.url)).length;
   const dlBtn = $('btn-search-download-sel');
@@ -87,7 +88,12 @@ function renderList(): void {
   custBtn.hidden = nSel === 0;
   dlBtn.textContent = `${t('Descargar', 'Download')} ${nSel}`;
 
-  $('search-list').innerHTML = videos.map((v) => videoCard(v, sel.has(v.url))).join('');
+  $('search-list').innerHTML = videos.length
+    ? videos.map((v) => videoCard(v, sel.has(v.url))).join('')
+    : stateCard(
+        t('Sin resultados en esta página', 'No results on this page'),
+        t('El filtro descartó estos resultados; prueba “Ver más”.', 'The filter dropped these results; try “Show more”.'),
+      );
 
   wireVideoCards($('search-list'), videos, {
     toggle: (url) => {

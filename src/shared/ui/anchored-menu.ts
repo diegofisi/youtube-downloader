@@ -64,9 +64,16 @@ export function openAnchoredMenu(anchor: HTMLElement, items: AnchoredMenuItem[])
 }
 
 // Global listeners registered ONCE at module level: outside click and Escape.
+// Clicks on the anchor are ignored here so the open-click (bubbling to document)
+// never closes the menu it just opened; the anchor handles its own toggle.
 document.addEventListener('click', (e) => {
-  if (menu && !menu.contains(e.target as Node)) closeAnchoredMenu();
+  const target = e.target as Node;
+  if (menu && !menu.contains(target) && !menuAnchor?.contains(target)) closeAnchoredMenu();
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && menu) closeAnchoredMenu();
 });
+// The menu is position:fixed: any scroll/resize would leave it floating detached
+// from its anchor, so it closes (capture catches inner-container scrolls).
+document.addEventListener('scroll', () => closeAnchoredMenu(), true);
+window.addEventListener('resize', () => closeAnchoredMenu());

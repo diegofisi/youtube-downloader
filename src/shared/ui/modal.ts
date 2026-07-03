@@ -4,7 +4,16 @@ const messageEl = document.getElementById('modal-message')!;
 const okBtn = document.getElementById('modal-ok')!;
 const cancelBtn = document.getElementById('modal-cancel')!;
 
+/** Serializes concurrent showModal calls: a second call waits instead of clobbering the DOM. */
+let queue: Promise<unknown> = Promise.resolve();
+
 export function showModal(title: string, message: string, showCancel = false): Promise<boolean> {
+  const result = queue.then(() => openModal(title, message, showCancel));
+  queue = result;
+  return result;
+}
+
+function openModal(title: string, message: string, showCancel: boolean): Promise<boolean> {
   return new Promise((resolve) => {
     titleEl.textContent = title;
     messageEl.textContent = message;

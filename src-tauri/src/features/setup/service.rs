@@ -2,6 +2,19 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::path::Path;
 
+/// Copies a zip entry into `dest`, removing the partial file on failure so
+/// `check_dependencies` (existence-only) never sees a truncated binary.
+fn extract_entry(entry: &mut impl Read, dest: &Path) -> Result<(), String> {
+    let mut outfile = fs::File::create(dest)
+        .map_err(|e| format!("No se pudo crear {}: {}", dest.display(), e))?;
+    if let Err(e) = io::copy(entry, &mut outfile) {
+        drop(outfile);
+        fs::remove_file(dest).ok();
+        return Err(format!("Error extrayendo: {}", e));
+    }
+    Ok(())
+}
+
 use tauri::{AppHandle, Emitter};
 
 use super::models::{DependencyStatus, SetupProgress};
@@ -41,7 +54,22 @@ pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
 }
 
 /// Downloads any missing dependencies.
+/// Guards against concurrent installs (onboarding "Omitir" + Settings "Repair"):
+/// two runs writing the same binaries would corrupt each other.
+static INSTALL_IN_PROGRESS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 pub fn download_dependencies(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    if INSTALL_IN_PROGRESS.swap(true, Ordering::SeqCst) {
+        return Err("Ya hay una instalación de componentes en curso.".into());
+    }
+    let result = download_dependencies_inner(app, app_dir);
+    INSTALL_IN_PROGRESS.store(false, Ordering::SeqCst);
+    result
+}
+
+fn download_dependencies_inner(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     fs::create_dir_all(app_dir).map_err(|e| format!("No se pudo crear directorio: {}", e))?;
 
     let status = check_dependencies(app_dir);
@@ -136,9 +164,10 @@ fn download_ffmpeg_windows(app: &AppHandle, app_dir: &Path) -> Result<(), String
 
         if name.ends_with("ffmpeg.exe") && !name.contains("ffprobe") {
             let dest = app_dir.join("ffmpeg.exe");
-            let mut outfile = fs::File::create(&dest)
-                .map_err(|e| format!("No se pudo crear ffmpeg.exe: {}", e))?;
-            io::copy(&mut entry, &mut outfile).map_err(|e| format!("Error extrayendo: {}", e))?;
+            if let Err(e) = extract_entry(&mut entry, &dest) {
+                fs::remove_file(&zip_path).ok();
+                return Err(e);
+            }
             found = true;
             break;
         }
@@ -173,9 +202,10 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
 
         if name == "ffmpeg" || name.ends_with("/ffmpeg") {
             let dest = app_dir.join("ffmpeg");
-            let mut outfile =
-                fs::File::create(&dest).map_err(|e| format!("No se pudo crear ffmpeg: {}", e))?;
-            io::copy(&mut entry, &mut outfile).map_err(|e| format!("Error extrayendo: {}", e))?;
+            if let Err(e) = extract_entry(&mut entry, &dest) {
+                fs::remove_file(&zip_path).ok();
+                return Err(e);
+            }
 
             #[cfg(unix)]
             {
@@ -227,9 +257,10 @@ fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
 
         if name == bin_name || name.ends_with(bin_name) {
             let dest = app_dir.join(bin_name);
-            let mut outfile = fs::File::create(&dest)
-                .map_err(|e| format!("No se pudo crear {}: {}", bin_name, e))?;
-            io::copy(&mut entry, &mut outfile).map_err(|e| format!("Error extrayendo: {}", e))?;
+            if let Err(e) = extract_entry(&mut entry, &dest) {
+                fs::remove_file(&zip_path).ok();
+                return Err(e);
+            }
 
             #[cfg(unix)]
             {
@@ -282,17 +313,19 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<
     let mut reader = response;
     let mut buffer = [0u8; 8192];
 
-    loop {
-        let bytes_read = reader
-            .read(&mut buffer)
-            .map_err(|e| format!("Error leyendo datos: {}", e))?;
+    let copy_result = loop {
+        let bytes_read = match reader.read(&mut buffer) {
+            Ok(n) => n,
+            Err(e) => break Err(format!("Error leyendo datos: {}", e)),
+        };
 
         if bytes_read == 0 {
-            break;
+            break Ok(());
         }
 
-        file.write_all(&buffer[..bytes_read])
-            .map_err(|e| format!("Error escribiendo archivo: {}", e))?;
+        if let Err(e) = file.write_all(&buffer[..bytes_read]) {
+            break Err(format!("Error escribiendo archivo: {}", e));
+        }
 
         downloaded += bytes_read as u64;
 
@@ -310,6 +343,14 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<
                 ),
             );
         }
+    };
+
+    // A truncated file must not survive: check_dependencies only tests
+    // existence and would treat a half-downloaded binary as installed.
+    if let Err(e) = copy_result {
+        drop(file);
+        fs::remove_file(dest).ok();
+        return Err(e);
     }
 
     Ok(())

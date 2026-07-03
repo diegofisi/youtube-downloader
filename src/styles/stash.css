@@ -16,6 +16,12 @@ body {
   font-size: 14px;
   overflow: hidden;
 }
+/* Pre-JS fallback for the light theme (the inline head script sets data-theme);
+   once core/theme.ts applies the CSS vars, var(--bg)/var(--text) win anyway. */
+html[data-theme='light'] body {
+  background: var(--bg, #f2f2f4);
+  color: var(--text, #1d1d1f);
+}
 button {
   font-family: inherit;
   cursor: pointer;
@@ -90,15 +96,6 @@ select {
     transform: translateY(0);
   }
 }
-@keyframes shimmer {
-  from {
-    background-position: 200% 0;
-  }
-  to {
-    background-position: -200% 0;
-  }
-}
-
 /* Hover helper: [data-hover] elements apply their value on hover.
    Inline style-hover isn't possible, so minimal utilities are exposed. */
 [hidden] {

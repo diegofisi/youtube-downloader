@@ -405,14 +405,15 @@ fn run_once(
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             let Ok(line) = line else { continue };
-            let trimmed = line.trim().to_string();
+            // Borrow: this runs per progress line; only the final-path branch allocates.
+            let trimmed = line.trim();
             if trimmed.is_empty() {
                 continue;
             }
 
-            if let Some(pct) = ytdlp::parse_percent(&trimmed) {
-                let speed = ytdlp::parse_field(&trimmed, "at ", " ETA").unwrap_or_default();
-                let eta = ytdlp::parse_field(&trimmed, "ETA ", "").unwrap_or_default();
+            if let Some(pct) = ytdlp::parse_percent(trimmed) {
+                let speed = ytdlp::parse_field(trimmed, "at ", " ETA").unwrap_or_default();
+                let eta = ytdlp::parse_field(trimmed, "ETA ", "").unwrap_or_default();
 
                 let _ = app_for_stdout.emit(
                     "download-progress",
@@ -438,9 +439,9 @@ fn run_once(
             } else if !trimmed.starts_with('[') {
                 // Candidate for the path printed by `--print after_move:filepath`:
                 // absolute and existing on disk.
-                let p = Path::new(&trimmed);
+                let p = Path::new(trimmed);
                 if p.is_absolute() && p.exists() {
-                    *final_path_clone.lock().unwrap() = Some(trimmed.clone());
+                    *final_path_clone.lock().unwrap() = Some(trimmed.to_string());
                 }
             }
         }

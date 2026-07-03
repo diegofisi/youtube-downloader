@@ -13,7 +13,7 @@ import { getDownloadFolder, getSettings } from '../../settings';
 import type { AppConfig } from '../../settings';
 import { getHistory } from '../../library';
 import { enqueue } from '../../queue';
-import { applyDefaults, effectiveOpts, fmtDescription, opts, optsToBackend } from '../opts-model';
+import { applyDefaults, effectiveOpts, fmtDescription, opts, optsToBackend, pruneOverrides } from '../opts-model';
 import type { Opts } from '../opts-model';
 import {
   STATUS_META,
@@ -93,6 +93,12 @@ function renderModeCards(): void {
 }
 
 // ---------- download ----------
+// Guards concurrent analyzes (e.g. two quick "Custom download" prefills): only the
+// latest run may touch shared state/UI; stale runs bail out after each await.
+let analyzeSeq = 0;
+// Idle label of the Analyze button, captured before showing the spinner.
+let analyzeIdleHtml = '';
+
 async function analyze(): Promise<void> {
   const urls = $<HTMLTextAreaElement>('url-input')
     .value.split('\n')
@@ -106,22 +112,28 @@ async function analyze(): Promise<void> {
     );
     return;
   }
+  const seq = ++analyzeSeq;
   const btn = $<HTMLButtonElement>('btn-analyze');
+  // Only capture the label when idle: if a run is in flight, the button shows the spinner.
+  if (!btn.disabled) analyzeIdleHtml = btn.innerHTML;
   btn.disabled = true;
-  const orig = btn.innerHTML;
   btn.innerHTML = `${I.spinner} ${t('Analizando…', 'Analyzing…')}`;
   $('preview-list').innerHTML =
     `<div style="display:flex;align-items:center;justify-content:center;gap:9px;padding:26px;color:var(--text2);font-size:12.5px">${I.spinner} ${t('Resolviendo metadatos de los enlaces…', 'Resolving link metadata…')}</div>`;
   $('preview-empty').hidden = true;
   const unlisten = await onPreviewProgress((done, total) => {
-    btn.innerHTML = `${I.spinner} ${done}/${total}…`;
+    if (seq === analyzeSeq) btn.innerHTML = `${I.spinner} ${done}/${total}…`;
   });
   try {
     const hist = await getHistory().catch(() => []);
+    const analyzed = await analyzeUrls(urls);
+    if (seq !== analyzeSeq) return; // superseded by a newer analysis
     setDownloadedSet(new Set(hist.flatMap((h) => (h.videoId ? [h.url, h.videoId] : [h.url]))));
-    setEntries(await analyzeUrls(urls));
+    setEntries(analyzed);
     sel.clear();
     const vids = allVideos();
+    // Overrides are per-batch: drop the ones for URLs no longer in the preview.
+    pruneOverrides(new Set(vids.map((v) => v.url)));
     // Auto-select only small batches to avoid checking hundreds by accident.
     if (vids.length <= 20) {
       for (const v of vids) {
@@ -144,17 +156,20 @@ async function analyze(): Promise<void> {
     // Auto-clear the links box after a successful analysis unless the setting
     // disables it; read fresh to honor recent changes.
     const cfg = await getSettings().catch(() => null);
-    if (cfg?.clear_links_after_preview !== false) {
+    if (seq === analyzeSeq && cfg?.clear_links_after_preview !== false) {
       $<HTMLTextAreaElement>('url-input').value = '';
       $('link-count').textContent = lineCountLabel(0);
     }
   } catch (e) {
-    $('preview-list').innerHTML =
-      `<div style="padding:24px;text-align:center;color:var(--danger);font-size:13px">Error: ${esc(String(e))}</div>`;
+    if (seq === analyzeSeq)
+      $('preview-list').innerHTML =
+        `<div style="padding:24px;text-align:center;color:var(--danger);font-size:13px">Error: ${esc(String(e))}</div>`;
   } finally {
     unlisten();
-    btn.disabled = false;
-    btn.innerHTML = orig;
+    if (seq === analyzeSeq) {
+      btn.disabled = false;
+      btn.innerHTML = analyzeIdleHtml;
+    }
   }
 }
 

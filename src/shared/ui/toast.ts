@@ -29,8 +29,11 @@ export function showToast(title: string, body = '', kind: ToastKind = 'done', ms
     </div>
     <button class="t-x" style="color:var(--text3);padding:2px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>`;
   host.appendChild(el);
-  const remove = () => el.remove();
+  const remove = () => {
+    clearTimeout(tid);
+    el.remove();
+  };
   el.querySelector('.t-x')!.addEventListener('click', remove);
-  setTimeout(remove, ms);
+  const tid = setTimeout(remove, ms);
   while (host.children.length > 3) host.removeChild(host.firstChild!);
 }

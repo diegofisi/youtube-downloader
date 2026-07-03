@@ -7,11 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    // Pre-JS theme hint: avoids a dark flash for light-theme users (palette lands via core/theme.ts).
+    try { if (localStorage.getItem('stash-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch { /* default dark */ }
+  </script>
   <link rel="stylesheet" href="/src/styles/stash.css">
   <style>
     .hov:hover { background: var(--hover); color: var(--text); }
     .acc-btn:hover { filter: brightness(1.08); }
-    .brd-hov:hover { border-color: var(--accent) !important; }
     input::placeholder, textarea::placeholder { color: var(--text3); }
   </style>
 </head>

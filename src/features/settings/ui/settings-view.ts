@@ -107,18 +107,27 @@ export async function initSettings(): Promise<void> {
   let clearLinks = cfg.clear_links_after_preview ?? true;
   setConcurrency(cfg.default_concurrency ?? 5);
 
-  const save = () =>
-    setSettings({
-      defaultQuality: quality,
-      defaultContainer: container.toLowerCase(),
-      defaultAudioFormat: cfg.default_audio_format || 'mp3',
-      defaultConcurrency: parseInt(conc, 10),
-      defaultMode: mode,
-      defaultTemplate: template,
-      defaultSubtitles: subs,
-      defaultThumbnail: thumb,
-      clearLinksAfterPreview: clearLinks,
-    });
+  // Saves are chained: concurrent set_settings calls (debounced template + immediate
+  // toggles) must not land out of order. Each link reads the state at execution time.
+  let saveChain: Promise<void> = Promise.resolve();
+  const save = (): Promise<void> =>
+    (saveChain = saveChain
+      .then(() =>
+        setSettings({
+          defaultQuality: quality,
+          defaultContainer: container.toLowerCase(),
+          defaultAudioFormat: cfg.default_audio_format || 'mp3',
+          defaultConcurrency: parseInt(conc, 10),
+          defaultMode: mode,
+          defaultTemplate: template,
+          defaultSubtitles: subs,
+          defaultThumbnail: thumb,
+          clearLinksAfterPreview: clearLinks,
+        }),
+      )
+      .catch(() =>
+        showToast(t('No se pudieron guardar los ajustes', 'Could not save the settings'), '', 'error'),
+      ));
 
   // Language: setLang persists and reloads the app (the notice is in the HTML row)
   renderSeg(

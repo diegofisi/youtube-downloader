@@ -1,13 +1,13 @@
 import { $ } from './dom';
 
 /** Chip with accent border when active. `pad` enables the compact Settings variant (5px 11px). */
-export const chipStyle = (on: boolean, pad = '6px 11px'): string =>
+const chipStyle = (on: boolean, pad = '6px 11px'): string =>
   `padding:${pad};border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid ${
     on ? 'var(--accent)' : 'var(--border)'
   };background:${on ? 'var(--accentSoft)' : 'transparent'};color:${on ? 'var(--accent)' : 'var(--text2)'}`;
 
 /** Button of a segmented group (Settings style: raised piece when active). */
-export const segStyle = (on: boolean): string =>
+const segStyle = (on: boolean): string =>
   `padding:6px 15px;border-radius:7px;font-size:12.5px;font-weight:600;${
     on
       ? 'background:var(--panel);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)'

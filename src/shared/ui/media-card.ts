@@ -53,7 +53,8 @@ export function wireVideoCards<T extends CardMedia>(
 ): void {
   list.querySelectorAll<HTMLElement>('[data-url]').forEach((card) => {
     const url = card.dataset.url!;
-    const item = items.find((x) => x.url === url)!;
+    const item = items.find((x) => x.url === url);
+    if (!item) return; // stale card not backed by items: leave it inert
     card.querySelector('.mc-check')?.addEventListener('click', (e) => {
       e.stopPropagation();
       on.toggle(url);

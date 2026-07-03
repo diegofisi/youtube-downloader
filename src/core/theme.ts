@@ -58,7 +58,12 @@ const THEMES: Record<Theme, Vars> = {
 };
 
 export function getTheme(): Theme {
-  return (localStorage.getItem(KEY) as Theme) || 'dark';
+  // Validates the stored value: a corrupted entry must not leak out as Theme.
+  try {
+    return localStorage.getItem(KEY) === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
 }
 
 export function applyTheme(theme: Theme): void {
@@ -66,5 +71,9 @@ export function applyTheme(theme: Theme): void {
   const vars = THEMES[theme];
   for (const k in vars) root.style.setProperty(k, vars[k]);
   root.dataset.theme = theme;
-  localStorage.setItem(KEY, theme);
+  try {
+    localStorage.setItem(KEY, theme);
+  } catch {
+    /* ignore persistence errors */
+  }
 }

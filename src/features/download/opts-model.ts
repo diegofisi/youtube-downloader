@@ -86,6 +86,12 @@ export function effectiveOpts(url: string): Opts {
   return { ...opts, ...(overrides[url] || {}) };
 }
 
+// Overrides are per-batch: on each new analysis, drop entries for URLs that left
+// the preview so the map doesn't grow unbounded across the session.
+export function pruneOverrides(keep: ReadonlySet<string>): void {
+  for (const url of Object.keys(overrides)) if (!keep.has(url)) delete overrides[url];
+}
+
 export function optsToBackend(o: Opts, cookieMode: string): DownloadOptions {
   return {
     mode: o.mode === 'audio' ? 'audio' : o.mode === 'video' ? 'videoonly' : 'video',

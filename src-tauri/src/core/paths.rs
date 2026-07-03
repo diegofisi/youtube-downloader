@@ -37,7 +37,7 @@ pub fn app_dir(app: &AppHandle) -> PathBuf {
     }
 }
 
-pub fn binary_name(name: &str) -> String {
+fn binary_name(name: &str) -> String {
     if cfg!(target_os = "windows") {
         format!("{}.exe", name)
     } else {

@@ -37,6 +37,8 @@ export interface QItem extends EnqueueItem {
   filePath?: string;
   /** true if we paused it due to an expired session (not the user manually). */
   pausedByAuth?: boolean;
+  /** Run generation: stale startDownload settlements (fast pause→resume) are ignored. */
+  runSeq?: number;
 }
 
 let items: QItem[] = [];
@@ -95,12 +97,14 @@ function pump(): void {
 }
 
 function run(it: QItem): void {
+  const runId = (it.runSeq = (it.runSeq ?? 0) + 1);
   it.status = 'downloading';
   // Don't reset it.progress: on resume yt-dlp continues the .part file, so keep
   // the shown progress until the first real progress event arrives.
   notify();
   startDownload(it.url, it.options)
     .then(async (res) => {
+      if (it.runSeq !== runId) return; // a newer run owns this item
       if (it.status === 'canceled' || it.status === 'paused') {
         notify();
         pump();
@@ -147,6 +151,7 @@ function run(it: QItem): void {
       pump();
     })
     .catch(() => {
+      if (it.runSeq !== runId) return; // a newer run owns this item
       if (it.status !== 'canceled' && it.status !== 'paused') {
         it.status = 'error';
         it.error = t('Error interno', 'Internal error');

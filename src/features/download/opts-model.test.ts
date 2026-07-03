@@ -1,6 +1,15 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import type { VideoMeta } from '../preview';
-import { optsToBackend, fmtDescription, sizeMB, effectiveOpts, opts, overrides, type Opts } from './opts-model';
+import {
+  optsToBackend,
+  fmtDescription,
+  sizeMB,
+  effectiveOpts,
+  opts,
+  overrides,
+  pruneOverrides,
+  type Opts,
+} from './opts-model';
 
 const MB = 1048576;
 
@@ -105,6 +114,16 @@ describe('sizeMB', () => {
 
   it('sin size_bytes devuelve 0', () => {
     expect(sizeMB(mkVideo(URL))).toBe(0);
+  });
+});
+
+describe('pruneOverrides', () => {
+  it('conserva los overrides del lote nuevo y descarta el resto', () => {
+    overrides['u1'] = { quality: '720p' };
+    overrides['u2'] = { mode: 'audio' };
+    pruneOverrides(new Set(['u1']));
+    expect(overrides['u1']).toEqual({ quality: '720p' });
+    expect(overrides['u2']).toBeUndefined();
   });
 });
 

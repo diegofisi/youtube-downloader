@@ -30,8 +30,8 @@ export function openLogin(): void {
 // ---------- real account info (name, handle, avatar) ----------
 /** In-memory cache of the connected account (invalidated on logout/reconnect). */
 let accountInfo: AccountInfo | null = null;
-/** In-flight promise: avoids fetching the account more than once per session. */
-let accountInfoPromise: Promise<AccountInfo | null> | null = null;
+/** In-flight/settled promise: avoids fetching the account more than once per session. */
+let accountInfoPromise: Promise<void> | null = null;
 
 export function invalidateAccountInfo(): void {
   accountInfo = null;
@@ -39,16 +39,21 @@ export function invalidateAccountInfo(): void {
   applyAccountInfo(); // restores the generic UI ("A" + "YouTube account")
 }
 
-/** Calls getAccountInfo() only once and paints the result when it arrives. */
+/** Calls getAccountInfo() once per session and paints the result when it arrives.
+ * A rejection (transient failure) is not cached: the next render retries. */
 function ensureAccountInfo(): void {
   if (accountInfoPromise) return;
-  const p = getAccountInfo().catch(() => null);
+  const p: Promise<void> = getAccountInfo().then(
+    (info) => {
+      if (p !== accountInfoPromise) return; // invalidated while loading
+      accountInfo = info; // null = "no account" (definitive): keep it cached
+      applyAccountInfo();
+    },
+    () => {
+      if (p === accountInfoPromise) accountInfoPromise = null;
+    },
+  );
   accountInfoPromise = p;
-  void p.then((info) => {
-    if (p !== accountInfoPromise) return; // invalidated while loading
-    accountInfo = info;
-    applyAccountInfo();
-  });
 }
 
 /** Paints (or restores) avatar and name on the account card.
