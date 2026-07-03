@@ -15,6 +15,8 @@ export function showModal(title: string, message: string, showCancel = false): P
       overlay.hidden = true;
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onOverlayClick);
+      document.removeEventListener('keydown', onKeyDown);
     };
     const onOk = () => {
       cleanup();
@@ -24,7 +26,16 @@ export function showModal(title: string, message: string, showCancel = false): P
       cleanup();
       resolve(false);
     };
+    // Cerrar con Escape o click en el fondo cuenta como cancelar.
+    const onOverlayClick = (e: MouseEvent) => {
+      if (e.target === overlay) onCancel();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKeyDown);
   });
 }

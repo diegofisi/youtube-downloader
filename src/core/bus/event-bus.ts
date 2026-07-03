@@ -11,8 +11,10 @@ export interface AppEvents {
   'nav:changed': { view: string };
   'nav:goto': { view: string };
   'theme:changed': Record<string, never>;
-  'download:completed': { url: string; title: string; format: string };
+  'download:completed': { url: string; title: string; format: string; videoId?: string };
   'queue:count': { active: number };
+  /** Pre-carga urls en la vista Descargar y lanza el análisis (el emisor navega con nav:goto). */
+  'descargar:prefill': { urls: string[] };
 }
 
 type Handler<K extends keyof AppEvents> = (payload: AppEvents[K]) => void;

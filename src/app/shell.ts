@@ -3,23 +3,30 @@ import { getTheme, applyTheme } from '../core/theme';
 import { bus } from '../core/bus/event-bus';
 import { minimizeWindow, toggleMaximizeWindow, closeWindow } from '../core/tauri/window';
 import { openYouTubeLogin } from '../features/session';
+import { t } from '../core/i18n';
 
-export type ViewId = 'descargar' | 'youtube' | 'cola' | 'biblioteca' | 'ajustes';
+export type ViewId = 'descargar' | 'buscar' | 'youtube' | 'cola' | 'biblioteca' | 'ajustes';
 
 const TITLES: Record<ViewId, string> = {
-  descargar: 'Descargar',
-  youtube: 'Mi YouTube',
-  cola: 'Cola de descargas',
-  biblioteca: 'Biblioteca',
-  ajustes: 'Ajustes',
+  descargar: t('Descargar', 'Download'),
+  buscar: t('Buscar', 'Search'),
+  youtube: t('Mi YouTube', 'My YouTube'),
+  cola: t('Cola de descargas', 'Download queue'),
+  biblioteca: t('Biblioteca', 'Library'),
+  ajustes: t('Ajustes', 'Settings'),
 };
 
+/** Lupa a 18px (I.search es de 16px, los iconos del nav van a 18). */
+const searchNavIcon =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.9"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+
 const NAV: { id: ViewId; label: string; icon: string; badge?: boolean }[] = [
-  { id: 'descargar', label: 'Descargar', icon: I.download },
-  { id: 'youtube', label: 'Mi YouTube', icon: I.youtube },
-  { id: 'cola', label: 'Cola', icon: I.queue, badge: true },
-  { id: 'biblioteca', label: 'Biblioteca', icon: I.library },
-  { id: 'ajustes', label: 'Ajustes', icon: I.settings },
+  { id: 'descargar', label: t('Descargar', 'Download'), icon: I.download },
+  { id: 'buscar', label: t('Buscar', 'Search'), icon: searchNavIcon },
+  { id: 'youtube', label: t('Mi YouTube', 'My YouTube'), icon: I.youtube },
+  { id: 'cola', label: t('Cola', 'Queue'), icon: I.queue, badge: true },
+  { id: 'biblioteca', label: t('Biblioteca', 'Library'), icon: I.library },
+  { id: 'ajustes', label: t('Ajustes', 'Settings'), icon: I.settings },
 ];
 
 let current: ViewId = 'descargar';
@@ -41,16 +48,18 @@ export function initShell(): void {
   renderTheme();
   themeBtn.addEventListener('click', () => {
     applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
-    renderTheme();
     bus.emit('theme:changed', {});
   });
+  // Repinta el icono cuando el tema cambia desde cualquier sitio (p. ej. Ajustes).
+  // Solo escucha y repinta: no vuelve a emitir, así no hay bucle.
+  bus.on('theme:changed', renderTheme);
 
   // Window controls (2 juegos: traffic lights + botones)
   const wire = (ids: string[], fn: () => void) =>
     ids.forEach((id) => document.getElementById(id)?.addEventListener('click', fn));
   wire(['win-close', 'win-close-2'], () => void closeWindow());
   wire(['win-min', 'win-min-2'], () => void minimizeWindow());
-  wire(['win-max'], () => void toggleMaximizeWindow());
+  wire(['win-max', 'win-max-2'], () => void toggleMaximizeWindow());
 
   // Sidebar nav
   const navEl = document.getElementById('nav')!;

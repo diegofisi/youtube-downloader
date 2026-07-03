@@ -2,10 +2,14 @@ import { I, esc } from '../../app/icons';
 
 export type ToastKind = 'done' | 'warn' | 'info' | 'error';
 
+// Icono estático de información (el spinner giraba para siempre y parecía "cargando").
+const INFO_ICON =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.9"/><path d="M12 11v5.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="7.6" r="1.2" fill="currentColor"/></svg>';
+
 const MAP: Record<ToastKind, { bg: string; c: string; ic: string }> = {
   done: { bg: 'var(--successSoft)', c: 'var(--success)', ic: I.check },
   warn: { bg: 'var(--warnSoft)', c: 'var(--warn)', ic: I.alert },
-  info: { bg: 'var(--infoSoft)', c: 'var(--info)', ic: I.spinner },
+  info: { bg: 'var(--infoSoft)', c: 'var(--info)', ic: INFO_ICON },
   error: { bg: 'var(--dangerSoft)', c: 'var(--danger)', ic: I.alert },
 };
 
