@@ -19,6 +19,18 @@ pub fn load_cookies(app: AppHandle, path: String) -> CookieResult {
 }
 
 #[tauri::command]
+pub fn get_session_status(app: AppHandle) -> String {
+    let app_dir = paths::app_dir(&app);
+    service::session_status(&app_dir).to_string()
+}
+
+#[tauri::command]
+pub fn logout(app: AppHandle) -> Result<(), String> {
+    let app_dir = paths::app_dir(&app);
+    service::logout(&app_dir)
+}
+
+#[tauri::command]
 pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window("youtube-login") {
         existing.set_focus().ok();

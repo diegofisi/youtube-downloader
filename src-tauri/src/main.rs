@@ -14,6 +14,8 @@ fn main() {
             session::commands::check_cookies,
             session::commands::load_cookies,
             session::commands::open_youtube_login,
+            session::commands::get_session_status,
+            session::commands::logout,
             settings::commands::open_downloads_folder,
             settings::commands::get_download_folder,
             settings::commands::set_download_folder,

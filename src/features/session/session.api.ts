@@ -28,6 +28,16 @@ export async function openYouTubeLogin(): Promise<void> {
   return invoke('open_youtube_login');
 }
 
+export type SessionStatus = 'none' | 'expired' | 'connected';
+
+export async function getSessionStatus(): Promise<SessionStatus> {
+  return invoke<SessionStatus>('get_session_status');
+}
+
+export async function logoutSession(): Promise<void> {
+  return invoke('logout');
+}
+
 export function onCookiesExtracted(cb: (success: boolean) => void): Promise<UnlistenFn> {
   return onEvent<boolean>('cookies-extracted', cb);
 }

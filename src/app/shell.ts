@@ -95,8 +95,17 @@ export function initShell(): void {
   bus.on('nav:goto', ({ view }) => navigate(view as ViewId));
   bus.on('queue:count', ({ active }) => router.setBadge(active));
 
-  // Session banner
+  // Session banner: aparece cuando la sesión de YouTube caduca
+  let bannerDismissed = false;
+  bus.on('session:expired', () => {
+    if (!bannerDismissed) document.getElementById('session-banner')!.hidden = false;
+  });
+  bus.on('session:connected', () => {
+    document.getElementById('session-banner')!.hidden = true;
+    bannerDismissed = false;
+  });
   document.getElementById('banner-dismiss')?.addEventListener('click', () => {
+    bannerDismissed = true;
     document.getElementById('session-banner')!.hidden = true;
   });
   document.getElementById('banner-reconnect')?.addEventListener('click', () => {

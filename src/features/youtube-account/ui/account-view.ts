@@ -1,16 +1,25 @@
 import { I, esc } from '../../../app/icons';
 import { bus } from '../../../core/bus/event-bus';
 import { showToast } from '../../../shared/ui/toast';
+import { showModal } from '../../../shared/ui/modal';
 import { analyzeUrls } from '../../preview/preview.api';
 import type { AnalyzedEntry, VideoMeta, PlaylistMeta } from '../../preview/preview.types';
 import { enqueue } from '../../queue';
-import { isConnected, openYouTubeLogin, getCookieMode } from '../../session';
+import {
+  isConnected,
+  isExpired,
+  refreshSession,
+  doLogout,
+  openYouTubeLogin,
+  getCookieMode,
+} from '../../session';
 import type { DownloadOptions } from '../../download/download.types';
 
 const TABS = [
-  { key: 'subs', label: 'Suscripciones', url: 'https://www.youtube.com/feed/subscriptions' },
   { key: 'wl', label: 'Ver más tarde', url: 'https://www.youtube.com/playlist?list=WL' },
   { key: 'liked', label: 'Me gusta', url: 'https://www.youtube.com/playlist?list=LL' },
+  { key: 'subs', label: 'Suscripciones', url: 'https://www.youtube.com/feed/subscriptions' },
+  { key: 'history', label: 'Historial', url: 'https://www.youtube.com/feed/history' },
 ];
 const BENEFITS = [
   'Descarga videos exclusivos para miembros',
@@ -18,7 +27,8 @@ const BENEFITS = [
   'Sin extensiones ni copiar cookies a mano',
 ];
 
-let tab = 'subs';
+let tab = 'wl';
+let loadSeq = 0;
 const sel = new Set<string>();
 let videos: VideoMeta[] = [];
 
@@ -55,12 +65,47 @@ function defaultOptions(): DownloadOptions {
     cookieMode: getCookieMode(),
   };
 }
+function toQueueItem(v: VideoMeta) {
+  return {
+    url: v.url,
+    title: v.title,
+    channel: v.channel,
+    grad: 'linear-gradient(135deg,#3a2d6b,#c2456b)',
+    thumbnail: v.thumbnail,
+    fmt: 'Máxima · MP4',
+    options: defaultOptions(),
+  };
+}
 
-function updateConnection(): void {
-  const conn = isConnected();
-  $('yt-logged-out').hidden = conn;
-  $('yt-logged-in').hidden = !conn;
-  if (conn && videos.length === 0) loadTab();
+function renderAccountCard(): void {
+  const badge = $('acc-badge');
+  const badgeText = $('acc-badge-text');
+  const desc = $('acc-desc');
+  const reconnect = $('btn-yt-reconnect');
+  if (isConnected()) {
+    badge.style.color = 'var(--success)';
+    badge.style.background = 'var(--successSoft)';
+    badgeText.textContent = 'Conectada';
+    desc.textContent = 'Sesión activa con cookies';
+    reconnect.hidden = true;
+  } else {
+    badge.style.color = 'var(--warn)';
+    badge.style.background = 'var(--warnSoft)';
+    badgeText.textContent = 'Caducada';
+    desc.textContent = 'La sesión venció o está incompleta — reconéctate para contenido de miembros';
+    reconnect.hidden = false;
+  }
+}
+
+async function updateConnection(): Promise<void> {
+  await refreshSession();
+  const logged = isConnected() || isExpired();
+  $('yt-logged-out').hidden = logged;
+  $('yt-logged-in').hidden = !logged;
+  if (logged) {
+    renderAccountCard();
+    if (videos.length === 0) loadTab();
+  }
 }
 
 function renderBenefits(): void {
@@ -82,6 +127,7 @@ function renderTabs(): void {
     .querySelectorAll<HTMLElement>('[data-tab]')
     .forEach((b) =>
       b.addEventListener('click', () => {
+        if (tab === b.dataset.tab) return;
         tab = b.dataset.tab!;
         renderTabs();
         loadTab();
@@ -93,6 +139,19 @@ function checkOverlay(on: boolean): string {
   return `<button class="yt-check" style="position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;border:1.8px solid ${
     on ? 'var(--accent)' : 'rgba(255,255,255,.7)'
   };background:${on ? 'var(--accent)' : 'rgba(0,0,0,.4)'};color:#fff;backdrop-filter:blur(4px)">${on ? I.check : ''}</button>`;
+}
+
+function emptyState(title: string, msg: string, showReconnect: boolean): string {
+  return `<div style="grid-column:1/-1;text-align:center;padding:50px 20px;border:1.5px dashed var(--border2);border-radius:16px;color:var(--text3)">
+    <div style="font-size:14px;font-weight:600;color:var(--text2)">${esc(title)}</div>
+    <div style="font-size:12.5px;margin-top:5px">${esc(msg)}</div>
+    ${showReconnect ? `<button id="yt-empty-reconnect" class="acc-btn" style="margin-top:16px;height:38px;padding:0 18px;border-radius:10px;background:var(--accent);color:var(--accentText);font-weight:600;font-size:13px">Volver a iniciar sesión</button>` : ''}
+  </div>`;
+}
+function wireEmptyReconnect(): void {
+  document.getElementById('yt-empty-reconnect')?.addEventListener('click', () => {
+    openYouTubeLogin().catch(() => showToast('No se pudo abrir el login', '', 'error'));
+  });
 }
 
 function renderList(): void {
@@ -140,7 +199,7 @@ function renderList(): void {
       });
       card.querySelector('.yt-dl')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        enqueue([{ url: v.url, title: v.title, channel: v.channel, grad: 'linear-gradient(135deg,#3a2d6b,#c2456b)', thumbnail: v.thumbnail, fmt: 'Máxima · MP4', options: defaultOptions() }]);
+        enqueue([toQueueItem(v)]);
         showToast('Añadido a la cola', v.title, 'done');
       });
     });
@@ -148,37 +207,96 @@ function renderList(): void {
 
 async function loadTab(): Promise<void> {
   const cur = TABS.find((t) => t.key === tab)!;
+  const seq = ++loadSeq;
   sel.clear();
-  $('yt-list').innerHTML = `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:9px;padding:40px;color:var(--text2);font-size:13px">${I.spinner} Cargando…</div>`;
+  videos = [];
+  // Título/contador correctos desde el arranque de la carga (antes se quedaba el anterior).
+  $('yt-title').textContent = cur.label;
+  $('yt-count').textContent = '';
+  ($('btn-yt-download-sel') as HTMLElement).hidden = true;
+  $('yt-list').innerHTML = `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:9px;padding:40px;color:var(--text2);font-size:13px">${I.spinner} Cargando ${esc(cur.label)}…</div>`;
   try {
     const entries = await analyzeUrls([cur.url]);
+    if (seq !== loadSeq) return; // cambió de tab mientras cargaba
     videos = flatten(entries);
     if (videos.length === 0) {
-      $('yt-list').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--text3)"><div style="font-size:14px;font-weight:600;color:var(--text2)">Nada por aquí</div><div style="font-size:12.5px;margin-top:5px">No se encontraron videos (¿sesión caducada?).</div></div>`;
-      $('yt-count').textContent = '';
+      await refreshSession();
+      renderAccountCard();
+      if (!isConnected()) {
+        $('yt-list').innerHTML = emptyState(
+          'Tu sesión no está activa',
+          'YouTube no reconoció la sesión. Vuelve a iniciar sesión para ver tu contenido.',
+          true,
+        );
+        wireEmptyReconnect();
+      } else {
+        $('yt-list').innerHTML = emptyState('Nada por aquí', `No se encontraron videos en ${cur.label}.`, false);
+      }
       return;
     }
     renderList();
   } catch (e) {
-    $('yt-list').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--danger);font-size:13px">Error: ${esc(String(e))}</div>`;
+    if (seq !== loadSeq) return;
+    const msg = String(e);
+    const authIssue = /login|account|cookies|autenticaci/i.test(msg);
+    if (authIssue) {
+      await refreshSession();
+      renderAccountCard();
+      $('yt-list').innerHTML = emptyState(
+        'Tu sesión no está activa',
+        'YouTube pidió iniciar sesión de nuevo para ver este contenido.',
+        true,
+      );
+      wireEmptyReconnect();
+    } else {
+      $('yt-list').innerHTML = emptyState('No se pudo cargar', msg, false);
+    }
+  }
+}
+
+async function handleLogout(): Promise<void> {
+  const ok = await showModal(
+    'Cerrar sesión',
+    'Se borrarán las cookies guardadas en este equipo. Podrás volver a conectarte cuando quieras.\n\n¿Cerrar sesión de YouTube?',
+    true,
+  );
+  if (!ok) return;
+  try {
+    await doLogout();
+    videos = [];
+    sel.clear();
+    $('yt-logged-out').hidden = false;
+    $('yt-logged-in').hidden = true;
+    showToast('Sesión cerrada', 'Las cookies fueron eliminadas.', 'done');
+  } catch (e) {
+    showToast('No se pudo cerrar sesión', String(e), 'error');
   }
 }
 
 export function initAccount(): void {
   renderBenefits();
   renderTabs();
-  $('btn-yt-login').addEventListener('click', () => openYouTubeLogin().catch(() => showToast('No se pudo abrir el login', '', 'error')));
-  $('btn-yt-logout').addEventListener('click', () => showToast('Sesión', 'Para cerrar sesión, borra cookies.txt (v2).', 'info'));
+  $('btn-yt-login').addEventListener('click', () =>
+    openYouTubeLogin().catch(() => showToast('No se pudo abrir el login', '', 'error')),
+  );
+  $('btn-yt-reconnect').addEventListener('click', () =>
+    openYouTubeLogin().catch(() => showToast('No se pudo abrir el login', '', 'error')),
+  );
+  $('btn-yt-logout').addEventListener('click', handleLogout);
   $('btn-yt-download-sel').addEventListener('click', () => {
     const items = videos.filter((v) => sel.has(v.url));
     if (!items.length) return;
-    enqueue(items.map((v) => ({ url: v.url, title: v.title, channel: v.channel, grad: 'linear-gradient(135deg,#3a2d6b,#c2456b)', thumbnail: v.thumbnail, fmt: 'Máxima · MP4', options: defaultOptions() })));
+    enqueue(items.map(toQueueItem));
     sel.clear();
     renderList();
     bus.emit('nav:goto', { view: 'cola' });
     showToast('Añadido a la cola', `${items.length} videos en proceso.`, 'done');
   });
-  bus.on('session:connected', updateConnection);
+  bus.on('session:connected', () => {
+    videos = [];
+    updateConnection();
+  });
+  bus.on('session:changed', () => updateConnection());
   bus.on('nav:changed', ({ view }) => {
     if (view === 'youtube') updateConnection();
   });

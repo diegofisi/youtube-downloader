@@ -7,6 +7,7 @@
 export interface AppEvents {
   'session:expired': void;
   'session:connected': { channel?: string };
+  'session:changed': void;
   'nav:changed': { view: string };
   'nav:goto': { view: string };
   'theme:changed': Record<string, never>;

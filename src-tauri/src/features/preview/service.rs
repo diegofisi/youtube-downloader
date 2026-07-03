@@ -12,13 +12,23 @@ use crate::features::session::service as session;
 
 /// Tope de entradas para Mezclas/radios (listas infinitas autogeneradas de YouTube).
 const RADIO_CAP: u32 = 25;
+/// Tope para feeds de cuenta (suscripciones, historial): son continuos, sin fin real.
+const FEED_CAP: u32 = 50;
 
 /// Analiza una URL (video suelto o playlist/canal) resolviendo metadatos con yt-dlp.
 pub fn analyze(app_dir: &Path, url: &str) -> Result<AnalyzedEntry, String> {
     // Mezcla/radio (list=RD…, start_radio): infinita → topamos a 25 como en YouTube.
+    // Feeds de cuenta (/feed/...): continuos → topamos a 50.
     // Playlists/canales reales: sin tope (todos los que encuentre).
     let is_radio = url.contains("list=RD") || url.contains("start_radio=");
-    let cap = if is_radio { Some(RADIO_CAP) } else { None };
+    let is_feed = url.contains("/feed/");
+    let cap = if is_radio {
+        Some(RADIO_CAP)
+    } else if is_feed {
+        Some(FEED_CAP)
+    } else {
+        None
+    };
     let json = run_dump_json(app_dir, url, cap)?;
     Ok(map_entry(&json, url))
 }

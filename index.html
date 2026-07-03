@@ -232,10 +232,11 @@
                 <div style="flex:1;min-width:0">
                   <div style="display:flex;align-items:center;gap:9px">
                     <span style="font-weight:700;font-size:15.5px;font-family:'SF Pro Display',system-ui,sans-serif">Cuenta de YouTube</span>
-                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;color:var(--success);background:var(--successSoft)"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulsedot 2s infinite"></span>Conectada</span>
+                    <span id="acc-badge" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;color:var(--success);background:var(--successSoft)"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulsedot 2s infinite"></span><span id="acc-badge-text">Conectada</span></span>
                   </div>
-                  <div style="font-size:12.5px;color:var(--text2);margin-top:2px">Sesión activa con cookies</div>
+                  <div id="acc-desc" style="font-size:12.5px;color:var(--text2);margin-top:2px">Sesión activa con cookies</div>
                 </div>
+                <button id="btn-yt-reconnect" hidden class="acc-btn" style="height:34px;padding:0 13px;border-radius:9px;background:var(--warn);color:#241600;font-weight:700;font-size:12.5px">Reconectar</button>
                 <button id="btn-yt-logout" style="height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--border2);color:var(--danger);font-weight:500;font-size:12.5px">Cerrar sesión</button>
               </div>
               <div id="yt-tabs" style="display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap"></div>
