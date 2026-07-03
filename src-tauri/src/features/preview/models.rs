@@ -17,6 +17,9 @@ pub struct VideoMeta {
     pub availability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub size_bytes: Option<u64>,
+    /// Nº de videos si la entrada plana es una playlist (feed de playlists) y yt-dlp lo reporta.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub playlist_count: Option<u64>,
     /// true si el metadato es "plano" (entrada de playlist sin resolver a fondo)
     pub flat: bool,
     pub is_playlist: bool,

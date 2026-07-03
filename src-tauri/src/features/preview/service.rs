@@ -16,7 +16,10 @@ const RADIO_CAP: u32 = 25;
 const FEED_CAP: u32 = 50;
 
 /// Analiza una URL (video suelto o playlist/canal) resolviendo metadatos con yt-dlp.
-pub fn analyze(app_dir: &Path, url: &str) -> Result<AnalyzedEntry, String> {
+///
+/// `range`: rango 1-based (start, end) para paginar playlists/feeds con
+/// `--playlist-items START:END`. Si es `None`, se aplican los topes por defecto.
+pub fn analyze(app_dir: &Path, url: &str, range: Option<(u32, u32)>) -> Result<AnalyzedEntry, String> {
     // Mezcla/radio (list=RD…, start_radio): infinita → topamos a 25 como en YouTube.
     // Feeds de cuenta (/feed/...): continuos → topamos a 50.
     // Playlists/canales reales: sin tope (todos los que encuentre).
@@ -29,11 +32,16 @@ pub fn analyze(app_dir: &Path, url: &str) -> Result<AnalyzedEntry, String> {
     } else {
         None
     };
-    let json = run_dump_json(app_dir, url, cap)?;
+    let json = run_dump_json(app_dir, url, cap, range)?;
     Ok(map_entry(&json, url))
 }
 
-fn run_dump_json(app_dir: &Path, url: &str, cap: Option<u32>) -> Result<Value, String> {
+fn run_dump_json(
+    app_dir: &Path,
+    url: &str,
+    cap: Option<u32>,
+    range: Option<(u32, u32)>,
+) -> Result<Value, String> {
     let ytdlp = paths::find_executable(app_dir, "yt-dlp")
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_else(|| "yt-dlp".into());
@@ -45,7 +53,11 @@ fn run_dump_json(app_dir: &Path, url: &str, cap: Option<u32>) -> Result<Value, S
         "--no-update".into(),
     ];
 
-    if let Some(c) = cap {
+    if let Some((start, end)) = range {
+        // Rango explícito (paginación desde el frontend): sustituye al tope fijo.
+        args.push("--playlist-items".into());
+        args.push(format!("{}:{}", start, end));
+    } else if let Some(c) = cap {
         args.push("--playlist-end".into());
         args.push(c.to_string());
     }
@@ -61,6 +73,8 @@ fn run_dump_json(app_dir: &Path, url: &str, cap: Option<u32>) -> Result<Value, S
         args.push(cookies.to_string_lossy().into());
     }
 
+    // `--` cierra las opciones: una URL con "-" inicial no se interpreta como flag.
+    args.push("--".into());
     args.push(url.into());
 
     let mut cmd = Command::new(&ytdlp);
@@ -129,6 +143,7 @@ fn full_video(v: &Value, url: &str) -> VideoMeta {
             .and_then(|x| x.as_str())
             .map(|s| s.to_string()),
         size_bytes: estimate_size(v),
+        playlist_count: v.get("playlist_count").and_then(|x| x.as_u64()),
         flat: false,
         is_playlist: false,
     }
@@ -159,8 +174,10 @@ fn flat_video(v: &Value) -> Option<VideoMeta> {
             .and_then(|x| x.as_str())
             .map(|s| s.to_string()),
         size_bytes: None,
+        playlist_count: v.get("playlist_count").and_then(|x| x.as_u64()),
         flat: true,
-        is_playlist: false,
+        // Entradas planas que apuntan a otra playlist (p. ej. /feed/playlists).
+        is_playlist: v.get("ie_key").and_then(|x| x.as_str()) == Some("YoutubeTab"),
     })
 }
 
