@@ -13,14 +13,19 @@
  *           para Shorts y las entradas planas siempre traen url watch?v= (nunca
  *           /shorts/), así que se afina en cliente con duración ≤ 180 s.
  */
-import { I, esc } from '../../../app/icons';
+import { I } from '../../../shared/ui/icons';
+import { esc } from '../../../shared/lib/html';
 import { bus } from '../../../core/bus/event-bus';
 import { showToast } from '../../../shared/ui/toast';
-import { analyzeUrls } from '../../preview/preview.api';
-import type { AnalyzedEntry, VideoMeta, PlaylistMeta } from '../../preview/preview.types';
+import { $ } from '../../../shared/ui/dom';
+import { fmtDuration } from '../../../shared/lib/format';
+import { CARD_GRAD } from '../../../shared/ui/gradients';
+import { openAnchoredMenu, closeAnchoredMenu } from '../../../shared/ui/anchored-menu';
+import { analyzeUrls } from '../../preview';
+import type { AnalyzedEntry, VideoMeta, PlaylistMeta } from '../../preview';
 import { enqueue } from '../../queue';
 import { getCookieMode } from '../../session';
-import type { DownloadOptions } from '../../download/download.types';
+import type { DownloadOptions } from '../../download';
 import { t } from '../../../core/i18n';
 
 const CHIPS = [
@@ -53,17 +58,6 @@ let nextStart = 1;
 let hasMore = false;
 let loadingMore = false;
 
-const $ = (id: string) => document.getElementById(id)!;
-
-function fmtDuration(s?: number): string {
-  if (!s) return '';
-  const sec = Math.floor(s);
-  const m = Math.floor(sec / 60);
-  const ss = sec % 60;
-  const h = Math.floor(m / 60);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m % 60)}:${pad(ss)}` : `${m}:${pad(ss)}`;
-}
 function flatten(entries: AnalyzedEntry[]): VideoMeta[] {
   const out: VideoMeta[] = [];
   for (const e of entries) {
@@ -122,7 +116,7 @@ function toQueueItem(v: VideoMeta) {
     videoId: v.id,
     title: v.title,
     channel: v.channel,
-    grad: 'linear-gradient(135deg,#3a2d6b,#c2456b)',
+    grad: CARD_GRAD,
     thumbnail: v.thumbnail,
     duration: v.duration,
     fmt: t('Máxima · MP4', 'Max · MP4'),
@@ -131,58 +125,26 @@ function toQueueItem(v: VideoMeta) {
 }
 
 // ---------- mini-menú de descarga por tarjeta ----------
-/** Menú desplegable abierto (solo uno a la vez) y su botón ancla. */
-let dlMenu: HTMLElement | null = null;
-let dlMenuAnchor: HTMLElement | null = null;
-
-function closeDlMenu(): void {
-  dlMenu?.remove();
-  dlMenu = null;
-  dlMenuAnchor = null;
-}
-
 /** Abre el menú "Descargar / Descarga personalizada" anclado al botón ⬇ de una tarjeta. */
 function openDlMenu(anchor: HTMLElement, v: VideoMeta): void {
-  if (dlMenuAnchor === anchor) {
-    closeDlMenu(); // segundo click en el mismo botón: cerrar
-    return;
-  }
-  closeDlMenu();
-  const menu = document.createElement('div');
-  menu.style.cssText =
-    'position:fixed;z-index:900;min-width:200px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px';
-  const addItem = (icon: string, label: string, onPick: () => void) => {
-    const b = document.createElement('button');
-    b.className = 'hov';
-    b.style.cssText =
-      'display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--text);text-align:left';
-    b.innerHTML = `<span style="display:flex;color:var(--text2)">${icon}</span>${label}`;
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeDlMenu();
-      onPick();
-    });
-    menu.appendChild(b);
-  };
-  addItem(I.download, t('Descargar', 'Download'), () => {
-    enqueue([toQueueItem(v)]);
-    showToast(t('Añadido a la cola', 'Added to queue'), v.title, 'done');
-  });
-  addItem(I.settings, t('Descarga personalizada', 'Custom download'), () => {
-    bus.emit('descargar:prefill', { urls: [v.url] });
-    bus.emit('nav:goto', { view: 'descargar' });
-  });
-  document.body.appendChild(menu);
-  // Posicionar bajo el botón, alineado a su borde derecho; si no cabe, encima.
-  const r = anchor.getBoundingClientRect();
-  const mr = menu.getBoundingClientRect();
-  let top = r.bottom + 6;
-  if (top + mr.height > window.innerHeight - 8) top = r.top - mr.height - 6;
-  const left = Math.max(8, Math.min(r.right - mr.width, window.innerWidth - mr.width - 8));
-  menu.style.top = `${top}px`;
-  menu.style.left = `${left}px`;
-  dlMenu = menu;
-  dlMenuAnchor = anchor;
+  openAnchoredMenu(anchor, [
+    {
+      icon: I.download,
+      label: t('Descargar', 'Download'),
+      onPick: () => {
+        enqueue([toQueueItem(v)]);
+        showToast(t('Añadido a la cola', 'Added to queue'), v.title, 'done');
+      },
+    },
+    {
+      icon: I.settings,
+      label: t('Descarga personalizada', 'Custom download'),
+      onPick: () => {
+        bus.emit('descargar:prefill', { urls: [v.url] });
+        bus.emit('nav:goto', { view: 'descargar' });
+      },
+    },
+  ]);
 }
 
 // ---------- render ----------
@@ -220,7 +182,7 @@ function stateCard(title: string, msg: string): string {
 
 function videoCard(v: VideoMeta): string {
   const on = sel.has(v.url);
-  const grad = 'linear-gradient(135deg,#3a2d6b,#c2456b)';
+  const grad = CARD_GRAD;
   const thumbInner = v.thumbnail
     ? `<img src="${esc(v.thumbnail)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" alt="">`
     : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:.85">${I.play20}</div>`;
@@ -241,17 +203,17 @@ function videoCard(v: VideoMeta): string {
 }
 
 function renderList(): void {
-  closeDlMenu(); // el grid se re-renderiza con innerHTML: el ancla deja de existir
-  ($('search-empty') as HTMLElement).hidden = true;
+  closeAnchoredMenu(); // el grid se re-renderiza con innerHTML: el ancla deja de existir
+  $('search-empty').hidden = true;
   $('search-count').textContent = videos.length
     ? `${videos.length} ${videos.length === 1 ? t('resultado', 'result') : t('resultados', 'results')}`
     : '';
 
-  ($('search-more-wrap') as HTMLElement).hidden = !hasMore || videos.length === 0;
+  $('search-more-wrap').hidden = !hasMore || videos.length === 0;
 
   const nSel = videos.filter((v) => sel.has(v.url)).length;
-  const dlBtn = $('btn-search-download-sel') as HTMLElement;
-  const custBtn = $('btn-search-custom-sel') as HTMLElement;
+  const dlBtn = $('btn-search-download-sel');
+  const custBtn = $('btn-search-custom-sel');
   dlBtn.hidden = nSel === 0;
   custBtn.hidden = nSel === 0;
   dlBtn.textContent = `${t('Descargar', 'Download')} ${nSel}`;
@@ -277,23 +239,23 @@ function renderList(): void {
 
 // ---------- carga ----------
 async function doSearch(): Promise<void> {
-  const q = ($('search-input') as HTMLInputElement).value.trim();
+  const q = $<HTMLInputElement>('search-input').value.trim();
   if (!q) {
     showToast(t('Escribe algo para buscar', 'Type something to search'), '', 'info');
     return;
   }
   query = q;
   const seq = ++loadSeq;
-  closeDlMenu();
+  closeAnchoredMenu();
   sel.clear();
   videos = [];
   nextStart = 1;
   hasMore = false;
   $('search-count').textContent = '';
-  ($('btn-search-download-sel') as HTMLElement).hidden = true;
-  ($('btn-search-custom-sel') as HTMLElement).hidden = true;
-  ($('search-more-wrap') as HTMLElement).hidden = true;
-  ($('search-empty') as HTMLElement).hidden = true;
+  $('btn-search-download-sel').hidden = true;
+  $('btn-search-custom-sel').hidden = true;
+  $('search-more-wrap').hidden = true;
+  $('search-empty').hidden = true;
   $('search-list').innerHTML = `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:9px;padding:40px;color:var(--text2);font-size:13px">${I.spinner} ${t('Buscando', 'Searching')} “${esc(query)}”…</div>`;
   try {
     const { page, rawCount } = await fetchPage(1);
@@ -324,7 +286,7 @@ async function loadMore(): Promise<void> {
   if (loadingMore || !hasMore) return;
   const seq = loadSeq; // si cambia (otra búsqueda/chip), se descarta el resultado
   loadingMore = true;
-  const btn = $('search-more') as HTMLButtonElement;
+  const btn = $<HTMLButtonElement>('search-more');
   const prevHtml = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = `${I.spinner} ${t('Cargando…', 'Loading…')}`;
@@ -384,15 +346,8 @@ export function initSearch(): void {
       'info',
     );
   });
-  // Cerrar el mini-menú al hacer click fuera o con Escape.
-  document.addEventListener('click', (e) => {
-    if (dlMenu && !dlMenu.contains(e.target as Node)) closeDlMenu();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && dlMenu) closeDlMenu();
-  });
   bus.on('nav:changed', ({ view }) => {
-    if (view === 'buscar') ($('search-input') as HTMLInputElement).focus();
-    else closeDlMenu();
+    if (view === 'buscar') $('search-input').focus();
+    else closeAnchoredMenu();
   });
 }

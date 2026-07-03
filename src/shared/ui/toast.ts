@@ -1,4 +1,5 @@
-import { I, esc } from '../../app/icons';
+import { I } from './icons';
+import { esc } from '../lib/html';
 
 export type ToastKind = 'done' | 'warn' | 'info' | 'error';
 

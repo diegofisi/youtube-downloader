@@ -1,12 +1,13 @@
-import { I, esc } from '../../app/icons';
+import { I } from '../../shared/ui/icons';
+import { esc } from '../../shared/lib/html';
 import { bus } from '../../core/bus/event-bus';
 import { t } from '../../core/i18n';
 import { showToast } from '../../shared/ui/toast';
-import { startDownload, cancelDownload, onProgress } from '../download/download.api';
-import { addHistory, openHistoryFolder } from '../library/library.api';
-import { getDownloadFolder } from '../settings/settings.api';
+import { startDownload, cancelDownload, onProgress } from '../download';
+import { addHistory, openHistoryFolder } from '../library';
+import { getDownloadFolder } from '../settings';
 import { attemptSilentReconnect } from '../session';
-import type { DownloadOptions } from '../download/download.types';
+import type { DownloadOptions } from '../download';
 
 type QStatus = 'queued' | 'downloading' | 'merging' | 'paused' | 'done' | 'error' | 'canceled';
 

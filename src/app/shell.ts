@@ -1,4 +1,4 @@
-import { I } from './icons';
+import { I } from '../shared/ui/icons';
 import { getTheme, applyTheme } from '../core/theme';
 import { bus } from '../core/bus/event-bus';
 import { minimizeWindow, toggleMaximizeWindow, closeWindow } from '../core/tauri/window';

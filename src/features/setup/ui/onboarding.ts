@@ -1,8 +1,7 @@
-import { I } from '../../../app/icons';
+import { I } from '../../../shared/ui/icons';
 import { t } from '../../../core/i18n';
+import { $ } from '../../../shared/ui/dom';
 import { checkDependencies, downloadDependencies, onSetupProgress } from '../setup.api';
-
-const $ = (id: string) => document.getElementById(id)!;
 
 // Perezoso (función, no constante) para no depender del orden de import de i18n.
 const getSteps = () => [
@@ -44,7 +43,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function initOnboarding(): Promise<void> {
   const onb = $('onboarding');
-  const finish = $('onb-finish') as HTMLButtonElement;
+  const finish = $<HTMLButtonElement>('onb-finish');
   const done = () => (onb.hidden = true);
   // En modo error el botón pasa a "Reintentar" y relanza la instalación en vez de cerrar.
   let retryMode = false;

@@ -3,61 +3,19 @@ import { getLang, setLang, t, type Lang } from '../../../core/i18n';
 import { bus } from '../../../core/bus/event-bus';
 import { getSettings, setSettings, getDownloadFolder, changeDownloadFolder } from '../settings.api';
 import type { AppConfig } from '../settings.types';
-import { checkDependencies, downloadDependencies, onSetupProgress } from '../../setup/setup.api';
-import type { DependencyStatus } from '../../setup/setup.types';
+import { checkDependencies, downloadDependencies, onSetupProgress } from '../../setup';
+import type { DependencyStatus } from '../../setup';
 import { setConcurrency } from '../../queue';
 import { showToast } from '../../../shared/ui/toast';
-import { I, esc } from '../../../app/icons';
+import { I } from '../../../shared/ui/icons';
+import { esc } from '../../../shared/lib/html';
+import { $ } from '../../../shared/ui/dom';
+import { renderChipGroup, renderSeg, renderToggle } from '../../../shared/ui/controls';
 import type { UnlistenFn } from '../../../core/tauri/client';
 
-const $ = (id: string) => document.getElementById(id)!;
-
-const segStyle = (on: boolean) =>
-  `padding:6px 15px;border-radius:7px;font-size:12.5px;font-weight:600;${
-    on ? 'background:var(--panel);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)' : 'color:var(--text2);background:transparent'
-  }`;
-const toggleStyle = (on: boolean) =>
-  `width:38px;height:22px;flex:none;border-radius:12px;padding:2px;display:flex;background:${
-    on ? 'var(--accent)' : 'var(--border2)'
-  };justify-content:${on ? 'flex-end' : 'flex-start'};transition:all .18s`;
-const knob = '<span style="width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>';
-const chipStyle = (on: boolean) =>
-  `padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid ${
-    on ? 'var(--accent)' : 'var(--border)'
-  };background:${on ? 'var(--accentSoft)' : 'transparent'};color:${on ? 'var(--accent)' : 'var(--text2)'}`;
-
-function renderSeg(id: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
-  const el = $(id);
-  el.innerHTML = list.map(([v, l]) => `<button data-val="${v}" style="${segStyle(v === get())}">${l}</button>`).join('');
-  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b) =>
-    b.addEventListener('click', () => {
-      set(b.dataset.val!);
-      renderSeg(id, list, get, set);
-    }),
-  );
-}
-function renderToggle(id: string, get: () => boolean, set: (v: boolean) => void): void {
-  const btn = $(id);
-  const paint = () => {
-    btn.setAttribute('style', toggleStyle(get()));
-    btn.innerHTML = knob;
-    btn.dataset.on = get() ? '1' : '0';
-  };
-  paint();
-  btn.addEventListener('click', () => {
-    set(!get());
-    paint();
-  });
-}
+/** Chips de Ajustes: variante compacta (padding 5px 11px). */
 function renderChips(sel: string, list: [string, string][], get: () => string, set: (v: string) => void): void {
-  const el = document.querySelector<HTMLElement>(`[data-group="${sel}"]`)!;
-  el.innerHTML = list.map(([v, l]) => `<button data-val="${v}" style="${chipStyle(v === get())}">${l}</button>`).join('');
-  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b) =>
-    b.addEventListener('click', () => {
-      set(b.dataset.val!);
-      renderChips(sel, list, get, set);
-    }),
-  );
+  renderChipGroup(sel, list, get, set, { pad: '5px 11px' });
 }
 
 function renderComponents(d: DependencyStatus): void {
@@ -70,7 +28,7 @@ function renderComponents(d: DependencyStatus): void {
 
 function renderFixStatus(d: DependencyStatus): void {
   const st = $('fix-status');
-  const btn = $('btn-repair') as HTMLButtonElement;
+  const btn = $<HTMLButtonElement>('btn-repair');
   if (d.ready) {
     st.innerHTML = `<span style="color:var(--success);display:flex;flex:none">${I.check}</span><span style="color:var(--text)">${esc(
       t('Todo funciona correctamente', 'Everything is working correctly'),
@@ -95,7 +53,7 @@ async function refreshTroubleshooting(): Promise<void> {
 }
 
 function initTroubleshooting(): void {
-  const btn = $('btn-repair') as HTMLButtonElement;
+  const btn = $<HTMLButtonElement>('btn-repair');
   const prog = $('fix-progress');
   let repairing = false;
 
@@ -188,7 +146,7 @@ export async function initSettings(): Promise<void> {
   });
 
   // Plantilla de nombre: guarda con debounce mientras se escribe y al perder foco
-  const tpl = $('set-template') as HTMLInputElement;
+  const tpl = $<HTMLInputElement>('set-template');
   tpl.value = template;
   let tplTimer: number | undefined;
   tpl.addEventListener('input', () => {

@@ -1,13 +1,18 @@
-import { I, esc } from '../../../app/icons';
+import { I } from '../../../shared/ui/icons';
+import { esc } from '../../../shared/lib/html';
 import { bus } from '../../../core/bus/event-bus';
 import { t } from '../../../core/i18n';
 import { showToast } from '../../../shared/ui/toast';
-import { analyzeUrls, onPreviewProgress } from '../../preview/preview.api';
-import type { AnalyzedEntry, VideoMeta, PlaylistMeta } from '../../preview/preview.types';
+import { $ } from '../../../shared/ui/dom';
+import { fmtDuration, fmtSize, timeAgo } from '../../../shared/lib/format';
+import { gradFor } from '../../../shared/ui/gradients';
+import { chipStyle, toggleStyle, knob, renderChipGroup } from '../../../shared/ui/controls';
+import { analyzeUrls, onPreviewProgress } from '../../preview';
+import type { AnalyzedEntry, VideoMeta, PlaylistMeta } from '../../preview';
 import { getCookieMode } from '../../session';
-import { getDownloadFolder, getSettings } from '../../settings/settings.api';
-import type { AppConfig } from '../../settings/settings.types';
-import { getHistory } from '../../library/library.api';
+import { getDownloadFolder, getSettings } from '../../settings';
+import type { AppConfig } from '../../settings';
+import { getHistory } from '../../library';
 import { enqueue } from '../../queue';
 import type { DownloadOptions } from '../download.types';
 
@@ -104,32 +109,6 @@ const expanded: Record<string, boolean> = {};
 let downloadedSet = new Set<string>();
 
 // ---------- helpers ----------
-const GRADS = [
-  'linear-gradient(135deg,#3a2d6b,#c2456b)',
-  'linear-gradient(135deg,#1f6b52,#2b3b4d)',
-  'linear-gradient(135deg,#6b1f4d,#3a2233)',
-  'linear-gradient(135deg,#46307a,#a84a6b)',
-  'linear-gradient(135deg,#1f4d6b,#33335a)',
-];
-function gradFor(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
-  return GRADS[h % GRADS.length];
-}
-function fmtDuration(s?: number): string {
-  if (!s) return '';
-  const sec = Math.floor(s);
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const ss = sec % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${m}:${pad(ss)}`;
-}
-function fmtSize(mb: number): string {
-  if (!mb) return '—';
-  if (mb >= 1024) return `${(mb / 1024).toFixed(mb >= 10240 ? 0 : 1)} GB`;
-  return `${Math.round(mb)} MB`;
-}
 type Status = 'ok' | 'members' | 'downloaded' | 'private' | 'region' | 'error';
 function statusOf(v: VideoMeta): Status {
   if (downloadedSet.has(v.id) || downloadedSet.has(v.url)) return 'downloaded';
@@ -170,20 +149,7 @@ function allVideos(): VideoMeta[] {
   return out as VideoMeta[];
 }
 
-// ---------- DOM refs ----------
-const $ = (id: string) => document.getElementById(id)!;
-
 // ---------- render options ----------
-const chipStyle = (on: boolean) =>
-  `padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid ${
-    on ? 'var(--accent)' : 'var(--border)'
-  };background:${on ? 'var(--accentSoft)' : 'transparent'};color:${on ? 'var(--accent)' : 'var(--text2)'}`;
-const toggleStyle = (on: boolean) =>
-  `width:38px;height:22px;flex:none;border-radius:12px;padding:2px;display:flex;background:${
-    on ? 'var(--accent)' : 'var(--border2)'
-  };justify-content:${on ? 'flex-end' : 'flex-start'};transition:all .18s`;
-const knob = '<span style="width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>';
-
 const MODE_DEFS = () => [
   { id: 'av', title: t('Video + audio', 'Video + audio'), sub: t('La opción más común', 'The most common option'), icon: I.film, bg: 'var(--infoSoft)', c: 'var(--info)' },
   { id: 'video', title: t('Solo video', 'Video only'), sub: t('Sin pista de audio', 'No audio track'), icon: I.video, bg: 'var(--accentSoft)', c: 'var(--accent)' },
@@ -217,24 +183,6 @@ function renderModeCards(): void {
     );
 }
 
-function renderChips<T extends string>(groupSel: string, list: [T, string][], get: () => string, set: (v: T) => void): void {
-  const el = document.querySelector<HTMLElement>(`[data-group="${groupSel}"]`);
-  if (!el) return;
-  el.innerHTML = list
-    .map(([v, l]) => `<button data-val="${v}" style="${chipStyle(v === get())}">${l}</button>`)
-    .join('');
-  // El valor se toma de `list` por índice (mismo orden que el innerHTML) para
-  // conservar el tipo literal T sin castear dataset.val (que siempre es string).
-  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b, i) =>
-    b.addEventListener('click', () => {
-      set(list[i][0]);
-      renderChips(groupSel, list, get, set);
-      if (groupSel === 'quality') renderPreview();
-      refreshSummary();
-    }),
-  );
-}
-
 // ---------- historial de enlaces recientes (localStorage) ----------
 const RECENT_KEY = 'stash.recentLinks';
 interface RecentLink {
@@ -265,15 +213,6 @@ function addRecentLinks(urls: string[]): void {
 function lineCountLabel(n: number): string {
   return t(`${n} línea${n === 1 ? '' : 's'}`, `${n} line${n === 1 ? '' : 's'}`);
 }
-function timeAgo(ts: number): string {
-  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return t('ahora', 'now');
-  const m = Math.floor(s / 60);
-  if (m < 60) return t(`hace ${m} min`, `${m} min ago`);
-  const h = Math.floor(m / 60);
-  if (h < 24) return t(`hace ${h} h`, `${h} h ago`);
-  return t(`hace ${Math.floor(h / 24)} d`, `${Math.floor(h / 24)} d ago`);
-}
 function renderRecentPanel(): void {
   const panel = $('recent-panel');
   const items = loadRecents();
@@ -296,7 +235,7 @@ function renderRecentPanel(): void {
   panel.querySelectorAll<HTMLElement>('.rl-item').forEach((b) =>
     b.addEventListener('click', () => {
       // Añade el enlace al textarea sin duplicar líneas y actualiza el contador.
-      const input = $('url-input') as HTMLTextAreaElement;
+      const input = $<HTMLTextAreaElement>('url-input');
       const lines = input.value.split('\n').map((l) => l.trim()).filter(Boolean);
       if (!lines.includes(b.dataset.url!)) lines.push(b.dataset.url!);
       input.value = lines.join('\n');
@@ -542,7 +481,7 @@ function openVideoOpts(url: string): void {
     // Se usa .onclick/.oninput (no addEventListener) para no acumular listeners
     // entre repintados y aperturas del modal.
     const paintTgl = (id: string, key: 'subs' | 'thumb') => {
-      const btn = $(id) as HTMLButtonElement;
+      const btn = $<HTMLButtonElement>(id);
       const on = !!eff[key];
       btn.setAttribute('style', toggleStyle(on));
       btn.innerHTML = knob;
@@ -554,7 +493,7 @@ function openVideoOpts(url: string): void {
     };
     paintTgl('ov-toggle-subs', 'subs');
     paintTgl('ov-toggle-thumb', 'thumb');
-    const tplIn = $('ov-template') as HTMLInputElement;
+    const tplIn = $<HTMLInputElement>('ov-template');
     if (document.activeElement !== tplIn) tplIn.value = eff.template;
     tplIn.oninput = () => {
       ovDraft = { ...(ovDraft || {}), template: tplIn.value };
@@ -580,24 +519,19 @@ function closeVideoOpts(commit: boolean): void {
   $('ov-overlay').hidden = true;
   renderPreview(); // resincroniza icono de engranaje y badge de override
 }
+/** Chips del modal por-video: no se auto-repintan (paint() repinta todo el modal). */
 function renderChipsInto<T extends string>(group: string, list: [T, string][], curVal: string, onPick: (v: T) => void): void {
-  const el = document.querySelector<HTMLElement>(`[data-group="${group}"]`);
-  if (!el) return;
-  el.innerHTML = list.map(([v, l]) => `<button data-val="${v}" style="${chipStyle(v === curVal)}">${l}</button>`).join('');
-  // Igual que renderChips: el valor sale de `list` por índice para conservar T.
-  el.querySelectorAll<HTMLElement>('[data-val]').forEach((b, i) => b.addEventListener('click', () => onPick(list[i][0])));
+  renderChipGroup(group, list, () => curVal, onPick, { rerender: false });
 }
 
 // ---------- download ----------
 async function analyze(): Promise<void> {
-  const urls = $('url-input')
-    ? ($('url-input') as HTMLTextAreaElement).value.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('http'))
-    : [];
+  const urls = $<HTMLTextAreaElement>('url-input').value.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('http'));
   if (urls.length === 0) {
     showToast(t('Sin enlaces', 'No links'), t('Pega al menos un enlace para previsualizar.', 'Paste at least one link to preview.'), 'warn');
     return;
   }
-  const btn = $('btn-analyze') as HTMLButtonElement;
+  const btn = $<HTMLButtonElement>('btn-analyze');
   btn.disabled = true;
   const orig = btn.innerHTML;
   btn.innerHTML = `${I.spinner} ${t('Analizando…', 'Analyzing…')}`;
@@ -632,7 +566,7 @@ async function analyze(): Promise<void> {
     // ajuste lo desactive; se lee fresco para respetar cambios recientes.
     const cfg = await getSettings().catch(() => null);
     if (cfg?.clear_links_after_preview !== false) {
-      ($('url-input') as HTMLTextAreaElement).value = '';
+      $<HTMLTextAreaElement>('url-input').value = '';
       $('link-count').textContent = lineCountLabel(0);
     }
   } catch (e) {
@@ -680,14 +614,15 @@ function startDownload(): void {
 
 export function initDescargar(): void {
   renderModeCards();
+  // La calidad repinta también la preview (los badges de tamaño dependen de ella).
   const paintQuality = () =>
-    renderChips('quality', [['max', t('Máxima', 'Max')], ['4k', '4K'], ['1440p', '1440p'], ['1080p', '1080p'], ['720p', '720p'], ['480p', '480p']], () => opts.quality, (v) => (opts.quality = v));
+    renderChipGroup('quality', [['max', t('Máxima', 'Max')], ['4k', '4K'], ['1440p', '1440p'], ['1080p', '1080p'], ['720p', '720p'], ['480p', '480p']], () => opts.quality, (v) => (opts.quality = v), { after: () => { renderPreview(); refreshSummary(); } });
   const paintContainer = () =>
-    renderChips('container', [['MP4', 'MP4'], ['MKV', 'MKV'], ['WebM', 'WebM']], () => opts.container, (v) => (opts.container = v));
+    renderChipGroup('container', [['MP4', 'MP4'], ['MKV', 'MKV'], ['WebM', 'WebM']], () => opts.container, (v) => (opts.container = v), { after: refreshSummary });
   paintQuality();
   paintContainer();
-  renderChips('audioFmt', [['MP3', 'MP3'], ['M4A', 'M4A'], ['Opus', 'Opus']], () => opts.audioFmt, (v) => (opts.audioFmt = v));
-  renderChips('bitrate', [['128', '128'], ['192', '192'], ['256', '256'], ['320', '320']], () => opts.bitrate, (v) => (opts.bitrate = v));
+  renderChipGroup('audioFmt', [['MP3', 'MP3'], ['M4A', 'M4A'], ['Opus', 'Opus']], () => opts.audioFmt, (v) => (opts.audioFmt = v), { after: refreshSummary });
+  renderChipGroup('bitrate', [['128', '128'], ['192', '192'], ['256', '256'], ['320', '320']], () => opts.bitrate, (v) => (opts.bitrate = v), { after: refreshSummary });
 
   // Aplicar los ajustes de "Descarga por defecto" (los defaults de modo, subs,
   // miniatura y plantilla ya no tienen controles aquí: viven en Ajustes). Si no
@@ -712,7 +647,7 @@ export function initDescargar(): void {
     .then((cfg) => applyDefaults(cfg))
     .catch(() => {});
 
-  const urlInput = $('url-input') as HTMLTextAreaElement;
+  const urlInput = $<HTMLTextAreaElement>('url-input');
   urlInput.addEventListener('input', () => {
     const n = urlInput.value.split('\n').filter((l) => l.trim()).length;
     $('link-count').textContent = lineCountLabel(n);
