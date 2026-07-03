@@ -16,6 +16,7 @@ fn main() {
             session::commands::open_youtube_login,
             session::commands::refresh_session_silent,
             session::commands::get_session_status,
+            session::commands::get_account_info,
             session::commands::logout,
             settings::commands::open_downloads_folder,
             settings::commands::get_download_folder,

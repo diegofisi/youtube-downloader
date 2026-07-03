@@ -1,3 +1,10 @@
+/** Información de la cuenta de YouTube conectada (comando get_account_info). */
+export interface AccountInfo {
+  name: string;
+  handle: string | null;
+  avatarUrl: string | null;
+}
+
 export interface CookieResult {
   status: 'none' | 'youtube' | 'generic' | 'invalid' | 'error' | 'cancelled';
   path?: string;

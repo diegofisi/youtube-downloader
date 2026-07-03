@@ -5716,10 +5716,12 @@ dependencies = [
 name = "youtube-downloader"
 version = "1.0.0"
 dependencies = [
+ "base64 0.22.1",
  "cookie",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha1",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

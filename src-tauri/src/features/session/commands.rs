@@ -2,7 +2,7 @@ use std::io::Write;
 use tauri::webview::{PageLoadEvent, WebviewWindowBuilder};
 use tauri::{AppHandle, Emitter, Manager, Url};
 
-use super::models::CookieResult;
+use super::models::{AccountInfo, CookieResult};
 use super::service;
 use crate::core::paths;
 
@@ -22,6 +22,15 @@ pub fn load_cookies(app: AppHandle, path: String) -> CookieResult {
 pub fn get_session_status(app: AppHandle) -> String {
     let app_dir = paths::app_dir(&app);
     service::session_status(&app_dir).to_string()
+}
+
+#[tauri::command]
+pub async fn get_account_info(app: AppHandle) -> Result<Option<AccountInfo>, String> {
+    let app_dir = paths::app_dir(&app);
+    // spawn_blocking: usa reqwest::blocking; no debe correr en el runtime async.
+    tauri::async_runtime::spawn_blocking(move || service::get_account_info(&app_dir))
+        .await
+        .map_err(|e| format!("Error interno consultando la cuenta: {}", e))?
 }
 
 #[tauri::command]

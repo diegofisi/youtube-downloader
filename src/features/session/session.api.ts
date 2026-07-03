@@ -1,7 +1,7 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import { open as shellOpen } from '@tauri-apps/plugin-shell';
 import { invoke, onEvent, type UnlistenFn } from '../../core/tauri/client';
-import type { CookieResult } from './session.types';
+import type { AccountInfo, CookieResult } from './session.types';
 
 export async function checkCookies(): Promise<CookieResult> {
   return invoke<CookieResult>('check_cookies');
@@ -32,6 +32,14 @@ export type SessionStatus = 'none' | 'expired' | 'connected';
 
 export async function getSessionStatus(): Promise<SessionStatus> {
   return invoke<SessionStatus>('get_session_status');
+}
+
+/**
+ * Nombre, handle y avatar de la cuenta de YouTube conectada.
+ * Resuelve null si no hay sesión o YouTube no devuelve cuenta.
+ */
+export async function getAccountInfo(): Promise<AccountInfo | null> {
+  return invoke<AccountInfo | null>('get_account_info');
 }
 
 export async function logoutSession(): Promise<void> {
