@@ -1,6 +1,6 @@
 # Testing: what gets tested here and how (backend)
 
-Repo philosophy (fase4 commit: "tests de lo fragil"): test the logic that breaks silently,
+Repo philosophy (fase4 commit, "tests for the fragile parts"): test the logic that breaks silently,
 not the wiring. Frontend testing (vitest patterns, component/state tests) is specified by the
 stash-frontend skill; this file covers the Rust side. Today: embedded Rust tests in ytdlp,
 download/service, session/service and settings/models.
@@ -22,8 +22,8 @@ download/service, session/service and settings/models.
 
 ## Rust patterns
 
-Tests live in `#[cfg(test)] mod tests { use super::*; … }` at the END of the same file, names
-in Spanish snake_case (see conventions.md).
+Tests live in `#[cfg(test)] mod tests { use super::*; … }` at the END of the same file; new
+test names in English snake_case (existing tests keep their legacy names — see conventions.md).
 
 **std tempdir with a Drop guard** (no test crates) for real FS (session/service.rs):
 

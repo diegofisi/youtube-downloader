@@ -4,14 +4,12 @@ description: >
   Generates backend code in Stash (Tauri 2 + Rust, vertical slices) following the
   repo's REAL architecture and conventions. Use when asked to add a new Tauri
   command, a new Rust service, a new backend event, or to change the frontend↔backend
-  contract — including the Spanish trigger phrases "nuevo comando", "nuevo servicio
-  Rust", "nuevo evento Tauri", "cambio de contrato backend". For UI/frontend work
-  use the stash-frontend skill instead.
+  contract. For UI/frontend work use the stash-frontend skill instead.
 ---
 
 # Stash Backend
 
-Examples > prose: every pattern below exists in the code; copy the cited example instead of inventing. Spanish for user-facing error messages; English for code, file names, and code comments (concise, max 1-2 lines).
+Examples > prose: every pattern below exists in the code; copy the cited example instead of inventing. User-facing error strings are product copy in the app's default language (es) — see `references/error-handling.md`; English for code, file names, and code comments (concise, max 1-2 lines).
 
 This skill covers the Rust/Tauri side and the FE↔BE contract. New views, components, state, or any React work → skill `../stash-frontend`.
 
@@ -21,7 +19,7 @@ This skill covers the Rust/Tauri side and the FE↔BE contract. New views, compo
 |---|---|
 | `references/architecture.md` | Before creating a slice or moving code between layers. Real backend tree, slice anatomy, core/ modules, decision log. |
 | `references/tauri-commands.md` | Before touching a Tauri command or event. Full FE↔BE contract table, serde, spawn_blocking, YtdlpCmd, DownloadRegistry. |
-| `references/error-handling.md` | Errors: `Result<T, String>`, `error_kind`, Spanish user-facing strings. |
+| `references/error-handling.md` | Errors: `Result<T, String>`, `error_kind`, user-facing error strings (product copy). |
 | `references/conventions.md` | Naming, comments, commits, Rust test style. |
 | `references/testing.md` | Before writing tests (what to test and with which patterns). |
 
@@ -35,7 +33,7 @@ Full backend chain (use `library` or `settings` as the model slice):
    #[serde(rename_all = "camelCase")]
    pub struct {Thing} { pub file_path: Option<String>, /* arrives as filePath */ }
    ```
-2. **`service.rs`** — ALL the logic. Typical signature: `pub fn {verb}(app_dir: &Path, ...) -> Result<{Thing}, String>` with user-facing messages in Spanish (`format!("No se pudo …: {}", e)`). No `tauri::` except `AppHandle` when it emits events.
+2. **`service.rs`** — ALL the logic. Typical signature: `pub fn {verb}(app_dir: &Path, ...) -> Result<{Thing}, String>`; the error string is user-facing product copy in the app's default language, e.g. `format!("No se pudo …: {}", e)` (see error-handling.md). No `tauri::` except `AppHandle` when it emits events.
 3. **`commands.rs`** — THIN wrapper:
    ```rust
    #[tauri::command]

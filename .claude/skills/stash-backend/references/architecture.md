@@ -29,7 +29,7 @@ src-tauri/src/
 | File | Role |
 |---|---|
 | `models.rs` | Serde structs of the contract (plus internal groupers like `NewEntry`) |
-| `service.rs` | All the logic; `Result<T, String>` — error strings are user-facing UI text and stay in Spanish (see conventions.md); `#[cfg(test)] mod tests` at the end |
+| `service.rs` | All the logic; `Result<T, String>` — error strings are user-facing product copy in the app's default language (see error-handling.md); `#[cfg(test)] mod tests` at the end |
 | `commands.rs` | Thin `#[tauri::command]` wrappers: resolve `app_dir`, delegate, `spawn_blocking` when heavy |
 | `mod.rs` | `pub mod commands; pub mod models; mod service;` — `pub mod service` ONLY if another slice consumes it (session, settings) |
 

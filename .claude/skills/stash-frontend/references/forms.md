@@ -8,7 +8,7 @@ Absorbs base guideline §4.9 (Zod Validation Schemas) in full, plus the RHF wiri
 - Schemas live in the feature's `helpers/` folder: `[domain].schema.ts` or `[action]-[domain].schema.ts`.
 - Always derive the form type with `z.infer<typeof schema>` — never duplicate the interface.
 - Compose with `.partial()`, `.pick()`, `.omit()`, `.extend()` to avoid repetition.
-- Validation messages are user-friendly strings (in Stash: Spanish via `t()` where surfaced, see below), not technical errors.
+- Validation messages are user-friendly strings (in Stash: bilingual via `t(es, en)` where surfaced, see below), not technical errors.
 - Zod is for **forms and runtime validation only**. Domain Models and DTOs remain plain TS interfaces.
 
 ```typescript

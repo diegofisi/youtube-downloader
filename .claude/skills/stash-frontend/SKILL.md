@@ -5,8 +5,7 @@ description: >
   architecture: React + TS + Tailwind + Shadcn UI + Zustand + React Query, vertical
   slices, Container/Presentational, Adapter Pattern over Tauri invoke(). Use when
   asked to create or modify a view, page, component, hook, store, form, route, or
-  any React UI work — including the Spanish trigger phrases "nueva vista",
-  "nueva página", "nuevo componente", "nuevo hook", "nueva feature de UI".
+  any React UI work.
 ---
 
 # Stash Frontend (React 19)

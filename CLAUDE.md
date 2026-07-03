@@ -1,7 +1,7 @@
 # Stash
 
 Stash is a desktop YouTube downloader (videos, playlists, subscriptions) built on yt-dlp/ffmpeg,
-with session login, a download queue, history library, and Spanish/English UI.
+with session login, a download queue, history library, and a bilingual (es/en) UI.
 
 ## Stack
 
@@ -33,8 +33,9 @@ cd src-tauri && cargo test
 1. **Never break the FE↔BE serde contract**: new structs use `rename_all = "camelCase"`;
    legacy snake_case models (`AppConfig`, `VideoMeta`) are untouchable without a migration.
    The contract table lives in the stash-backend skill (`references/tauri-commands.md`).
-2. **User-facing strings are Spanish**, delivered through the i18n system (frontend) or as
-   Spanish `Result<T, String>` messages (backend). Code, file names, and identifiers: English.
+2. **User-facing strings go through the i18n layer** `t(es, en)` (frontend); the backend
+   currently returns user-facing error strings in the app's default language (es) — treat
+   them as product copy, not code style. Code, file names, and identifiers: English.
 3. **Comments in English, max 1-2 lines**, explaining the why — never the what.
-4. **Commits in Spanish without accents**: `tipo(scope): descripcion`
-   (e.g. `feat(session): logout real`).
+4. **Commit messages in English**: `type(scope): description`
+   (e.g. `feat(session): real logout`).

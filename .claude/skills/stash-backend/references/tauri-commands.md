@@ -77,7 +77,7 @@ pub async fn {cmd}(app: AppHandle, url: String, options: {Opts}) -> Result<{Out}
         service::{fn}(&app, &registry, &app_dir, &url, &options)
     })
     .await
-    .map_err(|e| format!("Error interno en el hilo de {…}: {}", e))  // user-facing: Spanish
+    .map_err(|e| format!("Error interno en el hilo de {…}: {}", e))  // user-facing product copy (see error-handling.md)
 }
 ```
 

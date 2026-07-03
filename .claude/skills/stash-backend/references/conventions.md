@@ -21,30 +21,34 @@ than a redundant one. This applies to `//`, `/* */`, and doc comments alike.
 
 UI-facing strings are NOT comments and follow their own rules:
 - Rust error messages returned to the frontend (`Result<T, String>`) are user-visible text:
-  they stay in **Spanish** until backend i18n exists (see error-handling.md).
-- Frontend user-facing texts go through the i18n system specified by the stash-frontend skill.
+  the backend currently returns them in the app's default language (es) until backend i18n
+  exists — treat them as product copy, not code style (see error-handling.md).
+- Frontend user-facing texts go through the i18n layer `t(es, en)` specified by the
+  stash-frontend skill.
 
-## Commits (real git-log style)
+## Commits
 
-`type(scope): description` — **in Spanish and WITHOUT accents** (the log uses "descripcion",
-"nucleo", "tamanos"). This convention is intentionally kept in Spanish — do not switch it to
-English. Types seen: `feat`, `fix`, `refactor`, `chore`, `test` (combinable: `chore,test(fase4):`,
+Commit messages in **English**, `type(scope): description` (conventional style). Types seen:
+`feat`, `fix`, `refactor`, `chore`, `test` (combinable: `chore,test(fase4):`,
 `fix,refactor(fase1):`). Scope = slice or phase:
 
 ```
-feat(session): logout real + deteccion de sesion caducada + fix Mi YouTube
-fix(preview): radios/Mix -> tope 25; playlists reales -> sin tope
-refactor(fase3): cortes de god-files, dedupe de vistas y nucleo Rust unificado
+feat(session): real logout + expired-session detection + fix My YouTube
+fix(preview): radios/Mix -> cap 25; real playlists -> no cap
+refactor(fase3): god-file cuts, view dedupe and unified Rust core
 ```
 Body (when present): `-` bullets, dense, citing numbers ("descargar.ts 754->265") and the why.
+Note: older log entries predate this rule and are not in English — do not imitate them.
 
 ## Rust test style
 
 - `#[cfg(test)] mod tests { use super::*; … }` AT THE END of the same file.
-- Test names in Spanish with snake_case:
-  `fn build_fuerza_encoding_utf8_y_cierra_con_doble_guion_antes_de_la_url()`.
+- Test names in English snake_case, descriptive sentence style
+  (e.g. `fn build_forces_utf8_encoding_and_closes_with_double_dash_before_url()`).
+  Existing tests predate this rule and keep their original (non-English) names — do not
+  mass-rename them; new tests are English.
 - Sections separated with `// ---------- name ----------`.
-- Helpers/fixtures local to the tests mod: `fn linea(...)`, `struct TempDir` with `Drop`, `fn opciones(...)`.
+- Helpers/fixtures local to the tests mod (e.g. `struct TempDir` with `Drop`, small builder fns).
 
 Frontend (vitest) test style → stash-frontend skill.
 See testing.md for what deserves a test and what doesn't.

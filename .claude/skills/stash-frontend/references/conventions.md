@@ -29,11 +29,11 @@ React Query hooks live in `api/[endpoint]/`; custom hooks in `hooks/`. Mappers l
 
 | Topic | Rule | Grounded in |
 |---|---|---|
-| Commit messages | **Spanish**, conventional-commit style: `feat(session): logout real + deteccion de sesion caducada` | repo history |
+| Commit messages | **English**, conventional style `type(scope): description`: `feat(session): real logout + expired-session detection` | repo convention (older log entries predate this rule) |
 | Code comments | **English**, concise, max ~2 lines; explain the *why* | current codebase style |
 | UI text / user-facing errors | Always both languages via `t(es, en)` | `core/i18n.ts` |
 | localStorage | Prefix `stash.` for new keys (`stash.lang`, `stash.recentLinks`); legacy `stash-theme`, `stash-onboarded` remain until migrated | `core/i18n.ts`, `recent-links.ts`, `theme.ts`, `onboarding.ts` |
-| Rust-facing strings | User-facing backend errors arrive in Spanish (`Err(String)`); show them as the toast body | backend convention |
+| Rust-facing strings | User-facing backend errors arrive as `Err(String)` product copy in the app's default language (es, no backend i18n yet); show them as the toast body | backend contract (stash-backend error-handling.md) |
 
 ## Adaptation 5 — i18n & theme (OVERRIDES nothing in the guideline; it simply isn't covered there)
 

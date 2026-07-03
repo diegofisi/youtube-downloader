@@ -3,11 +3,13 @@
 How the frontend surfaces these errors (toasts, panels, catch boundaries) is specified by the
 stash-frontend skill. This file owns the backend side of the contract.
 
-## Rust: `Result<T, String>` with user-facing messages in Spanish
+## Rust: `Result<T, String>` — error strings are user-facing product copy
 
 No thiserror or custom error types: services return `Result<T, String>` and the message reaches
-the frontend verbatim. These are UI strings for the user (not logs, not comments): they stay in
-Spanish until backend i18n exists.
+the frontend verbatim. These are UI strings for the user (not logs, not comments). The frontend
+is bilingual via `t(es, en)`, but the backend has no i18n layer yet: until it exists, backend
+error strings are written in the app's default language (es). Treat them as product copy, not
+code style — code, identifiers, and comments remain English.
 
 ```rust
 fsx::write_atomic(&path, content).map_err(|e| format!("No se pudo escribir {…}: {}", e))?;
