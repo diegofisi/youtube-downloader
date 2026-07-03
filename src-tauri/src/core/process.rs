@@ -47,8 +47,9 @@ pub fn kill_all() -> bool {
 fn kill_process(pid: u32) {
     #[cfg(target_os = "windows")]
     {
+        // /T mata también los hijos (ffmpeg lanzado por yt-dlp para merge/extraccion).
         let mut cmd = Command::new("taskkill");
-        cmd.args(["/F", "/PID", &pid.to_string()]);
+        cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
         cmd.creation_flags(0x08000000);
         cmd.spawn().ok();
     }

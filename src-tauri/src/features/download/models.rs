@@ -7,6 +7,14 @@ pub struct DownloadResult {
     pub success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// Clasificación del fallo: "auth" (sesión/cookies), "cache" (HTTP 403
+    /// persistente tras limpiar cache) u "other". Llega al frontend como `errorKind`.
+    #[serde(rename = "errorKind", skip_serializing_if = "Option::is_none")]
+    pub error_kind: Option<String>,
+    /// Ruta absoluta del archivo final descargado (capturada con
+    /// `--print after_move:filepath`). None si no se pudo capturar.
+    #[serde(rename = "filePath", skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
 }
 
 /// Opciones de descarga (enviadas desde el frontend en camelCase).

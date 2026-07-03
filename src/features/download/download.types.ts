@@ -1,6 +1,10 @@
 export interface DownloadResult {
   success: boolean;
   error?: string;
+  /** Clasificación del fallo: sesión/cookies ("auth"), 403 persistente ("cache") u otro. */
+  errorKind?: 'auth' | 'cache' | 'other';
+  /** Ruta absoluta del archivo final descargado (si se pudo capturar). */
+  filePath?: string;
 }
 
 export interface ProgressData {
