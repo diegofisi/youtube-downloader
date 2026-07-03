@@ -1,5 +1,5 @@
 {
-  "productName": "YouTube Downloader",
+  "productName": "Stash",
   "version": "1.0.0",
   "identifier": "com.youtube.downloader",
   "build": {
@@ -37,6 +37,7 @@
     ],
     "targets": ["nsis", "dmg"],
     "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" },
       "nsis": {
         "installMode": "both",
         "displayLanguageSelector": false,
