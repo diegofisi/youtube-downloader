@@ -35,7 +35,7 @@ src-tauri/src/
 ├── core/
 │   ├── fsx.rs                     # write_atomic (tmp + rename)
 │   ├── models.rs                  # ProgressData (download-progress event)
-│   ├── paths.rs                   # app_dir(dev/release), find_executable, has_binary
+│   ├── paths.rs                   # app_dir (dev: <project>/.dev-data; release: AppData), find_executable
 │   ├── process.rs                 # DownloadRegistry (Tauri State) + hide_console + kill_process
 │   └── ytdlp.rs                   # YtdlpCmd (builder) + parse_percent + parse_field
 └── features/
