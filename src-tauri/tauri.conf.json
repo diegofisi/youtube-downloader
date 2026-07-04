@@ -1,6 +1,6 @@
 {
   "productName": "Stash",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.youtube.downloader",
   "build": {
     "frontendDist": "../dist",
@@ -13,10 +13,10 @@
       {
         "label": "main",
         "title": "Stash",
-        "width": 1100,
-        "height": 760,
+        "width": 1160,
+        "height": 900,
         "minWidth": 940,
-        "minHeight": 640,
+        "minHeight": 700,
         "resizable": true,
         "decorations": false,
         "center": true

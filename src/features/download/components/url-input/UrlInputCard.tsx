@@ -87,7 +87,7 @@ export const UrlInputCard = ({
         onChange={(e) => onUrlsTextChange(e.target.value)}
         spellCheck={false}
         placeholder={t.download.pastePlaceholder()}
-        className="h-22 w-full resize-y rounded-[10px] border border-border bg-background px-3.25 py-2.75 font-mono text-body-sm leading-[1.7] text-foreground outline-none placeholder:text-faint focus-visible:border-primary"
+        className="h-24 w-full resize-y rounded-[10px] border border-border bg-background px-3.25 py-2.75 font-mono text-body-sm leading-[1.7] text-foreground outline-none placeholder:text-faint focus-visible:border-primary"
       />
       <Stack direction="row" gap="sm" align="center" className="mt-3 gap-2.5">
         <Button onClick={onAnalyze} disabled={isAnalyzing} className="h-9.5 px-4.5 text-body-sm">
