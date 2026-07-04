@@ -13,8 +13,8 @@ with session login, a download queue, history library, and a bilingual (es/en) U
 ## Verification (golden commands)
 
 ```
-npm run check                 # tsc --noEmit + eslint src + cargo check
-npm run test                  # vitest run
+pnpm run check                 # tsc --noEmit + eslint src + cargo check
+pnpm run test                  # vitest run
 cd src-tauri && cargo check
 cd src-tauri && cargo clippy -- -D warnings
 cd src-tauri && cargo test

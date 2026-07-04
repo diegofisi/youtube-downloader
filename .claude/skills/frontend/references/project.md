@@ -175,10 +175,10 @@ gate is a shell-level blocking dialog (gated on `check_dependencies` +
 ## Verification commands
 
 ```bash
-npm run typecheck   # tsc --noEmit
-npm run lint        # eslint src (boundaries plugin enforces layer imports)
-npm run test        # vitest run
-npm run check       # typecheck + lint + cargo check
+pnpm run typecheck   # tsc --noEmit
+pnpm run lint        # eslint src (boundaries plugin enforces layer imports)
+pnpm run test        # vitest run
+pnpm run check       # typecheck + lint + cargo check
 ```
 
 If a script fails for tooling reasons, check `package.json` for its current

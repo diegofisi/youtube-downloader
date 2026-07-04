@@ -21,9 +21,9 @@ project's live data: real names, the FE↔BE contract, and the decision log.
 ## Verification commands
 
 ```
-npm run check                 # tsc --noEmit + eslint src + cargo check
+pnpm run check                 # tsc --noEmit + eslint src + cargo check
 cd src-tauri && cargo check
-cd src-tauri && cargo clippy -- -D warnings   # or: npm run check:rust
+cd src-tauri && cargo clippy -- -D warnings   # or: pnpm run check:rust
 cd src-tauri && cargo test
 ```
 
