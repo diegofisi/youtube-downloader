@@ -9,16 +9,9 @@
 Download videos, playlists and entire channels. Sign in to grab your subscriptions,
 Watch Later, liked videos and members-only content — with a live queue and a personal library.
 
-[![Release](https://img.shields.io/github/v/release/diegofisi/youtube-downloader?style=for-the-badge&color=7C6BF0&labelColor=1e1b2e)](https://github.com/diegofisi/youtube-downloader/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/diegofisi/youtube-downloader/total?style=for-the-badge&color=7C6BF0&labelColor=1e1b2e)](https://github.com/diegofisi/youtube-downloader/releases)
-[![License](https://img.shields.io/github/license/diegofisi/youtube-downloader?style=for-the-badge&color=7C6BF0&labelColor=1e1b2e)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/diegofisi/youtube-downloader?style=for-the-badge&color=7C6BF0&labelColor=1e1b2e)](https://github.com/diegofisi/youtube-downloader/releases/latest) [![Downloads](https://img.shields.io/github/downloads/diegofisi/youtube-downloader/total?style=for-the-badge&color=7C6BF0&labelColor=1e1b2e)](https://github.com/diegofisi/youtube-downloader/releases) [![License](https://img.shields.io/github/license/diegofisi/youtube-downloader?style=for-the-badge&color=7C6BF0&labelColor=1e1b2e)](LICENSE)
 
-[![Windows](https://img.shields.io/badge/Windows%2010%2F11-x64-0078D6?style=flat-square&logo=windows&logoColor=white)](https://github.com/diegofisi/youtube-downloader/releases/latest)
-[![Tauri](https://img.shields.io/badge/Tauri-2-24C8D8?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app)
-[![Rust](https://img.shields.io/badge/Rust-backend-CE412B?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org)
-[![React](https://img.shields.io/badge/React-19-58C4DC?style=flat-square&logo=react&logoColor=white)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Tailwind](https://img.shields.io/badge/Tailwind-4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Windows](https://img.shields.io/badge/Windows%2010%2F11-x64-0078D6?style=flat-square&logo=windows&logoColor=white)](https://github.com/diegofisi/youtube-downloader/releases/latest) [![Tauri](https://img.shields.io/badge/Tauri-2-24C8D8?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app) [![Rust](https://img.shields.io/badge/Rust-backend-CE412B?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org) [![React](https://img.shields.io/badge/React-19-58C4DC?style=flat-square&logo=react&logoColor=white)](https://react.dev) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org) [![Tailwind](https://img.shields.io/badge/Tailwind-4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 
 <br />
 
