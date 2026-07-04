@@ -61,7 +61,9 @@ Watch Later, liked videos and members-only content — with a live queue and a p
 </table>
 -->
 
-> 🚧 Screenshots coming soon.
+<div align="center">
+  <img src="docs/screenshots/app.png" alt="Stash — main window" width="850" />
+</div>
 
 ## 🚀 Install (users)
 
