@@ -1,0 +1,31 @@
+# Runtime binaries (downloaded by the app; release installs fetch their own)
+*.exe
+deno
+deno.zip
+ffmpeg
+ffmpeg-temp.zip
+yt-dlp
+yt-dlp_macos
+
+# Dev runtime data (app_dir in debug builds: session, settings, history, binaries)
+.dev-data/
+cookies.txt
+config.json
+history.json
+videos_descargados/
+
+# Node
+node_modules/
+
+# Build artifacts
+src-tauri/target/
+dist/
+*.log
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Claude Code (local-only settings; project skills ARE versioned)
+.claude/settings.local.json
