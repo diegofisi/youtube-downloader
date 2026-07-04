@@ -58,7 +58,7 @@ export const UrlInputCard = ({
 
   return (
     <Box className="rounded-2xl border border-border bg-panel p-4 shadow-stash">
-      <Box data-recents-anchor className="relative mb-[11px] flex items-center gap-2">
+      <Box data-recents-anchor className="relative mb-2.75 flex items-center gap-2">
         <ClipboardListIcon className="size-4 flex-none text-primary" />
         <Span className="text-[13.5px] font-semibold">{t('Pega tus enlaces', 'Paste your links')}</Span>
         <Small className="ml-auto font-mono text-[11.5px] text-faint">{lineCountLabel(countLines(urlsText))}</Small>
@@ -66,13 +66,13 @@ export const UrlInputCard = ({
           type="button"
           title={t('Enlaces analizados recientemente', 'Recently analyzed links')}
           onClick={toggleRecents}
-          className="flex h-[26px] flex-none items-center gap-[5px] rounded-lg border border-border2 px-[9px] text-[11.5px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          className="flex h-6.5 flex-none items-center gap-1.25 rounded-lg border border-border2 px-2.25 text-[11.5px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ClockIcon className="size-[13px]" />
+          <ClockIcon className="size-3.25" />
           {t('Recientes', 'Recent')}
         </button>
         {recentsOpen && (
-          <Box className="absolute top-[calc(100%+8px)] right-0 z-40 max-h-[320px] w-[340px] overflow-y-auto rounded-xl border border-border2 bg-panel p-[6px] shadow-stash">
+          <Box className="absolute top-[calc(100%+8px)] right-0 z-40 max-h-80 w-85 overflow-y-auto rounded-xl border border-border2 bg-panel p-1.5 shadow-stash">
             <RecentLinksPanel
               items={recents}
               onPick={onPickRecent}
@@ -92,10 +92,10 @@ export const UrlInputCard = ({
           'https://youtube.com/watch?v=…\nhttps://youtube.com/playlist?list=…\nhttps://youtube.com/@canal',
           'https://youtube.com/watch?v=…\nhttps://youtube.com/playlist?list=…\nhttps://youtube.com/@channel',
         )}
-        className="h-[88px] w-full resize-y rounded-[10px] border border-border bg-background px-[13px] py-[11px] font-mono text-[13px] leading-[1.7] text-foreground outline-none placeholder:text-faint focus-visible:border-primary"
+        className="h-22 w-full resize-y rounded-[10px] border border-border bg-background px-3.25 py-2.75 font-mono text-[13px] leading-[1.7] text-foreground outline-none placeholder:text-faint focus-visible:border-primary"
       />
-      <Stack direction="row" gap="sm" align="center" className="mt-3 gap-[10px]">
-        <Button onClick={onAnalyze} disabled={isAnalyzing} className="h-[38px] px-[18px] text-[13.5px]">
+      <Stack direction="row" gap="sm" align="center" className="mt-3 gap-2.5">
+        <Button onClick={onAnalyze} disabled={isAnalyzing} className="h-9.5 px-4.5 text-[13.5px]">
           {isAnalyzing ? <Loader2Icon className="animate-spin" /> : <EyeIcon />}
           {isAnalyzing
             ? progress
@@ -104,9 +104,9 @@ export const UrlInputCard = ({
             : t('Previsualizar videos', 'Preview videos')}
         </Button>
         <Box className="flex-1" />
-        <Button variant="ghost" onClick={onGoYoutube} className="h-[38px] px-[6px] text-[13px] font-medium">
+        <Button variant="ghost" onClick={onGoYoutube} className="h-9.5 px-1.5 text-[13px] font-medium">
           {t('o explora tu YouTube', 'or browse your YouTube')}
-          <ArrowRightIcon className="size-[15px]" />
+          <ArrowRightIcon className="size-3.75" />
         </Button>
       </Stack>
     </Box>

@@ -83,7 +83,7 @@ export const DefaultsSection = ({
           onBlur={onTemplateBlur}
           spellCheck={false}
           aria-invalid={templateError !== undefined}
-          className="h-[34px] w-[250px] font-mono text-xs"
+          className="h-8.5 w-62.5 font-mono text-xs"
         />
         {templateError !== undefined && <Small className="font-normal text-destructive">{templateError}</Small>}
       </Stack>
@@ -103,12 +103,12 @@ export const DefaultsSection = ({
     <SettingsRow
       title={t('Carpeta de descargas', 'Downloads folder')}
       description={
-        <Small className="block max-w-[420px] truncate font-mono text-xs font-normal" title={folder}>
+        <Small className="block max-w-105 truncate font-mono text-xs font-normal" title={folder}>
           {folder ?? '…'}
         </Small>
       }
     >
-      <Button variant="outline" size="sm" className="h-[34px]" disabled={isChangingFolder} onClick={onChangeFolder}>
+      <Button variant="outline" size="sm" className="h-8.5" disabled={isChangingFolder} onClick={onChangeFolder}>
         <FolderIcon />
         {t('Cambiar', 'Change')}
       </Button>

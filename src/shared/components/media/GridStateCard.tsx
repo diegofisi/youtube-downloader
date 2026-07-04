@@ -37,7 +37,7 @@ export const GridStateCard = ({ title, message, loading, action }: GridStateCard
       className="col-span-full rounded-2xl border-[1.5px] border-dashed border-border2 px-5 py-12 text-center"
     >
       <Span className="text-sm font-semibold text-muted-foreground">{title}</Span>
-      {message && <Span className="mt-[5px] text-[12.5px] text-faint">{message}</Span>}
+      {message && <Span className="mt-1.25 text-[12.5px] text-faint">{message}</Span>}
       {action && <Box className="mt-4">{action}</Box>}
     </Stack>
   );

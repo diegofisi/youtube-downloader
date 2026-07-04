@@ -99,7 +99,7 @@ export const LibraryListContainer = ({ onDeleteFile, onClearAll }: LibraryListCo
         <Stack direction="row" justify="center" className="mt-1">
           <Button
             variant="outline"
-            className="h-[38px] rounded-[10px] px-[22px] text-[13px]"
+            className="h-9.5 rounded-[10px] px-5.5 text-[13px]"
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
           >
             {t('Ver más', 'Show more')}

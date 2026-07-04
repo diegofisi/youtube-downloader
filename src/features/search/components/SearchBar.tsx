@@ -24,9 +24,9 @@ export const SearchBar = ({ value, onChange, onSubmit }: SearchBarProps) => (
       direction="row"
       gap="sm"
       align="center"
-      className="h-[46px] min-w-0 flex-1 rounded-xl border border-border bg-panel px-[15px] text-faint"
+      className="h-11.5 min-w-0 flex-1 rounded-xl border border-border bg-panel px-3.75 text-faint"
     >
-      <SearchIcon className="size-[18px]" />
+      <SearchIcon className="size-4.5" />
       {/* Raw input: the shared Input carries its own height/border chrome. */}
       <input
         autoFocus
@@ -38,7 +38,7 @@ export const SearchBar = ({ value, onChange, onSubmit }: SearchBarProps) => (
     </Stack>
     <Button
       type="submit"
-      className="h-[46px] rounded-xl px-6 text-sm font-bold shadow-[0_6px_18px_rgba(124,107,240,.3)]"
+      className="h-11.5 rounded-xl px-6 text-sm font-bold shadow-[0_6px_18px_rgba(124,107,240,.3)]"
     >
       {t('Buscar', 'Search')}
     </Button>

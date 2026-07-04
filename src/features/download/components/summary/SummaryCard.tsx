@@ -28,17 +28,17 @@ export const SummaryCard = ({ chosenCount, customCount, estMb, opts, onDownload 
       : `${qualityLabel(opts.quality)} · ${opts.container}${opts.mode === 'video' ? t(' · sin audio', ' · no audio') : ''}${opts.subs ? ' · Subs' : ''}`;
 
   return (
-    <Box className="rounded-2xl border border-border bg-panel p-[14px] shadow-stash">
+    <Box className="rounded-2xl border border-border bg-panel p-3.5 shadow-stash">
       <Stack direction="row" justify="between" className="mb-1 items-baseline">
         <Small className="text-xs font-normal text-muted-foreground">{selLabel}</Small>
         <Small className="text-[11.5px] font-normal text-faint">{optsLabel}</Small>
       </Stack>
-      <Stack direction="row" justify="between" className="mb-[11px] items-baseline">
+      <Stack direction="row" justify="between" className="mb-2.75 items-baseline">
         <Small className="text-xs font-normal text-muted-foreground">{t('Tamaño estimado', 'Estimated size')}</Small>
         <Span className="font-mono text-[15px] font-bold text-foreground">{estMb ? fmtSize(estMb) : '—'}</Span>
       </Stack>
       <Button onClick={onDownload} className="h-11 w-full rounded-[11px] text-sm font-bold">
-        <DownloadIcon className="size-[18px]" />
+        <DownloadIcon className="size-4.5" />
         {`${t('Descargar', 'Download')} ${chosenCount || ''}`.trim()}
       </Button>
     </Box>

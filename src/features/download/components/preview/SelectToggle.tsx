@@ -16,7 +16,7 @@ export const SelectToggle = ({ on, disabled, onToggle }: SelectToggleProps) => (
       if (!disabled) onToggle();
     }}
     className={cn(
-      'flex size-[22px] flex-none items-center justify-center rounded-[7px] border-[1.8px] transition-colors',
+      'flex size-5.5 flex-none items-center justify-center rounded-[7px] border-[1.8px] transition-colors',
       on ? 'border-primary bg-primary text-primary-foreground' : 'border-border2 bg-transparent',
     )}
   >

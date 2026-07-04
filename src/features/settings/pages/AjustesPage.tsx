@@ -37,7 +37,7 @@ export const AjustesPage = () => {
   };
 
   return (
-    <Stack gap="lg" className="mx-auto w-full max-w-[780px] px-[30px] pt-[26px] pb-16">
+    <Stack gap="lg" className="mx-auto w-full max-w-195 px-7.5 pt-6.5 pb-16">
       <Stack gap="xs">
         <H1>{t('Ajustes', 'Settings')}</H1>
         <P color="muted" className="text-[13.5px]">

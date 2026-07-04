@@ -25,7 +25,7 @@ export const VideoCard = ({ vm, onToggle, onOpenOpts }: VideoCardProps) => {
   return (
     <Box
       className={cn(
-        'flex items-center gap-[13px] rounded-[14px] border bg-panel p-[11px] transition-colors',
+        'flex items-center gap-3.25 rounded-[14px] border bg-panel p-2.75 transition-colors',
         vm.selected ? 'border-primary' : 'border-border',
         !meta.downloadable && 'opacity-50',
         meta.downloadable && dup && 'opacity-[.64]',
@@ -44,7 +44,7 @@ export const VideoCard = ({ vm, onToggle, onOpenOpts }: VideoCardProps) => {
           {vm.hasOverride && (
             <Span
               title={t('Opciones personalizadas de este video', 'Custom options for this video')}
-              className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-[7px] py-[2px] text-[10px] font-semibold text-primary"
+              className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-1.75 py-0.5 text-[10px] font-semibold text-primary"
             >
               {fmtDescription(vm.eff)}
             </Span>
@@ -54,7 +54,7 @@ export const VideoCard = ({ vm, onToggle, onOpenOpts }: VideoCardProps) => {
       <Stack gap="sm" align="end" className="flex-none self-start">
         <Span
           className={cn(
-            'rounded-[5px] px-[7px] py-[3px] text-[9.5px] font-bold tracking-[.5px]',
+            'rounded-[5px] px-1.75 py-0.75 text-[9.5px] font-bold tracking-[.5px]',
             vm.eff.mode === 'audio' ? 'bg-success/15 text-success' : 'bg-accent text-faint',
           )}
         >

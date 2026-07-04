@@ -32,16 +32,16 @@ export const PlaylistCard = ({ item, onOpen }: PlaylistCardProps) => {
           </Box>
         )}
         <Box className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(0,0,0,.5))]" />
-        <Span className="absolute right-2 bottom-2 flex items-center gap-[5px] rounded-[5px] bg-black/80 px-[7px] py-0.5 text-[10.5px] font-semibold text-white">
+        <Span className="absolute right-2 bottom-2 flex items-center gap-1.25 rounded-[5px] bg-black/80 px-1.75 py-0.5 text-[10.5px] font-semibold text-white">
           <ListVideoIcon className="size-3" />
           {badgeLabel}
         </Span>
       </Box>
-      <Stack gap="none" className="px-[11px] pt-2.5 pb-3">
+      <Stack gap="none" className="px-2.75 pt-2.5 pb-3">
         <Span className="line-clamp-2 min-h-8.5 text-[12.5px] leading-[1.35] font-semibold text-foreground">
           {item.title}
         </Span>
-        <Span className="mt-[5px] truncate text-[11.5px] text-muted-foreground">
+        <Span className="mt-1.25 truncate text-[11.5px] text-muted-foreground">
           {item.channel || t('Abrir playlist →', 'Open playlist →')}
         </Span>
       </Stack>

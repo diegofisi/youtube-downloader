@@ -22,7 +22,7 @@ export const PlaylistChildRow = ({ vm, onToggle, onOpenOpts }: PlaylistChildRowP
   return (
     <Box
       className={cn(
-        'flex items-center gap-[11px] rounded-[10px] border bg-background px-[9px] py-2',
+        'flex items-center gap-2.75 rounded-[10px] border bg-background px-2.25 py-2',
         vm.selected ? 'border-primary' : 'border-transparent',
         !meta.downloadable && 'opacity-50',
       )}

@@ -38,7 +38,7 @@ export const AccountCard = ({ name, handle, avatarUrl, expired, onReconnect, onL
       direction="row"
       gap="md"
       align="center"
-      className="mb-5 rounded-[15px] border border-border bg-panel px-[17px] py-[15px]"
+      className="mb-5 rounded-[15px] border border-border bg-panel px-4.25 py-3.75"
     >
       <Box className="flex size-12 flex-none items-center justify-center overflow-hidden rounded-full bg-[linear-gradient(140deg,#6D5BD0,#B36AE2)] text-lg font-bold text-white">
         {showAvatar ? (
@@ -59,7 +59,7 @@ export const AccountCard = ({ name, handle, avatarUrl, expired, onReconnect, onL
           </Span>
           <Span
             className={cn(
-              'inline-flex items-center gap-[5px] rounded-md px-2 py-0.5 text-[11px] font-semibold',
+              'inline-flex items-center gap-1.25 rounded-md px-2 py-0.5 text-[11px] font-semibold',
               expired ? 'bg-warn-soft text-warn' : 'bg-success-soft text-success',
             )}
           >
@@ -72,7 +72,7 @@ export const AccountCard = ({ name, handle, avatarUrl, expired, onReconnect, onL
       {expired && (
         <Button
           size="sm"
-          className="h-8.5 rounded-[9px] bg-warn px-[13px] text-[12.5px] font-bold text-[#241600] hover:bg-warn"
+          className="h-8.5 rounded-[9px] bg-warn px-3.25 text-[12.5px] font-bold text-[#241600] hover:bg-warn"
           onClick={onReconnect}
         >
           {t('Reconectar', 'Reconnect')}
@@ -81,7 +81,7 @@ export const AccountCard = ({ name, handle, avatarUrl, expired, onReconnect, onL
       <Button
         variant="outline"
         size="sm"
-        className="h-8.5 rounded-[9px] px-[13px] text-[12.5px] font-medium text-destructive hover:text-destructive"
+        className="h-8.5 rounded-[9px] px-3.25 text-[12.5px] font-medium text-destructive hover:text-destructive"
         onClick={onLogout}
       >
         {t('Cerrar sesión', 'Sign out')}

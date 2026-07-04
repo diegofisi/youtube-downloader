@@ -58,7 +58,7 @@ export const DescargarPage = () => {
   );
 
   return (
-    <Stack gap="lg" className="mx-auto w-full max-w-[1180px] px-[30px] pt-[26px] pb-16">
+    <Stack gap="lg" className="mx-auto w-full max-w-295 px-7.5 pt-6.5 pb-16">
       <Stack gap="xs">
         <H1>{t('Descargar', 'Download')}</H1>
         <P color="muted" className="text-[13.5px]">
@@ -69,9 +69,9 @@ export const DescargarPage = () => {
         </P>
       </Stack>
 
-      <Stack direction="row" gap="lg" align="start" wrap className="gap-[22px]">
+      <Stack direction="row" gap="lg" align="start" wrap className="gap-5.5">
         {/* LEFT: paste card + preview */}
-        <Stack gap="md" className="min-w-[380px] flex-1 gap-[18px]">
+        <Stack gap="md" className="min-w-95 flex-1 gap-4.5">
           <UrlInputCard
             urlsText={urlsText}
             isAnalyzing={isAnalyzing}
@@ -96,11 +96,11 @@ export const DescargarPage = () => {
           )}
           {!isAnalyzing && analyzeError !== null && <PageError message={`Error: ${analyzeError}`} />}
           {!isAnalyzing && analyzeError === null && !derived.hasEntries && (
-            <Box className="rounded-2xl border-[1.5px] border-dashed border-border2 px-5 py-[52px] text-center">
+            <Box className="rounded-2xl border-[1.5px] border-dashed border-border2 px-5 py-13 text-center">
               <P color="muted" className="text-sm font-semibold">
                 {t('Pega enlaces para empezar', 'Paste links to get started')}
               </P>
-              <P className="mt-[5px] text-[12.5px] text-faint">
+              <P className="mt-1.25 text-[12.5px] text-faint">
                 {t(
                   'Verás aquí qué se va a descargar, antes de bajar nada.',
                   "You'll see here what will be downloaded, before anything starts.",
@@ -109,7 +109,7 @@ export const DescargarPage = () => {
             </Box>
           )}
           {!isAnalyzing && analyzeError === null && derived.hasEntries && (
-            <Stack gap="sm" className="gap-[10px]">
+            <Stack gap="sm" className="gap-2.5">
               {derived.items.map((item, i) =>
                 item.kind === 'video' ? (
                   <VideoCard
@@ -134,7 +134,7 @@ export const DescargarPage = () => {
         </Stack>
 
         {/* RIGHT: sticky options + summary */}
-        <Stack gap="sm" className="sticky top-0 w-[312px] flex-none gap-[14px]">
+        <Stack gap="sm" className="sticky top-0 w-78 flex-none gap-3.5">
           <GlobalOptionsCard
             opts={opts}
             folder={folder}

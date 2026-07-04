@@ -24,11 +24,11 @@ export const OnboardingStepRow = ({ icon, name, desc, state }: OnboardingStepRow
     direction="row"
     align="center"
     gap="none"
-    className="gap-[13px] rounded-[13px] border border-border bg-panel px-[15px] py-[13px]"
+    className="gap-3.25 rounded-[13px] border border-border bg-panel px-3.75 py-3.25"
   >
     <Box
       className={cn(
-        'flex size-[30px] flex-none items-center justify-center rounded-[9px] bg-panel2',
+        'flex size-7.5 flex-none items-center justify-center rounded-[9px] bg-panel2',
         state === StepState.Done ? 'text-success' : 'text-muted-foreground',
       )}
     >

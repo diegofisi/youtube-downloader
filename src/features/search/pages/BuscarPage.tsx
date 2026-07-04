@@ -69,10 +69,10 @@ export const BuscarPage = () => {
   };
 
   return (
-    <Stack gap="none" className="mx-auto w-full max-w-[1020px] px-7.5 pt-[26px] pb-15">
-      <Stack gap="none" className="mb-[22px]">
+    <Stack gap="none" className="mx-auto w-full max-w-255 px-7.5 pt-6.5 pb-15">
+      <Stack gap="none" className="mb-5.5">
         <H1>{t('Buscar', 'Search')}</H1>
-        <P color="muted" className="mt-[5px] text-[13.5px]">
+        <P color="muted" className="mt-1.25 text-[13.5px]">
           {t(
             'Encuentra videos en YouTube y descárgalos sin salir de la app.',
             'Find videos on YouTube and download them without leaving the app.',
@@ -84,7 +84,7 @@ export const BuscarPage = () => {
         <SearchBar value={input} onChange={setInput} onSubmit={submit} />
       </Box>
 
-      <Box className="mr-auto mb-[18px] w-fit">
+      <Box className="mr-auto mb-4.5 w-fit">
         <ChipGroup options={searchChipOptions()} value={chip} onChange={pickChip} />
       </Box>
 
@@ -101,14 +101,14 @@ export const BuscarPage = () => {
             <Button
               variant="outline"
               size="sm"
-              className="h-8.5 rounded-[9px] px-[15px] text-[12.5px]"
+              className="h-8.5 rounded-[9px] px-3.75 text-[12.5px]"
               onClick={() => actions.customizeSelected(chosen)}
             >
               {t('Personalizar', 'Customize')}
             </Button>
             <Button
               size="sm"
-              className="h-8.5 rounded-[9px] px-[15px] text-[12.5px]"
+              className="h-8.5 rounded-[9px] px-3.75 text-[12.5px]"
               onClick={() => actions.downloadSelected(chosen)}
             >
               {`${t('Descargar', 'Download')} ${chosen.length}`}
@@ -167,7 +167,7 @@ export const BuscarPage = () => {
         <Stack direction="row" justify="center" className="mt-4">
           <Button
             variant="outline"
-            className="h-9.5 rounded-[10px] px-[22px] text-[13px]"
+            className="h-9.5 rounded-[10px] px-5.5 text-[13px]"
             disabled={search.isFetchingNextPage}
             onClick={loadMore}
           >

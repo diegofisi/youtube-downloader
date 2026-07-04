@@ -42,19 +42,19 @@ export const VideoOptsDialog = ({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[384px] gap-0 p-0">
+      <DialogContent className="max-w-96 gap-0 p-0">
         <Stack
           direction="row"
           gap="sm"
           align="center"
-          className="gap-[10px] border-b border-border px-[17px] py-[15px]"
+          className="gap-2.5 border-b border-border px-4.25 py-3.75"
         >
-          <SettingsIcon className="size-[17px] flex-none text-primary" />
+          <SettingsIcon className="size-4.25 flex-none text-primary" />
           <DialogTitle className="text-[14.5px]">{t('Opciones de este video', 'Options for this video')}</DialogTitle>
         </Stack>
 
-        <Stack gap="md" className="max-h-[60vh] overflow-y-auto px-[17px] py-[15px]">
-          <DialogDescription className="truncate rounded-[9px] bg-background px-[11px] py-[9px] text-[12.5px] text-muted-foreground">
+        <Stack gap="md" className="max-h-[60vh] overflow-y-auto px-4.25 py-3.75">
+          <DialogDescription className="truncate rounded-[9px] bg-background px-2.75 py-2.25 text-[12.5px] text-muted-foreground">
             {video.title}
           </DialogDescription>
 
@@ -117,23 +117,23 @@ export const VideoOptsDialog = ({
             <button
               type="button"
               onClick={() => setAdvOpen((o) => !o)}
-              className="flex w-full items-center gap-[7px] rounded-lg px-[2px] py-1 text-left text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+              className="flex w-full items-center gap-1.75 rounded-lg px-0.5 py-1 text-left text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ChevronRightIcon className={cn('size-[13px] flex-none transition-transform', advOpen && 'rotate-90')} />
+              <ChevronRightIcon className={cn('size-3.25 flex-none transition-transform', advOpen && 'rotate-90')} />
               {t('Avanzado', 'Advanced')}
             </button>
             {advOpen && <VideoOptsAdvanced eff={eff} onSetKey={setKey} />}
           </Box>
         </Stack>
 
-        <Stack direction="row" gap="sm" className="gap-[10px] border-t border-border px-[17px] py-[14px]">
+        <Stack direction="row" gap="sm" className="gap-2.5 border-t border-border px-4.25 py-3.5">
           {Object.keys(draft).length > 0 && (
-            <Button variant="outline" onClick={onClear} className="h-10 px-[14px] text-[12.5px]">
+            <Button variant="outline" onClick={onClear} className="h-10 px-3.5 text-[12.5px]">
               {t('Usar generales', 'Use defaults')}
             </Button>
           )}
           <Box className="flex-1" />
-          <Button onClick={() => onCommit(draft)} className="h-10 px-[22px] text-[13px] font-bold">
+          <Button onClick={() => onCommit(draft)} className="h-10 px-5.5 text-[13px] font-bold">
             {t('Listo', 'Done')}
           </Button>
         </Stack>

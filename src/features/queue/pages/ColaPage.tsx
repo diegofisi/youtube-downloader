@@ -36,7 +36,7 @@ export const ColaPage = () => {
     : t('Nada en la cola.', 'Nothing in the queue.');
 
   return (
-    <Box className="mx-auto w-full max-w-[1020px] px-7.5 pt-6.5 pb-16">
+    <Box className="mx-auto w-full max-w-255 px-7.5 pt-6.5 pb-16">
       <style>{BARFLOW_CSS}</style>
       <Stack direction="row" align="end" justify="between" gap="md" className="mb-5">
         <Box>

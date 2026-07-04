@@ -44,16 +44,16 @@ export const MediaCard = ({ item, selected, onToggleSelect, onDownload, onCustom
         onCustomize={() => onCustomize(item)}
       />
       {item.duration ? (
-        <Span className="absolute right-2 bottom-2 rounded-[5px] bg-black/80 px-[5px] py-px font-mono text-[10.5px] font-semibold text-white">
+        <Span className="absolute right-2 bottom-2 rounded-[5px] bg-black/80 px-1.25 py-px font-mono text-[10.5px] font-semibold text-white">
           {formatDuration(item.duration)}
         </Span>
       ) : null}
     </Box>
-    <Stack gap="none" className="px-[11px] pt-2.5 pb-3">
+    <Stack gap="none" className="px-2.75 pt-2.5 pb-3">
       <Span className="line-clamp-2 min-h-8.5 text-[12.5px] leading-[1.35] font-semibold text-foreground">
         {item.title}
       </Span>
-      <Span className="mt-[5px] truncate text-[11.5px] text-muted-foreground">{item.channel}</Span>
+      <Span className="mt-1.25 truncate text-[11.5px] text-muted-foreground">{item.channel}</Span>
     </Stack>
   </Box>
 );

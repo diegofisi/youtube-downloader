@@ -24,7 +24,7 @@ export const VideoThumb = ({ video, width, height }: VideoThumbProps) => (
       </Box>
     )}
     {video.duration ? (
-      <Span className="absolute right-[5px] bottom-[5px] rounded-[5px] bg-black/80 px-[5px] py-[1.5px] font-mono text-[10.5px] font-semibold text-white">
+      <Span className="absolute right-1.25 bottom-1.25 rounded-[5px] bg-black/80 px-1.25 py-[1.5px] font-mono text-[10.5px] font-semibold text-white">
         {fmtDuration(video.duration)}
       </Span>
     ) : null}

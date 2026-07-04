@@ -35,7 +35,7 @@ export const PreviewToolbar = ({
           type="button"
           onClick={onToggleFilter}
           className={cn(
-            'rounded-lg border-[1.5px] px-[11px] py-[6px] text-xs font-semibold transition-colors',
+            'rounded-lg border-[1.5px] px-2.75 py-1.5 text-xs font-semibold transition-colors',
             onlyDownloadable
               ? 'border-primary bg-primary-soft text-primary'
               : 'border-border bg-transparent text-muted-foreground hover:text-foreground',
@@ -46,7 +46,7 @@ export const PreviewToolbar = ({
         <button
           type="button"
           onClick={onToggleSelectAll}
-          className="rounded-lg px-2 py-[6px] text-[12.5px] font-medium text-primary transition-colors hover:bg-primary-soft"
+          className="rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-primary transition-colors hover:bg-primary-soft"
         >
           {allSelected ? t('Quitar selección', 'Clear selection') : t('Seleccionar todo', 'Select all')}
         </button>

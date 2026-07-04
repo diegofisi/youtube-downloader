@@ -24,7 +24,7 @@ const StatBox = ({ icon: Icon, toneClass, value, label }: StatBoxProps) => (
     direction="row"
     align="center"
     gap="none"
-    className="min-w-[120px] flex-1 gap-2.75 rounded-[13px] border border-border bg-panel px-3.75 py-3.25"
+    className="min-w-30 flex-1 gap-2.75 rounded-[13px] border border-border bg-panel px-3.75 py-3.25"
   >
     <Span className={cn('flex size-9 flex-none items-center justify-center rounded-[10px]', toneClass)}>
       <Icon className="size-4.5" />

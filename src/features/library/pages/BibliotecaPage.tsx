@@ -25,7 +25,7 @@ export const BibliotecaPage = () => {
   };
 
   return (
-    <Stack gap="md" className="mx-auto w-full max-w-[1020px] px-[30px] pt-[26px] pb-16">
+    <Stack gap="md" className="mx-auto w-full max-w-255 px-7.5 pt-6.5 pb-16">
       <Stack direction="row" align="end" justify="between" gap="md" className="mb-1">
         <Stack gap="xs">
           <H1>{t('Biblioteca', 'Library')}</H1>
@@ -35,7 +35,7 @@ export const BibliotecaPage = () => {
         </Stack>
         <Button
           variant="outline"
-          className="h-[38px] flex-none rounded-[10px] px-[15px] text-[13px]"
+          className="h-9.5 flex-none rounded-[10px] px-3.75 text-[13px]"
           onClick={onOpenDownloads}
         >
           <FolderOpenIcon className="size-4" />

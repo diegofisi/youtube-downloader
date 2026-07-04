@@ -54,11 +54,11 @@ export const ModeCards = ({ mode, onChange }: ModeCardsProps) => (
           type="button"
           onClick={() => onChange(m.id)}
           className={cn(
-            'flex w-full items-center gap-[11px] rounded-xl border-[1.5px] p-[10px] text-left transition-colors',
+            'flex w-full items-center gap-2.75 rounded-xl border-[1.5px] p-2.5 text-left transition-colors',
             on ? 'border-primary bg-primary-soft' : 'border-border bg-transparent hover:bg-accent',
           )}
         >
-          <Span className={cn('flex size-[34px] flex-none items-center justify-center rounded-[9px]', m.iconClass)}>
+          <Span className={cn('flex size-8.5 flex-none items-center justify-center rounded-[9px]', m.iconClass)}>
             <m.Icon className="size-4" />
           </Span>
           <Stack gap="none" className="flex-1">
@@ -67,11 +67,11 @@ export const ModeCards = ({ mode, onChange }: ModeCardsProps) => (
           </Stack>
           <Span
             className={cn(
-              'flex size-[18px] flex-none items-center justify-center rounded-full border-2',
+              'flex size-4.5 flex-none items-center justify-center rounded-full border-2',
               on ? 'border-primary' : 'border-border2',
             )}
           >
-            {on && <Box className="size-[9px] rounded-full bg-primary" />}
+            {on && <Box className="size-2.25 rounded-full bg-primary" />}
           </Span>
         </button>
       );

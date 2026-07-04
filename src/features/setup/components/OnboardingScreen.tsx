@@ -57,12 +57,12 @@ export const OnboardingScreen = ({
       className="absolute inset-0"
       style={{ background: 'radial-gradient(900px 500px at 50% 0%, rgba(124,107,240,.12), transparent 70%)' }}
     />
-    <Box className="relative w-[440px] px-6 text-center">
+    <Box className="relative w-110 px-6 text-center">
       <Box
-        className="mx-auto mb-[22px] flex size-16 items-center justify-center rounded-[18px] shadow-[0_12px_40px_rgba(124,107,240,.4)]"
+        className="mx-auto mb-5.5 flex size-16 items-center justify-center rounded-[18px] shadow-[0_12px_40px_rgba(124,107,240,.4)]"
         style={{ background: 'linear-gradient(150deg, #9385F4, #6B58E8)' }}
       >
-        <DownloadIcon className="size-[30px] text-white" />
+        <DownloadIcon className="size-7.5 text-white" />
       </Box>
       <H1 className="text-[27px] tracking-[-0.5px]">{t('Bienvenido a Stash', 'Welcome to Stash')}</H1>
       <P color="muted" className="mt-2 mb-7 text-sm">
@@ -71,7 +71,7 @@ export const OnboardingScreen = ({
           'We set everything up the first time. It only takes a few seconds.',
         )}
       </P>
-      <Stack gap="none" className="mb-[26px] gap-2.5 text-left">
+      <Stack gap="none" className="mb-6.5 gap-2.5 text-left">
         {getSteps().map((step, i) => (
           <OnboardingStepRow
             key={step.name}

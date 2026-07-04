@@ -20,10 +20,10 @@ export const LibraryEntryRow = ({ entry, onOpenFolder, onRemove, onDeleteFile }:
     direction="row"
     align="center"
     gap="none"
-    className="gap-[13px] rounded-[13px] border border-border bg-panel p-[11px]"
+    className="gap-3.25 rounded-[13px] border border-border bg-panel p-2.75"
   >
     <Box
-      className="relative h-[52px] w-[92px] flex-none overflow-hidden rounded-lg"
+      className="relative h-13 w-23 flex-none overflow-hidden rounded-lg"
       style={{ background: gradFor(entry.id) }}
     >
       {entry.thumbnail !== undefined && (
@@ -35,7 +35,7 @@ export const LibraryEntryRow = ({ entry, onOpenFolder, onRemove, onDeleteFile }:
         </Box>
       )}
       {entry.duration !== undefined && (
-        <Span className="absolute bottom-[3px] right-[3px] rounded px-1 py-px font-mono text-[9.5px] font-semibold bg-black/80 text-white">
+        <Span className="absolute bottom-0.75 right-0.75 rounded px-1 py-px font-mono text-[9.5px] font-semibold bg-black/80 text-white">
           {fmtDuration(entry.duration)}
         </Span>
       )}
@@ -45,7 +45,7 @@ export const LibraryEntryRow = ({ entry, onOpenFolder, onRemove, onDeleteFile }:
       <Small color="muted" className="mt-0.5 text-xs font-normal leading-normal">
         {fmtDate(entry.date)}
       </Small>
-      <Small className="mt-[3px] truncate font-mono text-[11px] font-normal leading-normal text-faint">
+      <Small className="mt-0.75 truncate font-mono text-[11px] font-normal leading-normal text-faint">
         {entry.folder}
       </Small>
     </Stack>

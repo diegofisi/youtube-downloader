@@ -31,7 +31,7 @@ const WindowButton = ({ title, onClick, children }: WindowButtonProps) => (
     type="button"
     title={title}
     onClick={onClick}
-    className="flex h-[30px] w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    className="flex h-7.5 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
   >
     {children}
   </button>
@@ -45,10 +45,10 @@ export const Titlebar = () => {
   return (
     <Box
       data-tauri-drag-region
-      className="z-10 flex h-[46px] flex-none select-none items-center gap-3.5 border-b border-border bg-background2 pr-2.5 pl-3.5"
+      className="z-10 flex h-11.5 flex-none select-none items-center gap-3.5 border-b border-border bg-background2 pr-2.5 pl-3.5"
     >
       <Stack direction="row" gap="sm" align="center" className="ml-1.5">
-        <Box className="flex size-[25px] items-center justify-center rounded-lg bg-gradient-to-br from-[#9385F4] to-[#6B58E8] shadow-[0_2px_8px_rgba(124,107,240,.4)]">
+        <Box className="flex size-6.25 items-center justify-center rounded-lg bg-gradient-to-br from-[#9385F4] to-[#6B58E8] shadow-[0_2px_8px_rgba(124,107,240,.4)]">
           <DownloadIcon className="size-3.5 text-white" strokeWidth={2.6} />
         </Box>
         <Span weight="bold" className="font-display text-[15px] tracking-tight">

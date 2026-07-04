@@ -45,7 +45,7 @@ export const EntryDeleteMenu = ({ hasFile, onRemove, onDeleteFile }: EntryDelete
       {open && (
         <Box
           role="menu"
-          className="absolute right-0 top-full z-30 mt-1 min-w-[190px] rounded-xl border border-border2 bg-popover p-1 shadow-stash"
+          className="absolute right-0 top-full z-30 mt-1 min-w-47.5 rounded-xl border border-border2 bg-popover p-1 shadow-stash"
         >
           <MenuItem
             icon={<XIcon className="size-4" />}

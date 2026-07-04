@@ -19,7 +19,7 @@ export const SegmentedControl = <T extends string>({
   onChange,
   disabled,
 }: SegmentedControlProps<T>) => (
-  <div className="flex gap-[5px] rounded-[9px] bg-background p-[3px]">
+  <div className="flex gap-1.25 rounded-[9px] bg-background p-0.75">
     {options.map((o) => (
       <button
         key={o.value}
@@ -27,7 +27,7 @@ export const SegmentedControl = <T extends string>({
         disabled={disabled}
         onClick={() => onChange(o.value)}
         className={cn(
-          'rounded-[7px] px-[15px] py-1.5 text-[12.5px] font-semibold transition-colors disabled:opacity-50',
+          'rounded-[7px] px-3.75 py-1.5 text-[12.5px] font-semibold transition-colors disabled:opacity-50',
           o.value === value
             ? 'bg-panel text-foreground shadow-[0_1px_4px_rgba(0,0,0,.25)]'
             : 'text-muted-foreground hover:text-foreground',

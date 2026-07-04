@@ -19,7 +19,7 @@ interface GlobalOptionsCardProps {
 export const GlobalOptionsCard = ({ opts, folder, onOptsChange, onOpenAjustes }: GlobalOptionsCardProps) => (
   <Box className="rounded-2xl border border-border bg-panel p-4 shadow-stash">
     <Span className="block font-display text-sm font-bold">{t('Opciones de descarga', 'Download options')}</Span>
-    <Small className="mt-[3px] mb-[14px] block text-[11.5px] font-normal text-muted-foreground">
+    <Small className="mt-0.75 mb-3.5 block text-[11.5px] font-normal text-muted-foreground">
       {t(
         'Por defecto: video + audio en MP4, mejor calidad disponible.',
         'Default: video + audio in MP4, best available quality.',
@@ -29,7 +29,7 @@ export const GlobalOptionsCard = ({ opts, folder, onOptsChange, onOpenAjustes }:
     <ModeCards mode={opts.mode} onChange={(mode) => onOptsChange({ mode })} />
 
     {opts.mode !== 'audio' && (
-      <Stack gap="md" className="mt-[14px] gap-[14px] border-t border-border pt-[14px]">
+      <Stack gap="md" className="mt-3.5 gap-3.5 border-t border-border pt-3.5">
         <Stack gap="xs">
           <Small className="text-[11.5px] font-semibold text-muted-foreground">{t('Calidad', 'Quality')}</Small>
           <ChipGroup options={qualityChips()} value={opts.quality} onChange={(quality) => onOptsChange({ quality })} />
@@ -48,7 +48,7 @@ export const GlobalOptionsCard = ({ opts, folder, onOptsChange, onOpenAjustes }:
     )}
 
     {opts.mode === 'audio' && (
-      <Stack gap="md" className="mt-[14px] gap-[14px] border-t border-border pt-[14px]">
+      <Stack gap="md" className="mt-3.5 gap-3.5 border-t border-border pt-3.5">
         <Stack gap="xs">
           <Small className="text-[11.5px] font-semibold text-muted-foreground">
             {t('Formato de audio', 'Audio format')}
@@ -69,8 +69,8 @@ export const GlobalOptionsCard = ({ opts, folder, onOptsChange, onOpenAjustes }:
     )}
 
     {/* Destination folder: informational only; changed from Settings. */}
-    <Stack direction="row" gap="sm" align="center" className="mt-[14px] border-t border-border pt-[13px]">
-      <FolderIcon className="size-[14px] flex-none text-faint" />
+    <Stack direction="row" gap="sm" align="center" className="mt-3.5 border-t border-border pt-3.25">
+      <FolderIcon className="size-3.5 flex-none text-faint" />
       <Span
         title={t('Carpeta de descargas actual', 'Current downloads folder')}
         className="min-w-0 flex-1 truncate font-mono text-[11px] text-faint"
@@ -80,7 +80,7 @@ export const GlobalOptionsCard = ({ opts, folder, onOptsChange, onOpenAjustes }:
       <button
         type="button"
         onClick={onOpenAjustes}
-        className="flex-none rounded-md px-1 py-[2px] text-[11px] font-semibold text-primary transition-colors hover:bg-primary-soft"
+        className="flex-none rounded-md px-1 py-0.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary-soft"
       >
         {t('Cambiar en Ajustes', 'Change in Settings')}
       </button>
