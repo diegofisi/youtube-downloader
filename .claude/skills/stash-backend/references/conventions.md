@@ -37,7 +37,7 @@ feat(session): real logout + expired-session detection + fix My YouTube
 fix(preview): radios/Mix -> cap 25; real playlists -> no cap
 refactor(fase3): god-file cuts, view dedupe and unified Rust core
 ```
-Body (when present): `-` bullets, dense, citing numbers ("descargar.ts 754->265") and the why.
+Body (when present): `-` bullets, dense, citing numbers ("descargar.ts 754->265" — pre-cutover example; the file is gone, the style stands) and the why.
 Note: older log entries predate this rule and are not in English — do not imitate them.
 
 ## Rust test style

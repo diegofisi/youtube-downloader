@@ -27,7 +27,7 @@ export type AppPath = keyof typeof AppPath;
 
 ## Router — flat, one layout
 
-The six sections mirror today's `ViewId` union in `src/app/shell.ts` (`descargar | buscar | youtube | cola | biblioteca | ajustes`).
+The six sections (`descargar | buscar | youtube | cola | biblioteca | ajustes`) are defined by `AppPath` in `src/shared/routes/app-path.ts`; `/` and any unknown path redirect to `/descargar`.
 
 ```typescript
 // shared/routes/router.tsx
@@ -60,7 +60,7 @@ export const router = createHashRouter([
 
 ## AppShell
 
-Recreates today's `src/app/shell.ts` + `index.html` shell as React, reusing the intact `core/tauri/window.ts` helpers.
+Lives in `src/shared/routes/` (AppShell + Sidebar + Titlebar — the eslint "shell" layer), on top of the `src/shared/lib/window.ts` helpers.
 
 ```text
 AppShell
@@ -73,7 +73,7 @@ AppShell
 
 ```tsx
 // shared/routes/Titlebar.tsx
-import { minimizeWindow, toggleMaximizeWindow, closeWindow } from "@/core/tauri/window";
+import { minimizeWindow, toggleMaximizeWindow, closeWindow } from "@/shared/lib/window";
 
 export const Titlebar = () => (
   <Box data-tauri-drag-region className="flex h-10 items-center justify-between select-none">
@@ -90,7 +90,7 @@ export const Titlebar = () => (
 ```
 
 - `data-tauri-drag-region` must sit on the bar itself (and any large empty child area); interactive children must NOT have it.
-- Window controls only via `core/tauri/window.ts` (`minimizeWindow`, `toggleMaximizeWindow`, `closeWindow`) — never import `@tauri-apps/api/window` in features. Today's app has two control sets (traffic lights + buttons); keep whichever the design uses, wired to the same three helpers.
+- Window controls only via `shared/lib/window.ts` (`minimizeWindow`, `toggleMaximizeWindow`, `closeWindow`) — never import `@tauri-apps/api/window` in features (the eslint Tauri-encapsulation rule enforces this).
 
 ### Sidebar
 
@@ -111,5 +111,5 @@ export const Titlebar = () => (
 | One flat route list under one `AppShell` | Role folders, guards, `RootLayout` auth init |
 | Router state for cross-view intents (prefill) | A global bus event for navigation |
 | `data-tauri-drag-region` on the titlebar element | Drag region on buttons/inputs |
-| Window ops via `core/tauri/window.ts` | `getCurrentWindow()` calls inside features |
+| Window ops via `shared/lib/window.ts` | `getCurrentWindow()` calls inside features |
 | Onboarding as a shell-level blocking dialog | An `/onboarding` route users could navigate away from |

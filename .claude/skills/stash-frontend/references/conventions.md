@@ -23,7 +23,7 @@ Absorbs base guideline §6 (Naming), §7 (Rules & Anti-patterns, complete), §10
 | Tauri command name (in `invoke`) | `snake_case` string | `'get_history'` — matches Rust |
 | Tauri event name | `kebab-case` string | `'download-progress'` |
 
-React Query hooks live in `api/[endpoint]/`; custom hooks in `hooks/`. Mappers live inside their `.dto.ts`. Path alias `@/` for `shared/`, `core/`, `features/` imports (§11.4).
+React Query hooks live in `api/[endpoint]/`; custom hooks in `hooks/`. Mappers live inside their `.dto.ts`. Path alias `@/` for `shared/` and `features/` imports (§11.4).
 
 ## Stash house rules
 
@@ -31,8 +31,8 @@ React Query hooks live in `api/[endpoint]/`; custom hooks in `hooks/`. Mappers l
 |---|---|---|
 | Commit messages | **English**, conventional style `type(scope): description`: `feat(session): real logout + expired-session detection` | repo convention (older log entries predate this rule) |
 | Code comments | **English**, concise, max ~2 lines; explain the *why* | current codebase style |
-| UI text / user-facing errors | Always both languages via `t(es, en)` | `core/i18n.ts` |
-| localStorage | Prefix `stash.` for new keys (`stash.lang`, `stash.recentLinks`); legacy `stash-theme`, `stash-onboarded` remain until migrated | `core/i18n.ts`, `recent-links.ts`, `theme.ts`, `onboarding.ts` |
+| UI text / user-facing errors | Always both languages via `t(es, en)` | `shared/lib/i18n.ts` |
+| localStorage | Prefix `stash.` for new keys (`stash.lang`, `stash.recentLinks`); legacy `stash-theme`, `stash-onboarded` remain until migrated | `shared/lib/i18n.ts`, `download/helpers/recent-links.ts`, `shared/stores/useUiStore.ts`, `setup/hooks/useOnboardingGate.ts` |
 | Rust-facing strings | User-facing backend errors arrive as `Err(String)` product copy in the app's default language (es, no backend i18n yet); show them as the toast body | backend contract (stash-backend error-handling.md) |
 
 ## Adaptation 5 — i18n & theme (OVERRIDES nothing in the guideline; it simply isn't covered there)
@@ -41,9 +41,9 @@ React Query hooks live in `api/[endpoint]/`; custom hooks in `hooks/`. Mappers l
 
 ### i18n — inline `t(es, en)` (no react-i18next)
 
-- Keep `t(es: string, en: string): string` from `core/i18n.ts`. In React it is a **plain function call in JSX**: `<P>{t("Cola vacía", "Queue is empty")}</P>`. No provider, no keys, no JSON catalogs.
+- Keep `t(es: string, en: string): string` from `shared/lib/i18n.ts`. In React it is a **plain function call in JSX**: `<P>{t("Cola vacía", "Queue is empty")}</P>`. No provider, no keys, no JSON catalogs.
 - Every user-visible string carries its `(es, en)` pair inline at the call site.
-- **Language change re-renders live instead of reloading** (today `setLang` calls `location.reload()`; the DOM-mutation `applyStaticI18n` dies with vanilla HTML). Put `lang` in a small ui store and key the app root:
+- **Language change re-renders live instead of reloading** (the vanilla app reloaded on `setLang`; its DOM-mutation `applyStaticI18n` died with the cutover). `lang` lives in the ui store and keys the app root:
 
 ```tsx
 // main.tsx
@@ -59,7 +59,7 @@ const App = () => {
 
 ### Theme — Tailwind `dark` class + existing CSS vars
 
-- Keep `core/theme.ts`'s palette: the full Stash var set (`--bg`, `--panel`, `--accent: #7C6BF0`, `--danger`, soft variants, `--shadow`, ...) applied on `<html>`, `data-theme` attribute preserved.
+- Keep the Stash palette (now in `shared/styles/globals.css`): the full var set (`--bg`, `--panel`, `--accent: #7C6BF0`, `--danger`, soft variants, `--shadow`, ...) applied on `<html>`, `data-theme` attribute preserved (theme committed by `shared/stores/useUiStore.ts`).
 - Add Tailwind `darkMode: "class"`: `applyTheme` also toggles `document.documentElement.classList.toggle("dark", theme === "dark")`.
 - Map the vars into Tailwind theme colors once (`colors: { bg: "var(--bg)", panel: "var(--panel)", accent: "var(--accent)", ... }`) so JSX uses `bg-panel text-accent` instead of inline `style` — and Shadcn's semantic tokens (`background`, `foreground`, `primary`, `muted`, `destructive`) alias to the same vars.
 - Theme toggle: ui store action → `applyTheme` → components restyle via CSS vars without re-render; the toggle icon subscribes to the store (replaces the `theme:changed` bus event).
@@ -121,7 +121,7 @@ Tree-shakeable, gives runtime value + type, consistent across statuses/modes/uni
 - **NEVER** put business logic in presentational components (no business `useMemo`, no `toast`, no API calls there).
 - **NEVER** call Tauri commands from components/containers/pages — only `api/` hooks and stores invoke.
 - **NEVER** use `any`.
-- **NEVER** mix feature concerns or import across features (local hooks instead).
+- **NEVER** mix feature concerns or import across features (local hooks instead; sole exception: the sanctioned `@/features/(queue|session|download)` `index.ts` facades).
 - **NEVER** use `mutateAsync` + `try/catch` in containers.
 - **NEVER** create standalone mapper files or inline DTOs in hook files.
 - **NEVER** put React Query hooks in `hooks/`.
@@ -145,5 +145,5 @@ Unique items not already covered above:
 1. When creating a new feature, scaffold the folder structure first, then implement following the data-flow direction: DTO + Mapper → Model → Hook → Schema → Container → Component → Page (§11.6).
 2. Generate **all layers** when integrating a new command — never a hook without its DTO/mapper/model (§11.2).
 3. Shadcn components via `npx shadcn@latest add`, never written manually (§11.3).
-4. Respect path aliases `@/shared/...`, `@/features/...`, `@/core/...` in all imports (§11.4).
+4. Respect the path aliases `@/shared/...` and `@/features/...` in all imports (§11.4).
 5. Follow the naming table strictly (§11.5). Everything else in §11 is the DO/DON'T list above, restated — when in doubt, that list wins.

@@ -14,9 +14,9 @@ We prioritize **Separation of Concerns**, **Domain Integrity**, and **Compositio
 
 ## Directory structure (§2)
 
-Vertical slices + shared layer, mapped to Stash's real domains. The current vanilla-TS slices (`src/features/{download,library,preview,queue,search,session,settings,setup,youtube-account}`) migrate 1:1 — except `preview`, which dissolves (see below).
+Vertical slices + shared layer, mapped to Stash's real domains. The pre-cutover vanilla-TS slices (`download,library,preview,queue,search,session,settings,setup,youtube-account`) migrated 1:1 — except `preview`, which dissolved (see below).
 
-## Target directory tree
+## Directory tree (current)
 
 ```text
 src/
@@ -24,18 +24,12 @@ src/
  │    ├── components/
  │    │    ├── ui/            # Shadcn primitives + typography + PageLoading/PageError/PageEmpty
  │    │    └── layout/        # Stack, Grid, Box
- │    ├── hooks/              # useTauriEvent, useDebounce...
- │    ├── lib/                # query-client.ts, utils.ts (cn), format.ts (ports src/shared/lib/format.ts)
- │    ├── styles/             # globals.css (Tailwind + Stash CSS vars from styles/stash.css)
- │    ├── types/              # shared const-object enums
- │    └── routes/             # router.tsx, app-path.ts, AppShell (see routing-shell.md)
- │
- ├── core/                    # Tauri boundary (kept from current app — framework-agnostic)
- │    ├── tauri/
- │    │    ├── client.ts      # typed invoke + onEvent (exists today, survives as-is)
- │    │    └── window.ts      # minimize/toggleMaximize/close (exists today, survives as-is)
- │    ├── i18n.ts             # t(es, en) — adapted (see conventions.md)
- │    └── theme.ts            # CSS vars + dark class (see conventions.md)
+ │    ├── hooks/              # useTauriEvent...
+ │    ├── lib/                # tauri.ts (typed invoke + onEvent facade), window.ts (min/max/close),
+ │    │                       #   i18n.ts (t(es,en)), query-client.ts, utils.ts (cn)
+ │    ├── stores/             # useUiStore (lang + theme)
+ │    ├── styles/             # globals.css (Tailwind + the Stash CSS-vars palette, formerly styles/stash.css)
+ │    └── routes/             # SHELL layer: router.tsx, app-path.ts, AppShell/Sidebar/Titlebar (see routing-shell.md)
  │
  ├── features/
  │    ├── download/           # "Descargar" view: URL input, analysis, options, enqueue
@@ -44,17 +38,19 @@ src/
  │    │    │    └── ...
  │    │    ├── components/    # url input, preview cards, video-opts dialog, recent links
  │    │    ├── containers/    # only if the page grows multiple operations
- │    │    ├── models/        # video.model.ts, download-options.model.ts (ports opts-model.ts)
- │    │    ├── helpers/       # download-options.schema.ts
+ │    │    ├── models/        # analyzed.model.ts, download-opts.model.ts (ports the vanilla opts-model)
+ │    │    ├── helpers/       # opts.ts, parse-urls.ts, recent-links.ts, format.ts
  │    │    ├── hooks/
+ │    │    ├── index.ts       # sanctioned facade (useDownloadPrefill — prefill contract)
  │    │    └── pages/         # DescargarPage.tsx
  │    ├── search/             # api/search-videos/ (local analyze_urls infinite hook), pages/BuscarPage.tsx
  │    ├── youtube-account/    # api/get-account-feed/ (local analyze_urls infinite hook), pages/YoutubePage.tsx
- │    ├── queue/              # stores/useQueueStore.ts (scheduler — see state.md), components/, pages/ColaPage.tsx
- │    ├── library/            # api/get-history/, add-history/, remove-history-item/, delete-history-file/,
+ │    ├── queue/              # stores/useQueueStore.ts (scheduler — see state.md), components/, pages/ColaPage.tsx,
+ │    │                       #   index.ts facade (useQueueStore + EnqueueItem — enqueue contract)
+ │    ├── library/            # api/get-history/, remove-history-item/, delete-history-file/,
  │    │                       #   clear-history/, open-history-folder/; models/library-entry.model.ts; pages/BibliotecaPage.tsx
  │    ├── session/            # api/get-session-status/, get-account-info/, open-youtube-login/,
- │    │                       #   refresh-session-silent/, logout/; stores/useSessionStore.ts
+ │    │                       #   refresh-session-silent/, logout/; index.ts facade (session hooks)
  │    ├── settings/           # api/get-settings/, set-settings/, get-download-folder/, set-download-folder/,
  │    │                       #   open-downloads-folder/; helpers/settings.schema.ts; pages/AjustesPage.tsx
  │    └── setup/              # api/check-dependencies/, download-dependencies/; components/OnboardingDialog
@@ -88,13 +84,13 @@ src/
 | `youtube-account` | `/youtube` | infinite query over `analyze_urls` (feeds) + session queries | Feed source tabs; "already downloaded" derives from the library query. |
 | `queue` | `/cola` | Zustand store (scheduler) | NOT React Query. See `state.md`. Sidebar badge reads a store selector. |
 | `library` | `/biblioteca` | query + mutations | `get_history` list, per-item mutations invalidate `['library']`. |
-| `session` | (no page — banner + account card) | queries + mutations + store for transient status | Status query with `refetchInterval: 10 * 60 * 1000` replaces today's `setInterval`. |
+| `session` | (no page — banner + account card) | queries + mutations (no store; single-flight lives in the api module) | Status query with `refetchInterval: 10 * 60 * 1000` replaced the vanilla `setInterval`. |
 | `settings` | `/ajustes` | query + mutations + RHF form | DTO is snake_case (Rust `AppConfig`) — mapper is mandatory, see data-flow.md. |
 | `setup` | (dialog at startup, no route) | query + mutation + `setup-progress` event | Onboarding gate before the shell; `stash.onboarded` flag. |
 
 ## Cross-feature data access — no cross-imports (§4.15)
 
-Features must **never** import from other features. When a feature needs data another feature also fetches, create a **local hook** inside the consuming feature that calls the command directly.
+Features must **never** import from other features, with ONE sanctioned exception (enforced by `eslint.config.js`): the app-level contracts exposed by the `index.ts` **facades** of `@/features/queue` (useQueueStore + EnqueueItem — enqueue contract), `@/features/session` (status/account/login/logout/reconnect hooks) and `@/features/download` (useDownloadPrefill — prefill contract). Deep paths (`@/features/queue/stores/...`) always fail lint. For anything else, create a **local hook** inside the consuming feature that calls the command directly.
 
 **Why not share the hook?** Cross-feature imports create coupling: if the source feature changes its DTO or model, it must not break consumers. Each feature owns its own adapter for the data it consumes.
 
@@ -118,7 +114,7 @@ export function useSearchVideos(query: string) {
 
 ### Where `preview` goes (§4.15 applied)
 
-Today `src/features/preview/` is a shared slice consumed by download, search and youtube-account. In React it **dissolves**: each consumer creates its **own local hook** in its own `api/` folder calling `analyze_urls`:
+The vanilla `src/features/preview/` was a shared slice consumed by download, search and youtube-account. In React it **dissolved**: each consumer owns its **own local hook** in its own `api/` folder calling `analyze_urls`:
 
 | Consumer | Local hook | Key |
 |---|---|---|
@@ -126,22 +122,23 @@ Today `src/features/preview/` is a shared slice consumed by download, search and
 | search | `api/search-videos/useSearchVideos.ts` (infinite) | `['search', query]` |
 | youtube-account | `api/get-account-feed/useAccountFeed.ts` (infinite) | `['youtube-account', 'feed', source]` |
 
-The `VideoMeta`/`PlaylistMeta` DTO shape may be duplicated (trimmed) per consumer — that is the point: no feature imports another feature's DTOs, models, or hooks. Ever.
+The analyzed-video DTO shape may be duplicated (trimmed) per consumer — that is the point: no feature imports another feature's DTOs, models, or hooks outside the three sanctioned facades. Ever.
 
 ## Dependency rules
 
+Enforced by `eslint.config.js` (`eslint-plugin-boundaries`) with four element types — `main` (`src/main.tsx`), `shell` (`src/shared/routes` — the app composition layer), `shared`, `features`:
+
 | From | May import | Never imports |
 |---|---|---|
-| `features/X/components/` | own models, `shared/`, `core/i18n` | hooks, stores, api, other features |
-| `features/X/containers/` | own api hooks, stores, models, components, `shared/` | other containers, other features |
-| `features/X/pages/` | own containers, components, hooks, `shared/routes` paths | other features' pages/containers |
-| `features/X/api/` | own models, `core/tauri/client`, `shared/lib/query-client` | UI, other features |
-| `features/X/stores/` | own models, own api fetcher fns, `shared/lib/query-client`, `core/i18n` | React components/hooks |
-| `shared/`, `core/` | `shared/`, `core/` only | anything in `features/` |
+| `shared/` (except routes) | `shared/` only | anything in `features/` |
+| `shell` (`shared/routes`) | `shared/`, `shell`, feature `index.ts` facades and `pages/*.tsx` | feature internals |
+| `features/X` | `shared/`, own slice, `shared/routes/app-path.ts`, and the sanctioned `@/features/(queue\|session\|download)` `index.ts` facades | any other cross-feature path (deep paths always) |
+| `main.tsx` | everything | — |
 
-- Only `api/` files and stores may call `invoke` (via `core/tauri/client`) — never components/containers/pages. This ports today's ESLint-boundaries rule ("invoke only in `*.api.ts`") to the new `api/[endpoint]/` layout; keep enforcing it with `eslint-plugin-boundaries`.
-- Pages are the only layer that renders containers (guideline §3.6). Containers never render containers.
-- Cross-feature communication: via React Query cache (invalidation), route navigation with path constants, or a shared store in `shared/` — never direct imports. Today's typed bus (`core/bus/event-bus.ts`) mostly disappears: its events map to store selectors and query invalidations (table in `state.md`).
+Within a feature, the guideline layering still applies: components stay props-only (models + `@/shared/lib/i18n`); containers connect hooks/stores to components; pages are the only layer that renders containers (guideline §3.6) — containers never render containers.
+
+- **Tauri encapsulation** (`no-restricted-imports`): `invoke`/`onEvent` (via `@/shared/lib/tauri`) and `@tauri-apps/*` may only be used by `src/shared/lib/tauri.ts` itself, `src/shared/lib/window.ts`, `src/shared/hooks/useTauriEvent.ts`, and each feature's `api/` and `stores/` layers — never components/containers/pages.
+- Cross-feature communication: the sanctioned facades above, React Query cache (invalidation), or route navigation with path constants — nothing else. The vanilla typed bus died with the cutover: its events map to store selectors and query invalidations (table in `state.md`).
 
 ## Layer summary (page / container / component)
 

@@ -63,13 +63,13 @@ const initialState = { lang: getInitialLang(), theme: getInitialTheme() };
 
 ## Adaptation 3 (detail) — The queue is a live process, not a query
 
-**Differs from the base guideline because** the guideline's "server state → React Query" rule assumes request/response. Stash's download queue is a **scheduler driving long-lived yt-dlp processes** with pause/resume/reorder and event-fed progress: caching, staleness and refetching are meaningless for it. The existing framework-agnostic `src/features/queue/queue.state.ts` (already DOM-free, subscribe-based, unit-tested) is **wrapped in / ported to a Zustand store**, preserving its semantics verbatim.
+**Differs from the base guideline because** the guideline's "server state → React Query" rule assumes request/response. Stash's download queue is a **scheduler driving long-lived yt-dlp processes** with pause/resume/reorder and event-fed progress: caching, staleness and refetching are meaningless for it. The vanilla framework-agnostic `queue.state.ts` (DOM-free, subscribe-based, unit-tested) was **ported verbatim to the Zustand store at `src/features/queue/stores/useQueueStore.ts`**, preserving its semantics.
 
 ### `features/queue/stores/useQueueStore.ts` — spec
 
-State and actions map 1:1 to today's module:
+State and actions map 1:1 to the vanilla module it ported:
 
-| Today (`queue.state.ts`) | Store equivalent | Preserve exactly |
+| Vanilla (`queue.state.ts`, pre-cutover) | Store equivalent | Preserve exactly |
 |---|---|---|
 | `items: QItem[]`, `concurrency` | state fields | `QItem`/`QStatus`/`EnqueueItem` types port as-is (become models) |
 | `subscribe(fn)` / `notify()` | Zustand's built-in subscription | notifications stay synchronous (Zustand is) |
@@ -86,10 +86,10 @@ State and actions map 1:1 to today's module:
 | `bus.emit('queue:count')` | **dies** → derived selector | `selectActiveCount = (s) => s.items.filter(i => ['downloading','queued','paused','merging'].includes(i.status)).length`; sidebar badge subscribes to it |
 | `bus.emit('download:completed')` | **dies** → on completion the store calls `add_history` (plain invoke) then `queryClient.invalidateQueries({ queryKey: ['library'] })` | history failure must not break the flow (try/catch kept); consumers read the library query instead of listening to a bus |
 
-The store imports: its own api fetcher functions (plain `invoke` wrappers), the exported `queryClient` singleton (`shared/lib/query-client.ts`), `t()` and `showToast` — never React.
+The store imports: its own api fetcher functions (plain `invoke` wrappers), the exported `queryClient` singleton (`shared/lib/query-client.ts`), `t()` and sonner's `toast` — never React.
 
 ```typescript
-// Sketch — internals stay functions over get()/set(), like today's module
+// Sketch — internals stay functions over get()/set(), like the vanilla module
 export const useQueueStore = create<QueueStore>((set, get) => ({
   items: [],
   concurrency: 5,
@@ -101,16 +101,16 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
 
 ## Session state
 
-| Today | React target |
+| Vanilla (pre-cutover) | React |
 |---|---|
-| `session.state.ts` module var `status` + bus events | `['session', 'status']` query (poll 10 min) is the source of truth for UI; a thin `useSessionStore` keeps only what non-React code needs synchronously: `getCookieMode()` for enqueue (`'none'` if no session, else `'file'`) |
-| `silentReconnectInFlight` shared-promise single-flight | **survives** as-is (module-level promise in the session api/store). React Query dedupes queries, not imperative mutations — keep the shared promise |
+| `session.state.ts` module var `status` + bus events | `['session', 'status']` query (poll 10 min) is the source of truth for UI; no session store — the download slice derives cookieMode with its local `useCookieMode` query (`'none'` if no session, else `'file'`) |
+| `silentReconnectInFlight` shared-promise single-flight | **survives** as-is (module-level promise in `session/api/refresh-session-silent/attemptSilentReconnect.ts`). React Query dedupes queries, not imperative mutations — keep the shared promise |
 | `session:expired` / `session:connected` bus events | die → shell banner derives from the status query (`status === 'expired' && !dismissed`); `dismissed` is local shell state |
 | `onCookiesExtracted` → refresh | global `cookies-extracted` listener → invalidate `['session']` |
 
 ## What dies vs. what survives (anti-race audit)
 
-| Pattern (today) | Fate | Why |
+| Pattern (vanilla, pre-cutover) | Fate | Why |
 |---|---|---|
 | `loadSeq` in `shared/ui/paged-loader.ts` (stale loads discarded on new source/search) | **Dies** | `useInfiniteQuery` keyed by `['search', q]` / `['youtube-account','feed',src]` discards stale results by key change; `isFetching` replaces `loadingMore` |
 | `appendUnique` cross-page dedupe (feed may shift between requests) | **Survives** inside `select` of the infinite query — dedupe pages by `VideoMeta.id` when flattening | React Query appends pages verbatim; the feed-shift problem is domain-specific |
@@ -136,7 +136,7 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
 
 | Do | Don't |
 |---|---|
-| Keep scheduler logic inside the queue store, testable without React (like today's `queue.state.test.ts`) | Move pump/run logic into components or effects |
+| Keep scheduler logic inside the queue store, testable without React (`stores/useQueueStore.test.ts`) | Move pump/run logic into components or effects |
 | Use `queryClient` singleton from stores for invalidation | Import React hooks into a store file |
 | Preserve `runSeq`, auth-pause, single-flight semantics verbatim | "Simplify" races away — each guard exists for a reproduced bug |
 | Narrow selectors (`useQueueStore(s => s.items)`, count selector for the badge) | Subscribe whole components to the entire store |

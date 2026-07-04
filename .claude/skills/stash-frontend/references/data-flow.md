@@ -28,11 +28,11 @@ Absorbs base guideline §3 (Strict Data Flow), §4.1 (Models vs DTOs), §4.2 (AP
 
 ## Adaptation 1 — Transport (OVERRIDES guideline §4.12)
 
-**Differs from the base guideline because** Stash is a Tauri desktop app with no HTTP backend: there is no axios, no `http-client.ts`, no JWT, no interceptors, no 401/refresh flow. Guideline §4.12 does not apply. The fetcher inside every React Query hook is the **typed `invoke()` wrapper** from `src/core/tauri/client.ts`. Errors are `Err(String)` from Rust commands — `invoke` rejects with that string; there is no status code.
+**Differs from the base guideline because** Stash is a Tauri desktop app with no HTTP backend: there is no axios, no `http-client.ts`, no JWT, no interceptors, no 401/refresh flow. Guideline §4.12 does not apply. The fetcher inside every React Query hook is the **typed `invoke()` wrapper** from `src/shared/lib/tauri.ts` (`@/shared/lib/tauri`). Errors are `Err(String)` from Rust commands — `invoke` rejects with that string; there is no status code.
 
 Everything else in the guideline's Adapter Pattern (§3, §4.1–4.4) applies unchanged:
 
-- **DTO** = the TS mirror of the Rust struct's serialized shape (today's `*.types.ts` files play this role — e.g. `settings.types.ts` `AppConfig`, `library.types.ts` `LibraryEntry`). Mirror the **actual serde casing**: new Rust structs use `#[serde(rename_all = "camelCase")]`, but legacy ones like `AppConfig` serialize snake_case — the DTO copies reality, the mapper cleans it.
+- **DTO** = the TS mirror of the Rust struct's serialized shape (the vanilla `*.types.ts` files played this role). Mirror the **actual serde casing**: new Rust structs use `#[serde(rename_all = "camelCase")]`, but legacy ones like `AppConfig` serialize snake_case — the DTO copies reality, the mapper cleans it.
 - **Mapper** = pure `toModel` function co-located in the `.dto.ts` file (never a separate mapper file).
 - **Model** = camelCase, `Date`/clean types, in `models/*.model.ts` — the only thing the UI sees.
 
@@ -105,7 +105,7 @@ export const toSetSettingsDTO = (model: Settings): SetSettingsDTORequest => ({
 ```typescript
 // features/settings/api/get-settings/useGetSettings.ts
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { invoke } from "@/core/tauri/client";
+import { invoke } from "@/shared/lib/tauri";
 import type { Settings } from "../../models/settings.model";
 import { toSettings, type SettingsDTOResponse } from "./get-settings.dto";
 
@@ -129,7 +129,7 @@ export function useGetSettings(
 ```typescript
 // features/library/api/delete-history-file/useDeleteHistoryFile.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { invoke } from "@/core/tauri/client";
+import { invoke } from "@/shared/lib/tauri";
 
 export type DeleteFileOutcome = "trash" | "permanent" | "no_file";
 
@@ -157,7 +157,7 @@ Rules (guideline §4.3–4.6 apply as-is):
 ```typescript
 // shared/hooks/useTauriEvent.ts
 import { useEffect, useRef } from "react";
-import { onEvent } from "@/core/tauri/client";
+import { onEvent } from "@/shared/lib/tauri";
 
 // Subscribes to a backend event for the component's lifetime.
 // handler goes through a ref so re-renders never resubscribe.
@@ -194,7 +194,7 @@ Rules:
 - **Global events** (must outlive any route) are wired once, in plain modules imported from `main.tsx`, using `onEvent` directly and `useXStore.getState()` / the exported `queryClient` singleton. A mounted component must not be a prerequisite for the queue to progress.
 - **View-scoped events** use `useTauriEvent`; cleanup is automatic on unmount.
 - Handlers either (a) call a store action or (b) invalidate/refetch a query. They never hold their own component state as the source of truth for cross-view data.
-- Do not poll (`refetchInterval`) for anything an event already reports. Exception: `['session', 'status']` keeps `refetchInterval: 10 * 60 * 1000` because cookie expiry has no event (ports today's `setInterval` in `session.state.ts`).
+- Do not poll (`refetchInterval`) for anything an event already reports. Exception: `['session', 'status']` keeps `refetchInterval: 10 * 60 * 1000` because cookie expiry has no event (ports the vanilla `setInterval`).
 
 ## Adaptation 3 — Decision table: all 21 commands
 
@@ -213,7 +213,7 @@ Rules:
 | `set_settings` | Mutation | `useSetSettings` | inv. `['settings']` |
 | `set_download_folder` | Mutation | `useSetDownloadFolder` | inv. `['settings', 'downloadFolder']` |
 | `open_youtube_login` | Mutation (fire-and-forget; completion = `cookies-extracted`) | `useOpenYoutubeLogin` | — |
-| `refresh_session_silent` | Mutation (single-flight, see state.md) | session store / `useSilentReconnect` | inv. `['session']` |
+| `refresh_session_silent` | Mutation (single-flight, see state.md) | `attemptSilentReconnect` plain fn (session facade export) | inv. `['session']` |
 | `logout` | Mutation | `useLogout` | inv. `['session']` |
 | `add_history` | Mutation-shaped, but **called by the queue store** on completion | plain `invoke` from store | store invalidates `['library']` |
 | `remove_history_item` | Mutation | `useRemoveHistoryItem` | inv. `['library']` |

@@ -1,5 +1,4 @@
-// Recent links history — same localStorage key/format as the vanilla app so
-// both apps share history during the migration.
+// Recent links history persisted under the legacy 'stash.recentLinks' key.
 
 const RECENT_KEY = 'stash.recentLinks';
 

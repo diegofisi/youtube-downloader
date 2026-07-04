@@ -44,8 +44,8 @@ download/library → `settings::service` (folder). Everything else shares via `c
 
 ## Decision Log (backend)
 
-Original IDs are kept; the missing numbers were frontend decisions that die with the
-vanilla-TS UI (the React ones live in stash-frontend).
+Original IDs are kept; the missing numbers were frontend decisions that died with the
+vanilla-TS UI in the React cutover (the React ones live in stash-frontend).
 
 | # | Decision | Why (the code's real rationale) |
 |---|---|---|

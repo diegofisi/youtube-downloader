@@ -53,7 +53,7 @@ This skill **fully absorbs** the former `FRONTED_ARCHITECTURE_GUIDELINE.md` (v3.
 
 | # | Topic | Adaptation | Detail in |
 |---|---|---|---|
-| 1 | Transport | No axios/JWT interceptors (guideline §4.12 N/A). Fetcher inside React Query hooks = typed `invoke()` from `core/tauri` client. DTO = TS mirror of the Rust struct. | `references/data-flow.md` |
+| 1 | Transport | No axios/JWT interceptors (guideline §4.12 N/A). Fetcher inside React Query hooks = typed `invoke()` from `@/shared/lib/tauri`. DTO = TS mirror of the Rust struct. | `references/data-flow.md` |
 | 2 | Events | Tauri events (`download-progress`, `setup-progress`, `cookies-extracted`, `preview-progress`) replace websockets. New `useTauriEvent(name, cb)` pattern. | `references/data-flow.md` |
 | 3 | Live processes | Download queue scheduler is store-driven (Zustand), NOT query-shaped. React Query only for request/response commands. Decision table for all 21 commands. | `references/state.md`, `references/data-flow.md` |
 | 4 | Routing/auth | No roles, no guards, no route groups (guideline §8–9 N/A). Flat sidebar shell + one route per section. Path constants rule kept. | `references/routing-shell.md` |
@@ -78,7 +78,7 @@ This skill **fully absorbs** the former `FRONTED_ARCHITECTURE_GUIDELINE.md` (v3.
 1. Scaffold `src/features/{name}/` with only the folders needed (`api/`, `models/`, `components/`, `pages/`, plus `containers/`, `stores/`, `hooks/`, `helpers/` on demand) — tree in `references/architecture.md`.
 2. Implement in data-flow order: DTO + mapper → Model → hook → (schema) → container → component → page.
 3. Register the page route in `shared/routes/` (path constant first) — `references/routing-shell.md`.
-4. Never import from another feature; duplicate a minimal local hook instead (guideline §4.15).
+4. Never import from another feature; duplicate a minimal local hook instead (guideline §4.15). Sole exception: the sanctioned `@/features/(queue|session|download)` facades via their `index.ts` (enforced by eslint.config.js).
 
 ## Workflow B — New endpoint hook (invoke adapter)
 
@@ -123,6 +123,6 @@ npm run test        # vitest run
 npm run check       # typecheck + lint + cargo check
 ```
 
-Scripts may evolve during the React migration (Vite plugin, Tailwind, new test setup) — if a script fails for tooling reasons, check `package.json` for its current form instead of assuming.
+If a script fails for tooling reasons, check `package.json` for its current form instead of assuming.
 
 Also verify: no cross-feature imports, no DTO reaching a component, no raw HTML layout tags, no hardcoded route strings, all new user-facing text has both `es` and `en`.
