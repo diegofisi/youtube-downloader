@@ -10,23 +10,28 @@ import {
 } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Small } from '@/shared/components/ui/typography';
+import { Small, Span } from '@/shared/components/ui/typography';
 import { cn } from '@/shared/lib/utils';
 import { t } from '@/shared/lib/i18n';
+import { selectActiveCount, useQueueStore } from '@/features/queue';
 import { AppPath } from './app-path';
 
 interface NavItem {
   path: string;
   label: string;
   icon: LucideIcon;
+  /** Live item count shown on the right (Cola only). */
+  badge?: number;
 }
 
 export const Sidebar = () => {
+  // Replaces the vanilla 'queue:count' bus event with a narrow store selector.
+  const queueCount = useQueueStore(selectActiveCount);
   const items: NavItem[] = [
     { path: AppPath.DESCARGAR, label: t('Descargar', 'Download'), icon: DownloadIcon },
     { path: AppPath.BUSCAR, label: t('Buscar', 'Search'), icon: SearchIcon },
     { path: AppPath.YOUTUBE, label: t('Mi YouTube', 'My YouTube'), icon: TvMinimalPlayIcon },
-    { path: AppPath.COLA, label: t('Cola', 'Queue'), icon: ListVideoIcon },
+    { path: AppPath.COLA, label: t('Cola', 'Queue'), icon: ListVideoIcon, badge: queueCount },
     { path: AppPath.BIBLIOTECA, label: t('Biblioteca', 'Library'), icon: LibraryIcon },
     { path: AppPath.AJUSTES, label: t('Ajustes', 'Settings'), icon: SettingsIcon },
   ];
@@ -37,7 +42,7 @@ export const Sidebar = () => {
         {t('Navegación', 'Navigation')}
       </Small>
       <Stack gap="xs">
-        {items.map(({ path, label, icon: Icon }) => (
+        {items.map(({ path, label, icon: Icon, badge }) => (
           <NavLink
             key={path}
             to={path}
@@ -49,7 +54,15 @@ export const Sidebar = () => {
             }
           >
             <Icon className="size-4" />
-            {label}
+            <Span className="flex-1">{label}</Span>
+            {badge !== undefined && badge > 0 && (
+              <Span
+                weight="bold"
+                className="flex h-4.5 min-w-4.5 items-center justify-center rounded-[9px] bg-primary px-1.25 font-mono text-[10.5px] text-primary-foreground"
+              >
+                {badge}
+              </Span>
+            )}
           </NavLink>
         ))}
       </Stack>
