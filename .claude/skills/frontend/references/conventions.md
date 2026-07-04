@@ -100,6 +100,7 @@ not raw strings. (The canonical auth instance, `AuthStatus`, lives in
 - Transform every DTO into a Domain Model before the UI consumes it.
 - Keep components **dumb** and containers **smart**.
 - Use React Query's `select` for query data transformation; type hooks generically for the Adapter Pattern.
+- Use canonical Tailwind spacing classes over arbitrary px values (`px-4.5`, not `px-[18px]`; 1 unit = 4px). Arbitrary only where no canonical form exists (`text-[13px]`, `rounded-[9px]`, non-quarter steps).
 - Create feature folders only when needed.
 - Zustand for client UI state + live processes; request/response server data in React Query.
 - Zod for form validation; `z.infer` for types; compose schemas.
