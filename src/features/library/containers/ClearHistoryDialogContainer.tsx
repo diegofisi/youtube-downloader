@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui/dialog';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { useClearHistory } from '../api/clear-history/useClearHistory';
 
 interface ClearHistoryDialogContainerProps {
@@ -16,18 +16,17 @@ interface ClearHistoryDialogContainerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Leaf container: confirm dialog + clear_history mutation. Files are NOT deleted. */
 export const ClearHistoryDialogContainer = ({ open, onOpenChange }: ClearHistoryDialogContainerProps) => {
   const { mutate: clearHistory, isPending } = useClearHistory();
 
   const onConfirm = () => {
     clearHistory(undefined, {
       onSuccess: () => {
-        toast.info(t('Historial vaciado', 'History cleared'));
+        toast.info(t.library.clearedToast());
         onOpenChange(false);
       },
       onError: () => {
-        toast.error(t('No se pudo vaciar el historial', 'Could not clear the history'));
+        toast.error(t.library.clearErrorToast());
         onOpenChange(false);
       },
     });
@@ -37,20 +36,17 @@ export const ClearHistoryDialogContainer = ({ open, onOpenChange }: ClearHistory
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('Vaciar historial', 'Clear history')}</DialogTitle>
+          <DialogTitle>{t.library.clearTitle()}</DialogTitle>
           <DialogDescription>
-            {t(
-              'Se limpiará el historial de descargas. Los archivos descargados NO se borran de tu equipo.',
-              'This will clear your download history. The downloaded files will NOT be deleted from your computer.',
-            )}
+            {t.library.clearConfirm()}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>
-            {t('Cancelar', 'Cancel')}
+            {t.common.cancel()}
           </Button>
           <Button disabled={isPending} onClick={onConfirm}>
-            {t('Vaciar', 'Clear')}
+            {t.library.clear()}
           </Button>
         </DialogFooter>
       </DialogContent>

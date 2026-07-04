@@ -1,5 +1,3 @@
-/** Domain Models for settings — camelCase, clean unions. The UI never sees the DTO. */
-
 export const DownloadMode = {
   Video: 'video',
   Audio: 'audio',
@@ -20,7 +18,7 @@ export interface Settings {
   defaultAudioFormat: string;
   defaultConcurrency: number;
   defaultMode: DownloadMode;
-  /** Output template (without ".%(ext)s"). */
+  /** Without the ".%(ext)s" suffix. */
   defaultTemplate: string;
   defaultSubtitles: boolean;
   defaultThumbnail: boolean;

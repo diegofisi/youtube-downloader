@@ -1,6 +1,6 @@
 import { Container, DownloadMode, type Settings } from '../../models/settings.model';
 
-/** Mirror of Rust `AppConfig` (legacy struct — serializes snake_case; copy reality, don't "fix" it here). */
+// Mirrors legacy Rust `AppConfig` — snake_case is contract, don't "fix" it here.
 export interface SettingsDTOResponse {
   download_folder: string;
   default_quality: string;
@@ -21,7 +21,7 @@ const toContainer = (raw: string): Container => {
   return Container.Mp4;
 };
 
-/** Same defensive fallbacks the vanilla settings-view applied on init. */
+// Defensive fallbacks match what the vanilla settings-view applied on init.
 export const toSettings = (dto: SettingsDTOResponse): Settings => ({
   downloadFolder: dto.download_folder,
   defaultQuality: dto.default_quality || 'auto',

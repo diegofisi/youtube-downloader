@@ -1,6 +1,5 @@
 import { getInitialLang } from '@/shared/lib/i18n';
 
-/** "h:mm:ss" or "m:ss" duration from seconds. */
 export function fmtDuration(s?: number): string {
   if (!s) return '';
   const sec = Math.floor(s);
@@ -11,7 +10,6 @@ export function fmtDuration(s?: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${m}:${pad(ss)}`;
 }
 
-/** Short local date (day, month, hour:min) per active language. */
 export function fmtDate(date: Date): string {
   try {
     return date.toLocaleString(getInitialLang(), {

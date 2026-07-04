@@ -1,6 +1,6 @@
 import { PlayIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
-import { Span } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import type { AnalyzedVideo } from '../../models/analyzed.model';
 import { fmtDuration, gradFor } from '../../helpers/format';
 
@@ -10,7 +10,6 @@ interface VideoThumbProps {
   height: number;
 }
 
-/** Thumbnail with gradient fallback and duration badge. */
 export const VideoThumb = ({ video, width, height }: VideoThumbProps) => (
   <Box
     className="relative flex-none overflow-hidden rounded-[9px]"
@@ -24,9 +23,9 @@ export const VideoThumb = ({ video, width, height }: VideoThumbProps) => (
       </Box>
     )}
     {video.duration ? (
-      <Span className="absolute right-1.25 bottom-1.25 rounded-[5px] bg-black/80 px-1.25 py-[1.5px] font-mono text-[10.5px] font-semibold text-white">
+      <Text variant="micro" className="absolute right-1.25 bottom-1.25 rounded-[5px] bg-black/80 px-1.25 py-[1.5px] font-mono font-semibold text-white">
         {fmtDuration(video.duration)}
-      </Span>
+      </Text>
     ) : null}
   </Box>
 );

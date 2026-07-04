@@ -1,5 +1,5 @@
 import { Switch } from '@/shared/components/ui/switch';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { SettingsSection } from './SettingsSection';
 import { SettingsRow } from './SettingsRow';
 
@@ -9,13 +9,10 @@ interface BehaviorSectionProps {
 }
 
 export const BehaviorSection = ({ clearLinksAfterPreview, onChange }: BehaviorSectionProps) => (
-  <SettingsSection title={t('Comportamiento', 'Behavior')}>
+  <SettingsSection title={t.settings.behavior()}>
     <SettingsRow
-      title={t('Limpiar enlaces al previsualizar', 'Clear links after preview')}
-      description={t(
-        'Vacía el cuadro de enlaces después de generar la vista previa',
-        'Empties the link box after generating the preview',
-      )}
+      title={t.settings.clearLinks()}
+      description={t.settings.clearLinksHint()}
     >
       <Switch checked={clearLinksAfterPreview} onCheckedChange={onChange} />
     </SettingsRow>

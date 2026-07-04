@@ -1,4 +1,4 @@
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 
 export const FeedTab = {
   WatchLater: 'wl',
@@ -20,11 +20,11 @@ export const FEED_TAB_URLS: Record<FeedTab, string> = {
 /** Labels resolve at call time so language switches re-evaluate them. */
 export function feedTabOptions(): { value: FeedTab; label: string }[] {
   return [
-    { value: FeedTab.WatchLater, label: t('Ver más tarde', 'Watch later') },
-    { value: FeedTab.Liked, label: t('Me gusta', 'Liked') },
-    { value: FeedTab.Subs, label: t('Suscripciones', 'Subscriptions') },
-    { value: FeedTab.History, label: t('Historial', 'History') },
-    { value: FeedTab.Playlists, label: t('Playlists', 'Playlists') },
+    { value: FeedTab.WatchLater, label: t.youtube.watchLater() },
+    { value: FeedTab.Liked, label: t.youtube.liked() },
+    { value: FeedTab.Subs, label: t.youtube.subscriptions() },
+    { value: FeedTab.History, label: t.youtube.history() },
+    { value: FeedTab.Playlists, label: t.youtube.playlists() },
   ];
 }
 

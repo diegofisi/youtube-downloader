@@ -1,12 +1,11 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { useTauriEvent } from '@/shared/hooks/useTauriEvent';
 import { useCheckDependencies } from '../api/check-dependencies/useCheckDependencies';
 import { useDownloadDependencies } from '../api/download-dependencies/useDownloadDependencies';
 import type { SetupProgress } from '../models/setup-progress.model';
 
-/** Troubleshooting panel: dependency status + repair with live setup-progress. */
 export function useTroubleshooting() {
   const { data: status, isLoading: checking } = useCheckDependencies();
   const { mutate: repair, isPending: repairing } = useDownloadDependencies();
@@ -18,18 +17,18 @@ export function useTroubleshooting() {
   });
 
   const onRepair = useCallback(() => {
-    if (repairing) return; // guards against double click
+    if (repairing) return;
     setError(null);
     setProgress(null);
     repair(undefined, {
       onSuccess: () => {
         setProgress(null);
-        toast.success(t('Reparación completada', 'Repair completed'));
+        toast.success(t.settings.repairDoneToast());
       },
       onError: (e) => {
         // The error stays visible in the panel (not cleared) in addition to the toast.
         setError(String(e));
-        toast.error(t('Error al reparar', 'Repair failed'), { description: String(e) });
+        toast.error(t.settings.repairErrorToast(), { description: String(e) });
       },
     });
   }, [repair, repairing]);

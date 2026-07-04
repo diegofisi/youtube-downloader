@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { ChevronRightIcon, SettingsIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Small } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import { Button } from '@/shared/components/ui/button';
 import { ChipGroup } from '@/shared/components/ui/ChipGroup';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/components/ui/dialog';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 import type { AnalyzedVideo } from '../../models/analyzed.model';
 import type { DownloadOpts, OptsOverride } from '../../models/download-opts.model';
@@ -25,7 +25,6 @@ interface VideoOptsDialogProps {
   onClose: () => void;
 }
 
-/** Per-video options dialog with draft semantics (remount per open via key={url}). */
 export const VideoOptsDialog = ({
   video,
   globalOpts,
@@ -50,25 +49,25 @@ export const VideoOptsDialog = ({
           className="gap-2.5 border-b border-border px-4.25 py-3.75"
         >
           <SettingsIcon className="size-4.25 flex-none text-primary" />
-          <DialogTitle className="text-[14.5px]">{t('Opciones de este video', 'Options for this video')}</DialogTitle>
+          <DialogTitle className="text-body-sm">{t.download.videoOptions()}</DialogTitle>
         </Stack>
 
         <Stack gap="md" className="max-h-[60vh] overflow-y-auto px-4.25 py-3.75">
-          <DialogDescription className="truncate rounded-[9px] bg-background px-2.75 py-2.25 text-[12.5px] text-muted-foreground">
+          <DialogDescription className="truncate rounded-[9px] bg-background px-2.75 py-2.25 text-small text-muted-foreground">
             {video.title}
           </DialogDescription>
 
           <Stack gap="xs">
-            <Small className="text-[11.5px] font-semibold text-muted-foreground">
-              {t('Qué descargar', 'What to download')}
-            </Small>
+            <Text variant="caption" className=" font-semibold text-muted-foreground">
+              {t.download.whatToDownload()}
+            </Text>
             <ChipGroup options={modeChips()} value={eff.mode} onChange={(mode) => setKey('mode', mode)} />
           </Stack>
 
           {eff.mode !== 'audio' && (
             <>
               <Stack gap="xs">
-                <Small className="text-[11.5px] font-semibold text-muted-foreground">{t('Calidad', 'Quality')}</Small>
+                <Text variant="caption" className=" font-semibold text-muted-foreground">{t.common.quality()}</Text>
                 <ChipGroup
                   options={qualityChips()}
                   value={eff.quality}
@@ -76,9 +75,9 @@ export const VideoOptsDialog = ({
                 />
               </Stack>
               <Stack gap="xs">
-                <Small className="text-[11.5px] font-semibold text-muted-foreground">
-                  {t('Formato del archivo', 'File format')}
-                </Small>
+                <Text variant="caption" className=" font-semibold text-muted-foreground">
+                  {t.download.fileFormat()}
+                </Text>
                 <ChipGroup
                   options={containerChips()}
                   value={eff.container}
@@ -91,9 +90,9 @@ export const VideoOptsDialog = ({
           {eff.mode === 'audio' && (
             <>
               <Stack gap="xs">
-                <Small className="text-[11.5px] font-semibold text-muted-foreground">
-                  {t('Formato de audio', 'Audio format')}
-                </Small>
+                <Text variant="caption" className=" font-semibold text-muted-foreground">
+                  {t.download.audioFormat()}
+                </Text>
                 <ChipGroup
                   options={audioFmtChips()}
                   value={eff.audioFmt}
@@ -101,9 +100,9 @@ export const VideoOptsDialog = ({
                 />
               </Stack>
               <Stack gap="xs">
-                <Small className="text-[11.5px] font-semibold text-muted-foreground">
-                  {t('Calidad de audio', 'Audio quality')}
-                </Small>
+                <Text variant="caption" className=" font-semibold text-muted-foreground">
+                  {t.download.audioQuality()}
+                </Text>
                 <ChipGroup
                   options={bitrateChips()}
                   value={eff.bitrate}
@@ -120,7 +119,7 @@ export const VideoOptsDialog = ({
               className="flex w-full items-center gap-1.75 rounded-lg px-0.5 py-1 text-left text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronRightIcon className={cn('size-3.25 flex-none transition-transform', advOpen && 'rotate-90')} />
-              {t('Avanzado', 'Advanced')}
+              {t.download.advanced()}
             </button>
             {advOpen && <VideoOptsAdvanced eff={eff} onSetKey={setKey} />}
           </Box>
@@ -128,13 +127,13 @@ export const VideoOptsDialog = ({
 
         <Stack direction="row" gap="sm" className="gap-2.5 border-t border-border px-4.25 py-3.5">
           {Object.keys(draft).length > 0 && (
-            <Button variant="outline" onClick={onClear} className="h-10 px-3.5 text-[12.5px]">
-              {t('Usar generales', 'Use defaults')}
+            <Button variant="outline" onClick={onClear} className="h-10 px-3.5 text-small">
+              {t.download.useGlobal()}
             </Button>
           )}
           <Box className="flex-1" />
-          <Button onClick={() => onCommit(draft)} className="h-10 px-5.5 text-[13px] font-bold">
-            {t('Listo', 'Done')}
+          <Button onClick={() => onCommit(draft)} className="h-10 px-5.5 text-body-sm font-bold">
+            {t.common.ready()}
           </Button>
         </Stack>
       </DialogContent>

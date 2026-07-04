@@ -1,6 +1,5 @@
 import type { DependencyStatus } from '../../models/dependency-status.model';
 
-/** Mirror of Rust `DependencyStatus` (single-word fields — no casing to clean). */
 export interface DependencyStatusDTOResponse {
   ytdlp: boolean;
   ffmpeg: boolean;

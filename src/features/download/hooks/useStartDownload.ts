@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { AppPath } from '@/shared/routes/app-path';
-// Pinned contract: the queue slice's public facade (built in parallel).
 import { useQueueStore, type EnqueueItem } from '@/features/queue';
 import { useCookieMode } from '../api/get-session-status/useCookieMode';
 import { useDownloadedKeys } from '../api/get-history/useDownloadedKeys';
@@ -14,7 +13,6 @@ import { useDownloadStore } from '../stores/useDownloadStore';
 
 const EMPTY_KEYS: ReadonlySet<string> = new Set();
 
-/** Enqueues the selected downloadable videos and jumps to the queue view. */
 export function useStartDownload(): () => void {
   const navigate = useNavigate();
   const { data: cookieMode } = useCookieMode();
@@ -27,8 +25,8 @@ export function useStartDownload(): () => void {
       (v) => selected.has(v.url) && STATUS_META[statusOf(v, downloaded)].downloadable,
     );
     if (chosen.length === 0) {
-      toast.warning(t('Nada seleccionado', 'Nothing selected'), {
-        description: t('Marca al menos un video descargable.', 'Check at least one downloadable video.'),
+      toast.warning(t.download.nothingSelectedTitle(), {
+        description: t.download.nothingSelectedToast(),
       });
       return;
     }
@@ -48,15 +46,11 @@ export function useStartDownload(): () => void {
       };
     });
     useQueueStore.getState().enqueue(items);
-    // Clear the selection so pressing "Download" again doesn't enqueue duplicates;
-    // the preview is kept in case other videos are picked next.
+    // Clear selection so pressing "Download" again can't re-enqueue duplicates.
     useDownloadStore.getState().clearSelection();
     void navigate(AppPath.COLA);
-    toast.success(t('Añadido a la cola', 'Added to queue'), {
-      description: t(
-        `${items.length} ${items.length === 1 ? 'video' : 'videos'} en proceso.`,
-        `${items.length} ${items.length === 1 ? 'video' : 'videos'} in progress.`,
-      ),
+    toast.success(t.common.addedToQueue(), {
+      description: t.download.downloadingToast({ n: items.length }),
     });
   }, [navigate, cookieMode, downloadedKeys]);
 }

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CARD_GRAD } from '@/shared/components/media/media-item';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { AppPath } from '@/shared/routes/app-path';
 import { useDownloadPrefill } from '@/features/download';
 import { useQueueStore, type EnqueueItem } from '@/features/queue';
@@ -25,7 +25,7 @@ export function useSearchActions(onSelectionDone: () => void) {
     grad: CARD_GRAD,
     thumbnail: v.thumbnail,
     duration: v.duration,
-    fmt: t('Máxima · MP4', 'Max · MP4'),
+    fmt: t.common.maxMp4(),
     options: {
       mode: 'video',
       quality: 'max',
@@ -42,7 +42,7 @@ export function useSearchActions(onSelectionDone: () => void) {
 
   const downloadOne = (v: SearchVideo) => {
     useQueueStore.getState().enqueue([toQueueItem(v)]);
-    toast.success(t('Añadido a la cola', 'Added to queue'), { description: v.title });
+    toast.success(t.common.addedToQueue(), { description: v.title });
   };
 
   const customizeOne = (v: SearchVideo) => {
@@ -55,11 +55,8 @@ export function useSearchActions(onSelectionDone: () => void) {
     useQueueStore.getState().enqueue(items.map(toQueueItem));
     onSelectionDone();
     void navigate(AppPath.COLA);
-    toast.success(t('Añadido a la cola', 'Added to queue'), {
-      description: t(
-        `${items.length} ${items.length === 1 ? 'video' : 'videos'} en proceso.`,
-        `${items.length} ${items.length === 1 ? 'video' : 'videos'} in progress.`,
-      ),
+    toast.success(t.common.addedToQueue(), {
+      description: t.download.downloadingToast({ n: items.length }),
     });
   };
 
@@ -68,11 +65,8 @@ export function useSearchActions(onSelectionDone: () => void) {
     useDownloadPrefill.getState().setUrls(items.map((v) => v.url));
     onSelectionDone();
     void navigate(AppPath.DESCARGAR);
-    toast.info(t('Personaliza tu descarga', 'Customize your download'), {
-      description: t(
-        `${items.length} ${items.length === 1 ? 'video listo' : 'videos listos'} en Descargar.`,
-        `${items.length} ${items.length === 1 ? 'video' : 'videos'} ready in Download.`,
-      ),
+    toast.info(t.common.customizeDownloadPrompt(), {
+      description: t.search.readyToast({ n: items.length }),
     });
   };
 

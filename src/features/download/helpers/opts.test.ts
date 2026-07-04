@@ -89,8 +89,8 @@ describe('sizeMB', () => {
   });
 
   it('aplica el factor de calidad relativo a 1080p', () => {
-    expect(sizeMB({ sizeBytes: 100 * MB }, mkOpts({ quality: '4k', mode: 'av' }))).toBeCloseTo(260); // 4k = x2.6
-    expect(sizeMB({ sizeBytes: 100 * MB }, mkOpts({ quality: '480p', mode: 'av' }))).toBeCloseTo(30); // 480p = x0.3
+    expect(sizeMB({ sizeBytes: 100 * MB }, mkOpts({ quality: '4k', mode: 'av' }))).toBeCloseTo(260);
+    expect(sizeMB({ sizeBytes: 100 * MB }, mkOpts({ quality: '480p', mode: 'av' }))).toBeCloseTo(30);
   });
 
   it('en modo audio aplica ×0.08 sobre el tamaño a esa calidad', () => {
@@ -106,7 +106,7 @@ describe('effectiveOpts', () => {
   it('mezcla las opciones globales con el override parcial del video', () => {
     const eff = effectiveOpts(mkOpts(), { quality: '720p' });
     expect(eff.quality).toBe('720p');
-    expect(eff.container).toBe(DEFAULT_OPTS.container); // the rest comes from the globals
+    expect(eff.container).toBe(DEFAULT_OPTS.container);
   });
 
   it('sin override devuelve una copia de las globales', () => {

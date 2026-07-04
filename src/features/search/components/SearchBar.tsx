@@ -2,7 +2,7 @@ import { SearchIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
 import { Button } from '@/shared/components/ui/button';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 
 interface SearchBarProps {
   value: string;
@@ -10,7 +10,6 @@ interface SearchBarProps {
   onSubmit: () => void;
 }
 
-/** Search input + button row (Enter submits). */
 export const SearchBar = ({ value, onChange, onSubmit }: SearchBarProps) => (
   <Box
     as="form"
@@ -32,7 +31,7 @@ export const SearchBar = ({ value, onChange, onSubmit }: SearchBarProps) => (
         autoFocus
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={t('Buscar en YouTube…', 'Search YouTube…')}
+        placeholder={t.search.inputPlaceholder()}
         className="min-w-0 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-faint"
       />
     </Stack>
@@ -40,7 +39,7 @@ export const SearchBar = ({ value, onChange, onSubmit }: SearchBarProps) => (
       type="submit"
       className="h-11.5 rounded-xl px-6 text-sm font-bold shadow-[0_6px_18px_rgba(124,107,240,.3)]"
     >
-      {t('Buscar', 'Search')}
+      {t.common.search()}
     </Button>
   </Box>
 );

@@ -1,5 +1,6 @@
 import { SegmentedControl } from '@/shared/components/ui/SegmentedControl';
-import { t, type Lang } from '@/shared/lib/i18n';
+import type { Lang } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import type { Theme } from '@/shared/stores/useUiStore';
 import { SettingsSection } from './SettingsSection';
 import { SettingsRow } from './SettingsRow';
@@ -21,8 +22,8 @@ export const AppearanceSection = ({
   onThemeChange,
   onConcurrencyChange,
 }: AppearanceSectionProps) => (
-  <SettingsSection title={t('Apariencia', 'Appearance')}>
-    <SettingsRow title="Idioma / Language" description={t('Se aplica al instante', 'Applies instantly')}>
+  <SettingsSection title={t.settings.appearance()}>
+    <SettingsRow title="Idioma / Language" description={t.settings.appearanceHint()}>
       <SegmentedControl
         options={[
           { value: 'es', label: 'Español' },
@@ -32,19 +33,19 @@ export const AppearanceSection = ({
         onChange={onLangChange}
       />
     </SettingsRow>
-    <SettingsRow title={t('Tema', 'Theme')} description={t('Claro u oscuro', 'Light or dark')}>
+    <SettingsRow title={t.settings.theme()} description={t.settings.themeHint()}>
       <SegmentedControl
         options={[
-          { value: 'dark', label: t('Oscuro', 'Dark') },
-          { value: 'light', label: t('Claro', 'Light') },
+          { value: 'dark', label: t.settings.dark() },
+          { value: 'light', label: t.settings.light() },
         ]}
         value={theme}
         onChange={onThemeChange}
       />
     </SettingsRow>
     <SettingsRow
-      title={t('Descargas simultáneas', 'Simultaneous downloads')}
-      description={t('Cuántos videos a la vez', 'How many videos at once')}
+      title={t.settings.concurrency()}
+      description={t.settings.concurrencyHint()}
     >
       <SegmentedControl
         options={[
@@ -52,7 +53,7 @@ export const AppearanceSection = ({
           { value: '10', label: '10' },
           { value: '20', label: '20' },
           { value: '50', label: '50' },
-          { value: '0', label: t('Todos', 'All') },
+          { value: '0', label: t.settings.concurrencyAll() },
         ]}
         value={String(concurrency)}
         onChange={(v) => onConcurrencyChange(parseInt(v, 10))}

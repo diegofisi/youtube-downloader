@@ -1,6 +1,6 @@
 import type { DownloadDefaults } from '../../models/download-opts.model';
 
-// Minimal mirror of Rust AppConfig (snake_case): only the fields this view needs (§4.15).
+// Minimal mirror of Rust AppConfig (snake_case): only the fields this view needs.
 export interface DownloadSettingsDTOResponse {
   default_quality: string;
   default_container: string;

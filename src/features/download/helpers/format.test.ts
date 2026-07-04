@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fmtDuration, fmtSize, timeAgo, gradFor } from './format';
 
-// Note: features/library/helpers/format.ts carries an identical fmtDuration copy
-// (each slice owns its local helpers); the shared behavior is pinned here once.
 // i18n falls back to 'es' with no localStorage, so timeAgo strings are Spanish.
 
 describe('fmtDuration', () => {

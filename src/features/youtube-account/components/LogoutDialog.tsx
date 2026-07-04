@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui/dialog';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 
 interface LogoutDialogProps {
   open: boolean;
@@ -16,25 +16,21 @@ interface LogoutDialogProps {
   isPending: boolean;
 }
 
-/** Sign-out confirmation (ports the vanilla showModal copy). */
 export const LogoutDialog = ({ open, onOpenChange, onConfirm, isPending }: LogoutDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>{t('Cerrar sesión', 'Sign out')}</DialogTitle>
+        <DialogTitle>{t.youtube.logout()}</DialogTitle>
         <DialogDescription className="whitespace-pre-line">
-          {t(
-            'Se borrarán las cookies guardadas en este equipo. Podrás volver a conectarte cuando quieras.\n\n¿Cerrar sesión de YouTube?',
-            'The cookies stored on this device will be deleted. You can reconnect whenever you want.\n\nSign out of YouTube?',
-          )}
+          {t.youtube.logoutConfirm()}
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>
-          {t('Cancelar', 'Cancel')}
+          {t.common.cancel()}
         </Button>
         <Button variant="destructive" disabled={isPending} onClick={onConfirm}>
-          {t('Cerrar sesión', 'Sign out')}
+          {t.youtube.logout()}
         </Button>
       </DialogFooter>
     </DialogContent>

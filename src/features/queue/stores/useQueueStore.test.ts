@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { DownloadOptions } from '../models/download-options.model';
 import type { EnqueueItem } from '../models/queue-item.model';
 
-// Mocks the api wrappers + the '@/features/session' facade; sonner and the query
-// client are side-effect sinks. i18n is pure and used real (defaults to 'es').
+// i18n is used real (not mocked), so assertions match the 'es' default strings.
 const mocks = vi.hoisted(() => ({
   startDownload: vi.fn(),
   cancelDownload: vi.fn(),
@@ -27,8 +26,8 @@ vi.mock('sonner', () => ({ toast: mocks.toast }));
 type StoreModule = typeof import('./useQueueStore');
 type Store = StoreModule['useQueueStore'];
 
-// The module holds state outside the store (seq, auth single-flight), so each
-// test re-imports it fresh via vi.resetModules().
+// Module holds state outside the store (seq, auth single-flight), so each test
+// re-imports it fresh via vi.resetModules().
 async function loadStore(): Promise<StoreModule> {
   return await import('./useQueueStore');
 }

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { fmtDate } from './format';
 
-// fmtDuration here is an identical copy of features/download/helpers/format.ts,
-// already pinned by that slice's tests; only the library-only fmtDate is tested.
+// fmtDuration is an identical copy already pinned by the download slice's tests;
+// only the library-only fmtDate is tested here.
 
 describe('fmtDate', () => {
   it('incluye día de dos dígitos y hora:minuto en el idioma activo (es)', () => {

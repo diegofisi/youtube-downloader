@@ -6,10 +6,8 @@ export type Theme = 'dark' | 'light';
 const THEME_KEY = 'stash-theme'; // legacy key shared with the vanilla app
 
 interface UiStore {
-  // State
   lang: Lang;
   theme: Theme;
-  // Actions
   setLang: (l: Lang) => void;
   setTheme: (theme: Theme) => void;
 }
@@ -23,7 +21,6 @@ const getInitialTheme = (): Theme => {
   }
 };
 
-/** Toggles the Tailwind dark class + data-theme attr and persists the choice. */
 export function applyTheme(theme: Theme): void {
   const root = document.documentElement;
   root.classList.toggle('dark', theme === 'dark');

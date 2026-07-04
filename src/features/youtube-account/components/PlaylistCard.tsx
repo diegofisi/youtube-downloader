@@ -1,8 +1,8 @@
 import { ListVideoIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Span } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import type { FeedVideo } from '../models/feed-video.model';
 
 const PLAYLIST_GRAD = 'linear-gradient(135deg,#2d3a6b,#7a45c2)';
@@ -12,10 +12,9 @@ interface PlaylistCardProps {
   onOpen: (item: FeedVideo) => void;
 }
 
-/** Playlist card ("Playlists" tab): own styling, opens the playlist on click. */
 export const PlaylistCard = ({ item, onOpen }: PlaylistCardProps) => {
   const badgeLabel =
-    item.playlistCount != null ? `${item.playlistCount} ${t('videos', 'videos')}` : t('Playlist', 'Playlist');
+    item.playlistCount != null ? `${item.playlistCount} ${t.youtube.videosNoun()}` : t.youtube.playlist();
 
   return (
     <button
@@ -32,18 +31,18 @@ export const PlaylistCard = ({ item, onOpen }: PlaylistCardProps) => {
           </Box>
         )}
         <Box className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(0,0,0,.5))]" />
-        <Span className="absolute right-2 bottom-2 flex items-center gap-1.25 rounded-[5px] bg-black/80 px-1.75 py-0.5 text-[10.5px] font-semibold text-white">
+        <Text variant="micro" className="absolute right-2 bottom-2 flex items-center gap-1.25 rounded-[5px] bg-black/80 px-1.75 py-0.5 font-semibold text-white">
           <ListVideoIcon className="size-3" />
           {badgeLabel}
-        </Span>
+        </Text>
       </Box>
       <Stack gap="none" className="px-2.75 pt-2.5 pb-3">
-        <Span className="line-clamp-2 min-h-8.5 text-[12.5px] leading-[1.35] font-semibold text-foreground">
+        <Text variant="small" className="line-clamp-2 min-h-8.5 leading-[1.35] font-semibold text-foreground">
           {item.title}
-        </Span>
-        <Span className="mt-1.25 truncate text-[11.5px] text-muted-foreground">
-          {item.channel || t('Abrir playlist →', 'Open playlist →')}
-        </Span>
+        </Text>
+        <Text variant="caption" className="mt-1.25 truncate text-muted-foreground">
+          {item.channel || t.youtube.openPlaylist()}
+        </Text>
       </Stack>
     </button>
   );

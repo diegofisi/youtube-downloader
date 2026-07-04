@@ -1,4 +1,3 @@
-/** Payload of the global 'download-progress' Tauri event (already camelCase). */
 export interface DownloadProgress {
   percent: number;
   speed: string;

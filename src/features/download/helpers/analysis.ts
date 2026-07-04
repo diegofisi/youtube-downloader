@@ -1,8 +1,5 @@
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import type { AnalyzedEntry, AnalyzedVideo, FlatVideo } from '../models/analyzed.model';
-
-// Preview derivation helpers: flattening with duplicate marking and
-// availability → status classification (ported from preview-render.ts).
 
 export function flattenVideos(entries: AnalyzedEntry[]): FlatVideo[] {
   const out: FlatVideo[] = [];
@@ -31,44 +28,42 @@ export function statusOf(v: AnalyzedVideo, downloaded: ReadonlySet<string>): Vid
 
 interface StatusMeta {
   label: () => string;
-  /** Static Tailwind classes for the badge (text + soft background). */
   tone: string;
   downloadable: boolean;
 }
 
 export const STATUS_META: Record<VideoStatus, StatusMeta> = {
   ok: {
-    label: () => t('Descargable', 'Downloadable'),
+    label: () => t.download.statusDownloadable(),
     tone: 'text-success bg-success/15',
     downloadable: true,
   },
   members: {
-    label: () => t('De miembros · requiere sesión', 'Members-only · requires session'),
+    label: () => t.download.statusMembers(),
     tone: 'text-warn bg-warn/15',
     downloadable: true,
   },
   downloaded: {
-    label: () => t('Ya descargado', 'Already downloaded'),
+    label: () => t.download.statusAlreadyDownloaded(),
     tone: 'text-info bg-info/15',
     downloadable: true,
   },
   private: {
-    label: () => t('Privado · no disponible', 'Private · not available'),
+    label: () => t.download.statusPrivate(),
     tone: 'text-faint bg-faint/15',
     downloadable: false,
   },
   region: {
-    label: () => t('Bloqueado por región', 'Region-blocked'),
+    label: () => t.download.statusRegionBlocked(),
     tone: 'text-warn bg-warn/15',
     downloadable: false,
   },
   error: {
-    label: () => t('No disponible', 'Not available'),
+    label: () => t.download.statusUnavailable(),
     tone: 'text-destructive bg-destructive/15',
     downloadable: false,
   },
 };
 
-/** Duplicate cards reuse the badge slot with a faint tone. */
 export const DUP_TONE = 'text-faint bg-faint/15';
-export const dupLabel = (): string => t('Duplicado', 'Duplicate');
+export const dupLabel = (): string => t.download.statusDuplicate();

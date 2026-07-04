@@ -26,7 +26,7 @@ export interface PlaylistMetaDTO {
 
 export type AnalyzedEntryDTO = VideoMetaDTO | PlaylistMetaDTO;
 
-/** Expands playlists into their entries and drops id-less rows (ports dl-actions flatten). */
+/** Drops id-less rows (ports dl-actions flatten). */
 export function flattenEntries(entries: AnalyzedEntryDTO[]): VideoMetaDTO[] {
   const out: VideoMetaDTO[] = [];
   for (const e of entries) {

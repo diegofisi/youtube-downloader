@@ -34,7 +34,6 @@ interface StackProps extends HTMLAttributes<HTMLDivElement> {
   wrap?: boolean;
 }
 
-/** Flex container for stacking — replaces raw `<div>` with flex. */
 export const Stack = ({
   gap = 'md',
   direction = 'col',

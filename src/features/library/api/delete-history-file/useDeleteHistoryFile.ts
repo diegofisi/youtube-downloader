@@ -5,14 +5,12 @@ import { LIBRARY_HISTORY_KEY } from '../get-history/useGetHistory';
 import type { LibraryEntryDTOResponse } from '../get-history/get-history.dto';
 import { toDeleteFileOutcome, type DeleteHistoryFileDTOResponse } from './delete-history-file.dto';
 
-/** Deletes an entry's file (trash if possible, permanent as fallback)
- * and removes the entry from history. */
 export function useDeleteHistoryFile() {
   const queryClient = useQueryClient();
   return useMutation<DeleteFileOutcome, Error, { id: string }>({
     mutationFn: async ({ id }) =>
       toDeleteFileOutcome(await invoke<DeleteHistoryFileDTOResponse>('delete_history_file', { id })),
-    // The backend already removed the entry: drop the row from the cache.
+    // Backend already removed the entry, so just drop the row from cache.
     onSuccess: (_outcome, { id }) => {
       queryClient.setQueryData<LibraryEntryDTOResponse[]>(LIBRARY_HISTORY_KEY, (old) =>
         old?.filter((e) => e.id !== id),

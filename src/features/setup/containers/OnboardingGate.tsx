@@ -6,8 +6,7 @@ interface OnboardingGateProps {
   children: ReactNode;
 }
 
-// The app shell stays mounted underneath (like the vanilla overlay), so
-// "Omitir" reveals it instantly and global wiring is never delayed.
+// Children stay mounted underneath the overlay so skipping reveals the app instantly.
 export const OnboardingGate = ({ children }: OnboardingGateProps) => {
   const gate = useOnboardingGate();
 

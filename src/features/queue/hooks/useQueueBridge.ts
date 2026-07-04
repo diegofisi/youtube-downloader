@@ -6,20 +6,17 @@ import type { DownloadProgress } from '../models/download-progress.model';
 import { getConcurrency } from '../api/get-concurrency/getConcurrency';
 import { useQueueStore } from '../stores/useQueueStore';
 
-/** Headless bridge mounted once in AppShell: feeds the queue scheduler with the
- * global 'download-progress' event, wires the session 'cookies-extracted' sync and
- * keeps the concurrency in step with the ['settings'] cache (Ajustes autosave). */
-export const QueueBridge = () => {
+/** Call once from the shell so the scheduler runs even when /cola is not mounted. */
+export function useQueueBridge() {
   useTauriEvent<DownloadProgress>('download-progress', (p) => useQueueStore.getState().handleProgress(p));
   useCookiesExtractedSync();
 
   useEffect(() => {
-    // Initial concurrency from get_settings (0 → Infinity handled by the store action).
     getConcurrency()
       .then((n) => useQueueStore.getState().setConcurrency(n))
       .catch(() => {}); // settings unavailable: keep the default of 5
 
-    // Live sync: useSetSettings patches the ['settings'] DTO cache on every save.
+    // Live sync: useSetSettings patches the ['settings'] cache on every save.
     return queryClient.getQueryCache().subscribe((event) => {
       const key = event.query.queryKey;
       if (key.length !== 1 || key[0] !== 'settings') return;
@@ -30,6 +27,4 @@ export const QueueBridge = () => {
       if (next !== concurrency) setConcurrency(dto.default_concurrency);
     });
   }, []);
-
-  return null;
-};
+}

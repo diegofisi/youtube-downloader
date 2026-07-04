@@ -8,8 +8,8 @@ import { MediaCard } from '@/shared/components/media/MediaCard';
 import { MediaGrid } from '@/shared/components/media/MediaGrid';
 import { Button } from '@/shared/components/ui/button';
 import { ChipGroup } from '@/shared/components/ui/ChipGroup';
-import { H1, P, Small } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { useSearchVideos } from '../api/search-videos/useSearchVideos';
 import { SearchBar } from '../components/SearchBar';
 import { SearchChip, searchChipLabel, searchChipOptions } from '../helpers/search-chips';
@@ -34,7 +34,7 @@ export const BuscarPage = () => {
   const submit = () => {
     const next = input.trim();
     if (!next) {
-      toast.info(t('Escribe algo para buscar', 'Type something to search'));
+      toast.info(t.search.promptTitle());
       return;
     }
     clearSelection();
@@ -64,20 +64,17 @@ export const BuscarPage = () => {
     void search.fetchNextPage().then((r) => {
       // Keep the loaded grid: page errors surface as a toast, not a state card.
       if (r.isError)
-        toast.error(t('No se pudieron cargar más', 'Could not load more'), { description: String(r.error) });
+        toast.error(t.common.couldNotLoadMore(), { description: String(r.error) });
     });
   };
 
   return (
     <Stack gap="none" className="mx-auto w-full max-w-255 px-7.5 pt-6.5 pb-15">
       <Stack gap="none" className="mb-5.5">
-        <H1>{t('Buscar', 'Search')}</H1>
-        <P color="muted" className="mt-1.25 text-[13.5px]">
-          {t(
-            'Encuentra videos en YouTube y descárgalos sin salir de la app.',
-            'Find videos on YouTube and download them without leaving the app.',
-          )}
-        </P>
+        <Text variant="h1">{t.common.search()}</Text>
+        <Text variant="body-sm" color="muted" className="mt-1.25">
+          {t.search.promptSubtitle()}
+        </Text>
       </Stack>
 
       <Box className="mb-3.5">
@@ -90,28 +87,28 @@ export const BuscarPage = () => {
 
       {/* min-height keeps the grid from jumping when the selection buttons appear */}
       <Stack direction="row" gap="sm" align="center" className="mb-3.5 min-h-8.5">
-        <Small color="muted" className="text-xs font-normal">
+        <Text variant="small" color="muted" className="text-xs font-normal">
           {!searching && videos.length > 0
-            ? `${videos.length} ${videos.length === 1 ? t('resultado', 'result') : t('resultados', 'results')}`
+            ? `${videos.length} ${videos.length === 1 ? t.search.resultSingular() : t.search.resultPlural()}`
             : ''}
-        </Small>
+        </Text>
         <Box className="flex-1" />
         {chosen.length > 0 && (
           <>
             <Button
               variant="outline"
               size="sm"
-              className="h-8.5 rounded-[9px] px-3.75 text-[12.5px]"
+              className="h-8.5 rounded-[9px] px-3.75 text-small"
               onClick={() => actions.customizeSelected(chosen)}
             >
-              {t('Personalizar', 'Customize')}
+              {t.common.customize()}
             </Button>
             <Button
               size="sm"
-              className="h-8.5 rounded-[9px] px-3.75 text-[12.5px]"
+              className="h-8.5 rounded-[9px] px-3.75 text-small"
               onClick={() => actions.downloadSelected(chosen)}
             >
-              {`${t('Descargar', 'Download')} ${chosen.length}`}
+              {`${t.common.download()} ${chosen.length}`}
             </Button>
           </>
         )}
@@ -120,33 +117,24 @@ export const BuscarPage = () => {
       <MediaGrid>
         {query === '' && (
           <GridStateCard
-            title={t('Busca algo en YouTube', 'Search for something on YouTube')}
-            message={t(
-              'Escribe arriba lo que quieras encontrar y descárgalo desde aquí.',
-              "Type what you're looking for above and download it from here.",
-            )}
+            title={t.search.emptyTitle()}
+            message={t.search.emptySubtitle()}
           />
         )}
-        {query !== '' && searching && <GridStateCard loading title={`${t('Buscando', 'Searching')} “${query}”…`} />}
+        {query !== '' && searching && <GridStateCard loading title={`${t.search.searching()} “${query}”…`} />}
         {query !== '' && !searching && search.isError && !search.data && (
-          <GridStateCard title={t('No se pudo buscar', 'Search failed')} message={String(search.error)} />
+          <GridStateCard title={t.search.searchError()} message={String(search.error)} />
         )}
         {query !== '' && !searching && search.isSuccess && videos.length === 0 && !search.hasNextPage && (
           <GridStateCard
-            title={t('Sin resultados', 'No results')}
-            message={t(
-              `No se encontró nada para “${query}” con el filtro ${searchChipLabel(chip)}.`,
-              `Nothing found for “${query}” with the ${searchChipLabel(chip)} filter.`,
-            )}
+            title={t.search.noResults()}
+            message={t.search.noResultsFor({ query, filter: searchChipLabel(chip) })}
           />
         )}
         {query !== '' && !searching && search.isSuccess && videos.length === 0 && search.hasNextPage && (
           <GridStateCard
-            title={t('Sin resultados en esta página', 'No results on this page')}
-            message={t(
-              'El filtro descartó estos resultados; prueba “Ver más”.',
-              'The filter dropped these results; try “Show more”.',
-            )}
+            title={t.search.noResultsPage()}
+            message={t.search.filterHidAll()}
           />
         )}
         {!searching &&
@@ -167,12 +155,12 @@ export const BuscarPage = () => {
         <Stack direction="row" justify="center" className="mt-4">
           <Button
             variant="outline"
-            className="h-9.5 rounded-[10px] px-5.5 text-[13px]"
+            className="h-9.5 rounded-[10px] px-5.5 text-body-sm"
             disabled={search.isFetchingNextPage}
             onClick={loadMore}
           >
             {search.isFetchingNextPage && <Loader2Icon className="size-4 animate-spin" />}
-            {search.isFetchingNextPage ? t('Cargando…', 'Loading…') : t('Ver más', 'Show more')}
+            {search.isFetchingNextPage ? t.common.loadingEllipsis() : t.common.seeMore()}
           </Button>
         </Stack>
       )}

@@ -15,7 +15,6 @@ export function isAuthError(e: unknown): boolean {
   return /login|account|cookies|autenticaci/i.test(String(e));
 }
 
-/** Tab/playlist/selection state + feed query for My YouTube (guideline §4.18 hook). */
 export function useYoutubeFeed() {
   const [tab, setTab] = useState<FeedTab>(FeedTab.WatchLater);
   const [openPlaylist, setOpenPlaylist] = useState<OpenPlaylist | null>(null);

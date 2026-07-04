@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Trash2Icon, XIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
-import { t } from '@/shared/lib/i18n';
+import { IconButton } from '@/shared/components/ui/IconButton';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 
 interface EntryDeleteMenuProps {
@@ -10,9 +11,8 @@ interface EntryDeleteMenuProps {
   onDeleteFile: () => void;
 }
 
-// Local dropdown (no @radix-ui/react-dropdown-menu in the project yet):
-// trash button anchoring a small menu. Any click closes it — item handlers
-// run first (React root listeners fire before this document-level one).
+// No dropdown-menu dep yet, so hand-rolled. Any document click closes it, but item
+// handlers still fire first: React root listeners run before this document-level one.
 export const EntryDeleteMenu = ({ hasFile, onRemove, onDeleteFile }: EntryDeleteMenuProps) => {
   const [open, setOpen] = useState(false);
 
@@ -32,16 +32,15 @@ export const EntryDeleteMenu = ({ hasFile, onRemove, onDeleteFile }: EntryDelete
 
   return (
     <Box className="relative">
-      <button
-        type="button"
-        title={t('Quitar o eliminar', 'Remove or delete')}
+      <IconButton
+        title={t.library.removeOrDelete()}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex size-8 items-center justify-center rounded-lg border border-border text-destructive transition-colors hover:bg-accent"
+        tone="danger"
         onClick={() => setOpen((v) => !v)}
       >
         <Trash2Icon className="size-4" />
-      </button>
+      </IconButton>
       {open && (
         <Box
           role="menu"
@@ -49,13 +48,13 @@ export const EntryDeleteMenu = ({ hasFile, onRemove, onDeleteFile }: EntryDelete
         >
           <MenuItem
             icon={<XIcon className="size-4" />}
-            label={t('Quitar de la lista', 'Remove from list')}
+            label={t.common.removeFromList()}
             onClick={onRemove}
           />
           {hasFile && (
             <MenuItem
               icon={<Trash2Icon className="size-4" />}
-              label={t('Eliminar archivo', 'Delete file')}
+              label={t.library.deleteFile()}
               destructive
               onClick={onDeleteFile}
             />
@@ -78,7 +77,7 @@ const MenuItem = ({ icon, label, destructive = false, onClick }: MenuItemProps) 
     type="button"
     role="menuitem"
     className={cn(
-      'flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[12.5px] font-medium transition-colors hover:bg-accent',
+      'flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-small font-medium transition-colors hover:bg-accent',
       destructive ? 'text-destructive' : 'text-foreground',
     )}
     onClick={onClick}

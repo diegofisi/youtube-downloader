@@ -1,8 +1,8 @@
 import { ChevronDownIcon, ChevronRightIcon, PlayIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Span } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 import { gradFor } from '../../helpers/format';
 import type { PreviewItemVM } from '../../hooks/usePreviewDerived';
@@ -17,7 +17,6 @@ interface PlaylistGroupProps {
   onOpenOpts: (url: string) => void;
 }
 
-/** Collapsible playlist group: select-all header + compact child rows. */
 export const PlaylistGroup = ({
   item,
   onToggleGroup,
@@ -41,24 +40,21 @@ export const PlaylistGroup = ({
           >
             <PlayIcon className="size-5 fill-current" />
           </Box>
-          <Span className="absolute right-0.75 bottom-0.75 rounded bg-black/80 px-1.25 py-px font-mono text-[9.5px] font-bold text-white">
+          <Text variant="micro" className="absolute right-0.75 bottom-0.75 rounded bg-black/80 px-1.25 py-px font-mono font-bold text-white">
             {p.count}
-          </Span>
+          </Text>
         </Box>
         <Stack gap="xs" className="min-w-0 flex-1">
           <Stack direction="row" gap="sm" align="center" className="min-w-0">
-            <Span className="flex-none rounded-[5px] bg-primary-soft px-1.75 py-0.5 text-[9.5px] font-bold tracking-[.5px] text-primary">
+            <Text variant="micro" className="flex-none rounded-[5px] bg-primary-soft px-1.75 py-0.5 font-bold tracking-[.5px] text-primary">
               PLAYLIST
-            </Span>
-            <Span className="truncate text-[13.5px] font-semibold text-foreground">{p.title}</Span>
+            </Text>
+            <Text variant="body-sm" className="truncate font-semibold text-foreground">{p.title}</Text>
           </Stack>
-          <Span className="block truncate text-xs text-muted-foreground">
+          <Text variant="inline" className="block truncate text-xs text-muted-foreground">
             {p.channel} ·{' '}
-            {t(
-              `${p.count} videos · ${item.nSel} de ${item.nSelectable} elegidos`,
-              `${p.count} videos · ${item.nSel} of ${item.nSelectable} selected`,
-            )}
-          </Span>
+            {t.download.playlistMeta({ count: p.count, sel: item.nSel, total: item.nSelectable })}
+          </Text>
         </Stack>
         <button
           type="button"
@@ -68,7 +64,7 @@ export const PlaylistGroup = ({
             'text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
           )}
         >
-          {item.expanded ? t('Ocultar', 'Hide') : t('Ver', 'View')}
+          {item.expanded ? t.download.hide() : t.download.show()}
           {item.expanded ? <ChevronDownIcon className="size-3.75" /> : <ChevronRightIcon className="size-3.75" />}
         </button>
       </Stack>

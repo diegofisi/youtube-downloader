@@ -3,8 +3,7 @@ import { invoke } from '@/shared/lib/tauri';
 import type { DependencyStatus } from '../../models/dependency-status.model';
 import { toDependencyStatus, type DependencyStatusDTOResponse } from './check-dependencies.dto';
 
-// Local hook for the Troubleshooting panel. Key is settings-scoped so the future
-// setup feature's ['setup', 'dependencies'] query never collides (guideline §4.15).
+// Settings-scoped key so it never collides with setup's ['setup', 'dependencies'].
 export function useCheckDependencies(
   options?: Omit<
     UseQueryOptions<DependencyStatusDTOResponse, Error, DependencyStatus>,

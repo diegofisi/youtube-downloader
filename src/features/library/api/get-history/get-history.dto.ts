@@ -1,6 +1,6 @@
 import type { LibraryEntry } from '../../models/library-entry.model';
 
-/** Mirror of Rust `LibraryEntry` (serde renames video_id/file_path to camelCase). */
+/** Serde renames video_id/file_path to camelCase over the wire. */
 export interface LibraryEntryDTOResponse {
   id: string;
   videoId?: string;

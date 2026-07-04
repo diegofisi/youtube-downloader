@@ -4,9 +4,9 @@ import { Button } from '@/shared/components/ui/button';
 import { ChipGroup } from '@/shared/components/ui/ChipGroup';
 import { Input } from '@/shared/components/ui/input';
 import { SegmentedControl } from '@/shared/components/ui/SegmentedControl';
-import { Small } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import { Switch } from '@/shared/components/ui/switch';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { Container, DownloadMode } from '../models/settings.model';
 import type { SettingsForm } from '../helpers/settings.schema';
 import { SettingsSection } from './SettingsSection';
@@ -33,25 +33,25 @@ export const DefaultsSection = ({
   onTemplateBlur,
   onChangeFolder,
 }: DefaultsSectionProps) => (
-  <SettingsSection title={t('Descarga por defecto', 'Download defaults')}>
+  <SettingsSection title={t.settings.defaultDownload()}>
     <SettingsRow
-      title={t('Modo por defecto', 'Default mode')}
-      description={t('Qué se descarga si no eliges otra cosa', "What gets downloaded if you don't choose otherwise")}
+      title={t.settings.defaultMode()}
+      description={t.settings.defaultModeHint()}
     >
       <SegmentedControl
         options={[
-          { value: DownloadMode.Video, label: t('Video + audio', 'Video + audio') },
-          { value: DownloadMode.Audio, label: t('Solo audio', 'Audio only') },
+          { value: DownloadMode.Video, label: t.common.videoAndAudio() },
+          { value: DownloadMode.Audio, label: t.common.audioOnly() },
         ]}
         value={values.defaultMode}
         onChange={(v) => onField('defaultMode', v)}
       />
     </SettingsRow>
-    <SettingsRow title={t('Calidad', 'Quality')}>
+    <SettingsRow title={t.common.quality()}>
       <ChipGroup
         options={[
           { value: 'auto', label: 'Auto' },
-          { value: 'max', label: t('Máx', 'Max') },
+          { value: 'max', label: t.settings.qualityMaxShort() },
           { value: '2160', label: '4K' },
           { value: '1080', label: '1080p' },
           { value: '720', label: '720p' },
@@ -61,7 +61,7 @@ export const DefaultsSection = ({
         onChange={(v) => onField('defaultQuality', v)}
       />
     </SettingsRow>
-    <SettingsRow title={t('Formato', 'Format')}>
+    <SettingsRow title={t.settings.format()}>
       <ChipGroup
         options={[
           { value: Container.Mp4, label: 'MP4' },
@@ -73,8 +73,8 @@ export const DefaultsSection = ({
       />
     </SettingsRow>
     <SettingsRow
-      title={t('Plantilla de nombre', 'Filename template')}
-      description={t('Cómo se nombran los archivos (%(title)s, %(id)s…)', 'How files are named (%(title)s, %(id)s…)')}
+      title={t.common.nameTemplate()}
+      description={t.settings.templateHint()}
     >
       <Stack gap="xs" align="end">
         <Input
@@ -85,32 +85,32 @@ export const DefaultsSection = ({
           aria-invalid={templateError !== undefined}
           className="h-8.5 w-62.5 font-mono text-xs"
         />
-        {templateError !== undefined && <Small className="font-normal text-destructive">{templateError}</Small>}
+        {templateError !== undefined && <Text variant="small" className="font-normal text-destructive">{templateError}</Text>}
       </Stack>
     </SettingsRow>
     <SettingsRow
-      title={t('Descargar subtítulos', 'Download subtitles')}
-      description={t('Incluye los subtítulos si están disponibles', 'Include subtitles when available')}
+      title={t.common.downloadSubtitles()}
+      description={t.settings.subtitlesHint()}
     >
       <Switch checked={values.defaultSubtitles} onCheckedChange={(v) => onField('defaultSubtitles', v)} />
     </SettingsRow>
     <SettingsRow
-      title={t('Guardar miniatura del video', 'Save video thumbnail')}
-      description={t('Guarda la portada junto al archivo', 'Saves the cover image next to the file')}
+      title={t.settings.thumbnail()}
+      description={t.settings.thumbnailHint()}
     >
       <Switch checked={values.defaultThumbnail} onCheckedChange={(v) => onField('defaultThumbnail', v)} />
     </SettingsRow>
     <SettingsRow
-      title={t('Carpeta de descargas', 'Downloads folder')}
+      title={t.settings.downloadFolder()}
       description={
-        <Small className="block max-w-105 truncate font-mono text-xs font-normal" title={folder}>
+        <Text variant="small" className="block max-w-105 truncate font-mono text-xs font-normal" title={folder}>
           {folder ?? '…'}
-        </Small>
+        </Text>
       }
     >
       <Button variant="outline" size="sm" className="h-8.5" disabled={isChangingFolder} onClick={onChangeFolder}>
         <FolderIcon />
-        {t('Cambiar', 'Change')}
+        {t.settings.change()}
       </Button>
     </SettingsRow>
   </SettingsSection>

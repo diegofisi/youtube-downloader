@@ -1,7 +1,7 @@
 import { Stack } from '@/shared/components/layout/Stack';
 import { Box } from '@/shared/components/layout/Box';
-import { H3, Small } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 
 interface PreviewToolbarProps {
@@ -13,7 +13,6 @@ interface PreviewToolbarProps {
   onToggleSelectAll: () => void;
 }
 
-/** "Vista previa" heading + count + filter/select-all actions (visible with a batch). */
 export const PreviewToolbar = ({
   hasEntries,
   totalCount,
@@ -23,10 +22,10 @@ export const PreviewToolbar = ({
   onToggleSelectAll,
 }: PreviewToolbarProps) => (
   <Stack direction="row" gap="sm" align="center" wrap className="gap-3">
-    <H3 className="text-[15px]">{t('Vista previa', 'Preview')}</H3>
+    <Text variant="h6">{t.download.previewTitle()}</Text>
     {hasEntries && (
       /* "video(s)" reads the same in both languages */
-      <Small className="text-xs text-muted-foreground">{`${totalCount} video${totalCount === 1 ? '' : 's'}`}</Small>
+      <Text variant="small" className="text-xs text-muted-foreground">{`${totalCount} video${totalCount === 1 ? '' : 's'}`}</Text>
     )}
     <Box className="flex-1" />
     {hasEntries && (
@@ -41,14 +40,14 @@ export const PreviewToolbar = ({
               : 'border-border bg-transparent text-muted-foreground hover:text-foreground',
           )}
         >
-          {t('Solo descargables', 'Downloadable only')}
+          {t.download.onlyDownloadable()}
         </button>
         <button
           type="button"
           onClick={onToggleSelectAll}
-          className="rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-primary transition-colors hover:bg-primary-soft"
+          className="rounded-lg px-2 py-1.5 text-small font-medium text-primary transition-colors hover:bg-primary-soft"
         >
-          {allSelected ? t('Quitar selección', 'Clear selection') : t('Seleccionar todo', 'Select all')}
+          {allSelected ? t.download.clearSelection() : t.download.selectAll()}
         </button>
       </>
     )}

@@ -2,7 +2,6 @@ import type { ComponentProps } from 'react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/shared/lib/utils';
 
-/** Styled to match the Stash toggle (38x22, white knob, accent when on). */
 const Switch = ({ className, ...props }: ComponentProps<typeof SwitchPrimitive.Root>) => (
   <SwitchPrimitive.Root
     className={cn(

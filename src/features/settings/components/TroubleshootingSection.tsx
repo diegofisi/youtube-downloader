@@ -2,9 +2,9 @@ import { AlertTriangleIcon, CheckIcon, ChevronRightIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
 import { Button } from '@/shared/components/ui/button';
-import { Small, Span } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import { cn } from '@/shared/lib/utils';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import type { DependencyStatus } from '../models/dependency-status.model';
 import type { SetupProgress } from '../models/setup-progress.model';
 import { SettingsSection } from './SettingsSection';
@@ -19,15 +19,15 @@ interface TroubleshootingSectionProps {
 
 const DependencyRow = ({ name, ok }: { name: string; ok: boolean }) => (
   <Stack direction="row" align="center" justify="between" className="border-t border-border py-3.25">
-    <Span className="font-mono text-[13.5px]">{name}</Span>
-    <Small
+    <Text variant="body-sm" className="font-mono">{name}</Text>
+    <Text variant="caption"
       className={cn(
-        'rounded-md px-2.25 py-0.75 text-[11px] font-bold',
+        'rounded-md px-2.25 py-0.75 font-bold',
         ok ? 'bg-success-soft text-success' : 'bg-destructive-soft text-destructive',
       )}
     >
-      {ok ? t('Instalado', 'Installed') : t('Falta', 'Missing')}
-    </Small>
+      {ok ? t.settings.installed() : t.settings.missing()}
+    </Text>
   </Stack>
 );
 
@@ -38,27 +38,24 @@ export const TroubleshootingSection = ({
   error,
   onRepair,
 }: TroubleshootingSectionProps) => (
-  <SettingsSection title={t('Solucionar problemas', 'Troubleshooting')}>
+  <SettingsSection title={t.settings.troubleshoot()}>
     <Stack direction="row" gap="md" align="center" className="border-t border-border py-3.25">
-      <Stack direction="row" gap="sm" align="center" className="min-w-0 flex-1 text-[13.5px]">
-        {status === undefined && <Small color="muted">…</Small>}
+      <Stack direction="row" gap="sm" align="center" className="min-w-0 flex-1 text-body-sm">
+        {status === undefined && <Text variant="small" color="muted">…</Text>}
         {status?.ready === true && (
           <>
             <CheckIcon className="size-4 flex-none text-success" />
-            <Small className="font-normal text-foreground">
-              {t('Todo funciona correctamente', 'Everything is working correctly')}
-            </Small>
+            <Text variant="small" className="font-normal text-foreground">
+              {t.settings.allGood()}
+            </Text>
           </>
         )}
         {status !== undefined && !status.ready && (
           <>
             <AlertTriangleIcon className="size-4 flex-none text-warn" />
-            <Small className="font-normal text-warn">
-              {t(
-                'Faltan componentes necesarios — usa "Comprobar y reparar"',
-                'Required components are missing — use "Check & repair"',
-              )}
-            </Small>
+            <Text variant="small" className="font-normal text-warn">
+              {t.settings.missingComponents()}
+            </Text>
           </>
         )}
       </Stack>
@@ -69,18 +66,18 @@ export const TroubleshootingSection = ({
         disabled={repairing}
         onClick={onRepair}
       >
-        {repairing ? t('Reparando…', 'Repairing…') : t('Comprobar y reparar', 'Check & repair')}
+        {repairing ? t.settings.repairing() : t.settings.checkAndRepair()}
       </Button>
     </Stack>
     {repairing && progress !== null && (
       <Box className="pb-3.25">
         <Stack direction="row" gap="sm" justify="between" className="mb-1.5">
-          <Small color="muted" className="min-w-0 truncate font-normal">
+          <Text variant="small" color="muted" className="min-w-0 truncate font-normal">
             {progress.message}
-          </Small>
-          <Small color="muted" className="flex-none font-mono">
+          </Text>
+          <Text variant="small" color="muted" className="flex-none font-mono">
             {Math.round(progress.percent)}%
-          </Small>
+          </Text>
         </Stack>
         <Box className="h-1 rounded-sm bg-border">
           <Box
@@ -92,16 +89,16 @@ export const TroubleshootingSection = ({
     )}
     {error !== null && (
       <Box className="pb-3.25">
-        <Small className="font-normal text-destructive">{`${t('Error', 'Error')}: ${error}`}</Small>
+        <Text variant="small" className="font-normal text-destructive">{`${t.common.error()}: ${error}`}</Text>
       </Box>
     )}
     <Box as="details" className="border-t border-border">
       <Box
         as="summary"
-        className="flex cursor-pointer list-none items-center gap-1.75 rounded-md py-3.25 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
+        className="flex cursor-pointer list-none items-center gap-1.75 rounded-md py-3.25 text-body-sm font-semibold text-muted-foreground hover:text-foreground"
       >
         <ChevronRightIcon className="size-3.5 flex-none" />
-        {t('Detalles técnicos', 'Technical details')}
+        {t.settings.technicalDetails()}
       </Box>
       <Box className="pb-1">
         <DependencyRow name="yt-dlp" ok={status?.ytdlp === true} />

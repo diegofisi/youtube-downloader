@@ -9,7 +9,6 @@ import { mergeLines } from '../helpers/parse-urls';
 // and per-batch overrides survive navigating to /cola and back — vanilla parity.
 
 interface DownloadStore {
-  // State
   urlsText: string;
   entries: AnalyzedEntry[];
   selected: ReadonlySet<string>;
@@ -19,7 +18,6 @@ interface DownloadStore {
   /** Playlist id → collapsed (default expanded, like vanilla `expanded[id] !== false`). */
   collapsed: Record<string, boolean>;
   analyzeError: string | null;
-  // Actions
   setUrlsText: (text: string) => void;
   appendUrls: (urls: string[]) => void;
   setBatch: (entries: AnalyzedEntry[], selected: Set<string>) => void;

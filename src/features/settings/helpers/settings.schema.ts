@@ -1,8 +1,8 @@
 import { z } from 'zod/v4';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { Container, DownloadMode, type Settings } from '../models/settings.model';
 
-// Builder (not a const): the template message must follow the live language (see forms reference).
+// Builder, not a const, so the template error message follows the live language.
 export const buildSettingsSchema = () =>
   z.object({
     defaultQuality: z.string().min(1),
@@ -10,7 +10,7 @@ export const buildSettingsSchema = () =>
     defaultAudioFormat: z.string().min(1),
     defaultConcurrency: z.number().int().min(0),
     defaultMode: z.enum([DownloadMode.Video, DownloadMode.Audio]),
-    defaultTemplate: z.string().min(1, t('La plantilla no puede estar vacía', 'Template cannot be empty')),
+    defaultTemplate: z.string().min(1, t.settings.templateEmptyError()),
     defaultSubtitles: z.boolean(),
     defaultThumbnail: z.boolean(),
     clearLinksAfterPreview: z.boolean(),
@@ -18,7 +18,7 @@ export const buildSettingsSchema = () =>
 
 export type SettingsForm = z.infer<ReturnType<typeof buildSettingsSchema>>;
 
-/** Model → form values (the folder is not a form field — it has its own picker flow). */
+// Folder is excluded — it has its own picker flow, not a form field.
 export const toFormValues = (s: Settings): SettingsForm => ({
   defaultQuality: s.defaultQuality,
   defaultContainer: s.defaultContainer,

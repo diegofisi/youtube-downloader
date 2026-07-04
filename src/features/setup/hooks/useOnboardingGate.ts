@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { useTauriEvent } from '@/shared/hooks/useTauriEvent';
 import { useCheckDependencies } from '../api/check-dependencies/useCheckDependencies';
 import { useDownloadDependencies } from '../api/download-dependencies/useDownloadDependencies';
@@ -12,7 +12,7 @@ export const OnboardingPhase = {
 } as const;
 export type OnboardingPhase = (typeof OnboardingPhase)[keyof typeof OnboardingPhase];
 
-// Legacy key shared with the vanilla app (house rule: keep until migrated).
+// Legacy key shared with the vanilla app — keep until migrated.
 const ONBOARDED_KEY = 'stash-onboarded';
 const FAKE_STEP_MS = 520;
 const TOTAL_STEPS = 3;
@@ -29,12 +29,10 @@ const markOnboarded = (): void => {
   try {
     localStorage.setItem(ONBOARDED_KEY, '1');
   } catch {
-    /* ignore persistence errors */
+    // ignore persistence errors
   }
 };
 
-/** Boot gate: mirrors vanilla initOnboarding() — check deps, install if missing,
- * or play a short welcome animation on the very first ready boot. */
 export function useOnboardingGate() {
   const { data: status } = useCheckDependencies();
   const { mutate: install, isPending: installing } = useDownloadDependencies();
@@ -68,7 +66,7 @@ export function useOnboardingGate() {
       },
       onError: (e) => {
         // Keep the error visible and offer retry; don't continue as if all went well.
-        setDetail(`${t('Error', 'Error')}: ${String(e)}`);
+        setDetail(`${t.common.error()}: ${String(e)}`);
         setRetryMode(true);
         setFinishEnabled(true);
       },
@@ -121,7 +119,7 @@ export function useOnboardingGate() {
     stepsDone,
     detail,
     detailIsError: retryMode,
-    finishLabel: retryMode ? t('Reintentar', 'Retry') : t('Empezar a usar Stash', 'Start using Stash'),
+    finishLabel: retryMode ? t.common.retry() : t.setup.finish(),
     finishEnabled,
     onFinish,
     onSkip,

@@ -1,5 +1,3 @@
-// Analysis result models (camelCase) — the only shapes the download UI consumes.
-
 export interface AnalyzedVideo {
   id: string;
   url: string;

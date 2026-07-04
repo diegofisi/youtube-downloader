@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
 import { Button } from '@/shared/components/ui/button';
-import { Span } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 
 interface AccountCardProps {
@@ -16,19 +16,14 @@ interface AccountCardProps {
   onLogout: () => void;
 }
 
-/** Session/account card of My YouTube: avatar, name, Connected/Expired badge,
- * Reconnect (expired only) and Sign out. */
 export const AccountCard = ({ name, handle, avatarUrl, expired, onReconnect, onLogout }: AccountCardProps) => {
   // The gradient + "A" stay visible while the avatar loads or if it fails.
   const [avatarFailed, setAvatarFailed] = useState(false);
   const showAvatar = avatarUrl !== null && !avatarFailed;
 
-  const active = t('Sesión activa con cookies', 'Active session with cookies');
+  const active = t.youtube.sessionActive();
   const desc = expired
-    ? t(
-        'La sesión venció o está incompleta — reconéctate para contenido de miembros',
-        'The session expired or is incomplete — reconnect for members-only content',
-      )
+    ? t.youtube.sessionExpiredDesc()
     : handle
       ? `${handle} · ${active}`
       : active;
@@ -54,37 +49,37 @@ export const AccountCard = ({ name, handle, avatarUrl, expired, onReconnect, onL
       </Box>
       <Stack gap="none" className="min-w-0 flex-1">
         <Stack direction="row" gap="sm" align="center">
-          <Span className="font-display truncate text-[15.5px] font-bold">
-            {name ?? t('Cuenta de YouTube', 'YouTube account')}
-          </Span>
-          <Span
+          <Text variant="inline" className="font-display truncate text-body font-bold">
+            {name ?? t.youtube.accountFallbackName()}
+          </Text>
+          <Text variant="caption"
             className={cn(
-              'inline-flex items-center gap-1.25 rounded-md px-2 py-0.5 text-[11px] font-semibold',
+              'inline-flex items-center gap-1.25 rounded-md px-2 py-0.5 font-semibold',
               expired ? 'bg-warn-soft text-warn' : 'bg-success-soft text-success',
             )}
           >
-            <Span className="size-1.5 animate-pulse rounded-full bg-current" />
-            {expired ? t('Caducada', 'Expired') : t('Conectada', 'Connected')}
-          </Span>
+            <Text variant="inline" className="size-1.5 animate-pulse rounded-full bg-current" />
+            {expired ? t.youtube.badgeExpired() : t.youtube.badgeConnected()}
+          </Text>
         </Stack>
-        <Span className="mt-0.5 truncate text-[12.5px] text-muted-foreground">{desc}</Span>
+        <Text variant="small" className="mt-0.5 truncate text-muted-foreground">{desc}</Text>
       </Stack>
       {expired && (
         <Button
           size="sm"
-          className="h-8.5 rounded-[9px] bg-warn px-3.25 text-[12.5px] font-bold text-[#241600] hover:bg-warn"
+          className="h-8.5 rounded-[9px] bg-warn px-3.25 text-small font-bold text-warn-foreground hover:bg-warn"
           onClick={onReconnect}
         >
-          {t('Reconectar', 'Reconnect')}
+          {t.common.reconnect()}
         </Button>
       )}
       <Button
         variant="outline"
         size="sm"
-        className="h-8.5 rounded-[9px] px-3.25 text-[12.5px] font-medium text-destructive hover:text-destructive"
+        className="h-8.5 rounded-[9px] px-3.25 text-small font-medium text-destructive hover:text-destructive"
         onClick={onLogout}
       >
-        {t('Cerrar sesión', 'Sign out')}
+        {t.youtube.logout()}
       </Button>
     </Stack>
   );

@@ -5,8 +5,7 @@ import { toDependencyStatus, type DependencyStatusDTOResponse } from './check-de
 
 export const SETUP_DEPENDENCIES_KEY = ['setup', 'dependencies'] as const;
 
-// Local hook (guideline §4.15): settings has its own copy under
-// ['settings', 'dependencies'] — distinct keys, no cache collision.
+// Distinct key from settings' ['settings', 'dependencies'] — no cache collision.
 export function useCheckDependencies(
   options?: Omit<
     UseQueryOptions<DependencyStatusDTOResponse, Error, DependencyStatus>,

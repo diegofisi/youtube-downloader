@@ -6,9 +6,6 @@ import { STATUS_META, flattenVideos, statusOf, type VideoStatus } from '../helpe
 import { effectiveOpts, sizeMB } from '../helpers/opts';
 import { useDownloadStore } from '../stores/useDownloadStore';
 
-// View-models for the preview list: components stay dumb, all business
-// derivation (status, effective opts, size, selection counts) happens here.
-
 export interface VideoVM {
   video: FlatVideo;
   status: VideoStatus;
@@ -94,7 +91,6 @@ export function usePreviewDerived() {
   const summary = useMemo(() => {
     const selectableUrls = flat.filter((v) => STATUS_META[statusOf(v, downloaded)].downloadable).map((v) => v.url);
     const chosen = flat.filter((v) => selected.has(v.url) && STATUS_META[statusOf(v, downloaded)].downloadable);
-    // How many selected videos carry custom options (non-empty override).
     const customCount = chosen.filter((v) => overrides[v.url] && Object.keys(overrides[v.url]).length > 0).length;
     const estMb = chosen.reduce((a, v) => a + sizeMB(v, effectiveOpts(opts, overrides[v.url])), 0);
     return {

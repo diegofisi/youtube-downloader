@@ -1,4 +1,4 @@
-// Minimal mirror of the history entry — only the keys the download view needs (§4.15).
+// Minimal mirror of the history entry — only the keys the download view needs.
 export interface HistoryEntryDTOResponse {
   url: string;
   videoId?: string;

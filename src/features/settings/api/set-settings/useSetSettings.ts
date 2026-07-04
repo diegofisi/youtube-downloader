@@ -4,8 +4,7 @@ import type { SettingsUpdate } from '../../models/settings.model';
 import type { SettingsDTOResponse } from '../get-settings/get-settings.dto';
 import { patchSettingsDTO, toSetSettingsDTO } from './set-settings.dto';
 
-// Saves are chained: concurrent set_settings calls (debounced template + immediate
-// toggles) must not land out of order. Call order == save order.
+// Chained so concurrent saves (debounced template + immediate toggles) land in call order.
 let saveChain: Promise<unknown> = Promise.resolve();
 
 export function useSetSettings() {
@@ -18,7 +17,7 @@ export function useSetSettings() {
       return save;
     },
     onSuccess: (_data, update) => {
-      // No invalidation: a refetch mid-edit could clobber the form. Patch the cache instead.
+      // Patch, don't invalidate: a refetch mid-edit could clobber the form.
       queryClient.setQueryData<SettingsDTOResponse>(['settings'], (old) => (old ? patchSettingsDTO(old, update) : old));
     },
   });

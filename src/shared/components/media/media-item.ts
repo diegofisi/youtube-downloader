@@ -1,4 +1,3 @@
-/** Structural contract for media grid cards: any feature model with these fields fits. */
 export interface MediaItem {
   url: string;
   title: string;
@@ -7,10 +6,8 @@ export interface MediaItem {
   duration?: number;
 }
 
-/** Fixed gradient behind (or instead of) thumbnails on media cards (ports CARD_GRAD). */
 export const CARD_GRAD = 'linear-gradient(135deg,#3a2d6b,#c2456b)';
 
-/** h:mm:ss / m:ss, empty when unknown (ports shared/lib/format fmtDuration). */
 export function formatDuration(s?: number): string {
   if (!s) return '';
   const sec = Math.floor(s);

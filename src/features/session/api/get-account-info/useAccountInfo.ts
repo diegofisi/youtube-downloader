@@ -17,9 +17,8 @@ export function useAccountInfo(
     queryFn: () => invoke<AccountInfoDTOResponse | null>('get_account_info'),
     select: toAccountInfo,
     enabled: status === SessionStatus.Connected,
-    // Vanilla account-card semantics: a resolved value (even null = "no account") is
-    // cached for the whole session; a transient failure is NOT cached — `retry`
-    // covers it, and an errored query refetches when a consumer remounts.
+    // Cache a resolved value (even null) for the session; transient failures aren't
+    // cached — `retry` covers them and an errored query refetches on remount.
     staleTime: Infinity,
     retry: 2,
     ...options,

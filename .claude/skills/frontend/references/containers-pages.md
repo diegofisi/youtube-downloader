@@ -6,6 +6,114 @@
 
 All examples use structural placeholder names (`Entity`, `{feature}`).
 
+## The Container/Component boundary (universal rule)
+
+Two rules remove all ambiguity about where code goes. The old "components are
+props-only with zero hooks" rule is **retired** — it was over-rigid (the author
+of the Container/Presentational pattern retracted the prescriptive version). The
+real split is **data/business vs presentation**, not *all* state vs *no* state.
+
+**Rule A — where state/logic lives.** One-sentence test: *if the state vanished on
+remount and nothing outside the component would notice, it belongs in the
+component; if anything external (server, store, a sibling, the URL, a toast)
+depends on it, it belongs in the container/hook.* The question is binary — "does
+anything external depend on this state?"
+
+| In the **component** (local, ephemeral, presentational) | In the **container/hook** (data, business, external effects) |
+|---|---|
+| `useState` for open/hover/focus/expanded/active-visual-tab/own-input draft | Server data (React Query) |
+| `useRef`, `useId` | Mutations / writes |
+| Outside-click / Escape listener for **its own** popover | Shared/global state (Zustand) |
+| CSS animation of its own UI | Business-derived data |
+| | `toast`, navigation, `invoke`, any external effect |
+| | Orchestrating multiple components |
+
+So a dropdown owning its own `open` + outside-click listener is a correct
+presentational component — do not hoist that into a container.
+
+**Rule B — what a container's JSX may contain.** Only: (1) other components,
+(2) conditional rendering (`&&`, early returns), (3) fragments, and passing
+props/callbacks. **Forbidden inside a container's JSX:** layout primitives
+(`Stack`/`Grid`/`Box`), icons, custom text layouts, styling
+`className`/`style`/magic values, `<button>`/inputs/raw HTML. If substantial
+markup appears, that JSX is a component — extract a `<FooView/>`.
+
+*Carve-out — leaf confirm/dialog containers.* A tiny leaf container whose whole
+job is "confirm + one mutation" may render the Shadcn `Dialog` shell + its
+title/description/buttons directly (with the `t.*` strings): the dialog *is* the
+component, and a separate view file for a 15-line confirm is over-engineering.
+Extract a view only when the dialog body grows past a simple confirm or a short
+form. So a leaf confirm-dialog container is fine as-is, but a list/section
+container that fuses filter + pagination logic is not.
+
+```tsx
+// ✅ container JSX = components + conditionals + props only
+return (
+  <>
+    {children}
+    {gate.phase === Phase.Open && <OnboardingScreen {...gate} />}
+  </>
+);
+
+// ❌ container containing raw markup → extract a <FooView/>
+return (
+  <Stack className="border-b bg-warn-soft px-4 py-2">
+    <TriangleAlertIcon /> <Text variant="caption">{t('…','…')}</Text> <button>…</button>
+  </Stack>
+);
+```
+
+**Rule C — the container is THIN; logic ALWAYS lives in a hook.** A container is
+NOT a "super component" — it is the *thinnest* smart unit: it calls a hook and
+wires its result to (dumb) components. The **hook is the brain**; the container is
+a wiring shell. If a container contains a `useMemo`, a `useEffect`, derived
+business data, or multi-step handlers, **that logic belongs in a hook** (`hooks/`
+or an `api/` hook). The failure mode is the fat 2015 container that fuses logic +
+JSX — avoid it.
+
+```tsx
+// ✅ ideal container: get from a hook, render — nothing else
+export const EntityListContainer = ({ onEdit }: Props) => {
+  const { entities, isLoading } = useEntityList();      // ← brain is the hook
+  if (isLoading) return <PageLoading message="…" />;
+  return <EntityListTable entities={entities} onEdit={onEdit} />;
+};
+// ❌ logic fused in the container → move filter/effect/derivation into useEntityList
+```
+
+Litmus: a container should read like `const x = useX(); return <View {...x} />`.
+
+### Container vs Component vs Page — the categories (no overlap)
+
+This is a **4-layer** split, and the folders make the categories physical (more
+signal than mixing them — the Feature-Sliced Design idea):
+
+| Layer | Folder | What it is | Owns |
+|---|---|---|---|
+| **Page** | `pages/` | A route's composition root | cross-unit state (which dialog is open, shared selection); composes containers. One per route. |
+| **Container** | `containers/` | A thin, hook-backed **connected** unit | its concern's wiring (calls a hook, renders components). Reusable; not a route. |
+| **Component** | `components/` | **Presentational** (dumb) | props + local ephemeral UI state only. Reusable, pure. |
+| **Hook** | `hooks/` (or `api/`) | The **logic** | data, mutations, derived state, handlers. Testable without a tree. |
+
+- **`components/` = only dumb.** If a component fetches/mutates/derives-business
+  data, it is a container — move it to `containers/`. If a "container" holds no
+  hook and just renders markup, it is a component — move it to `components/`.
+- **Page ≠ Container.** A page is a route + cross-unit state. A container is one
+  connected unit a page drops in. A page never *is* a container.
+
+### When does a container exist? (this ends the "why no containers here?" confusion)
+
+A `containers/` folder appears **only when a page places 2+ independent connected
+units** (a list + dialogs, tabs). Rules:
+
+- **1 operation → NO container.** The page uses a hook directly (Pattern A/C
+  below). A `container` that a page wraps 1:1 is a thin-wrapper anti-pattern.
+- **2+ operations → containers.** Each connected unit is a thin container; the page
+  owns the state between them.
+
+So a feature having **no `containers/` folder is correct, not an omission** — it
+means every page there is single-operation.
+
 ## Container — Query
 
 ```typescript
@@ -151,7 +259,7 @@ export const PreferencesPage = () => {
   const { form, onSubmit, isPending } = /* hooks used directly */;
   return (
     <Stack gap="lg">
-      <H4>Preferences</H4>
+      <Text variant="h4">Preferences</Text>
       <PreferencesForm form={form} onSubmit={onSubmit} isLoading={isPending} />
     </Stack>
   );

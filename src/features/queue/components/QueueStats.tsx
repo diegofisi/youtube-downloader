@@ -1,9 +1,9 @@
 import { CheckIcon, DownloadIcon, ListVideoIcon, TriangleAlertIcon, type LucideIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Small, Span } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import { cn } from '@/shared/lib/utils';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 
 export interface QueueCounts {
   active: number;
@@ -26,44 +26,43 @@ const StatBox = ({ icon: Icon, toneClass, value, label }: StatBoxProps) => (
     gap="none"
     className="min-w-30 flex-1 gap-2.75 rounded-[13px] border border-border bg-panel px-3.75 py-3.25"
   >
-    <Span className={cn('flex size-9 flex-none items-center justify-center rounded-[10px]', toneClass)}>
+    <Text variant="inline" className={cn('flex size-9 flex-none items-center justify-center rounded-[10px]', toneClass)}>
       <Icon className="size-4.5" />
-    </Span>
+    </Text>
     <Box>
       <Box className="font-display text-xl leading-none font-bold">{value}</Box>
-      <Small color="muted" className="mt-0.75 block text-[11.5px] font-normal">
+      <Text variant="caption" color="muted" className="mt-0.75 block font-normal">
         {label}
-      </Small>
+      </Text>
     </Box>
   </Stack>
 );
 
-/** Stat boxes row (Active / Waiting / Completed / Errors) — vanilla queue-view parity. */
 export const QueueStats = ({ active, waiting, done, errors }: QueueCounts) => (
   <Stack direction="row" gap="none" wrap className="gap-3">
     <StatBox
       icon={DownloadIcon}
       toneClass="bg-primary-soft text-primary"
       value={active}
-      label={t('Activas', 'Active')}
+      label={t.queue.statActive()}
     />
     <StatBox
       icon={ListVideoIcon}
       toneClass="bg-info-soft text-info"
       value={waiting}
-      label={t('En espera', 'Waiting')}
+      label={t.queue.waiting()}
     />
     <StatBox
       icon={CheckIcon}
       toneClass="bg-success-soft text-success"
       value={done}
-      label={t('Completadas', 'Completed')}
+      label={t.queue.statCompleted()}
     />
     <StatBox
       icon={TriangleAlertIcon}
       toneClass="bg-destructive-soft text-destructive"
       value={errors}
-      label={t('Errores', 'Errors')}
+      label={t.queue.statErrors()}
     />
   </Stack>
 );

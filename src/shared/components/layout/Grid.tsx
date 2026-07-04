@@ -26,7 +26,6 @@ interface GridProps extends HTMLAttributes<HTMLDivElement> {
   gap?: Gap;
 }
 
-/** Grid container for layouts — replaces raw `<div>` with grid. */
 export const Grid = ({ cols = 2, gap = 'md', className, ...props }: GridProps) => (
   <div className={cn('grid', COLS[cols], GAP[gap], className)} {...props} />
 );

@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@/shared/lib/tauri';
 
-/** Repair: re-downloads missing dependencies. Progress arrives via the `setup-progress` event. */
 export function useDownloadDependencies() {
   const queryClient = useQueryClient();
   return useMutation<void, Error>({

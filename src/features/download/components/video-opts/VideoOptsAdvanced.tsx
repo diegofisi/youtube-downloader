@@ -1,8 +1,8 @@
 import { Stack } from '@/shared/components/layout/Stack';
-import { Small, Span } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import { Input } from '@/shared/components/ui/input';
 import { Switch } from '@/shared/components/ui/switch';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import type { DownloadOpts } from '../../models/download-opts.model';
 
 interface VideoOptsAdvancedProps {
@@ -10,22 +10,21 @@ interface VideoOptsAdvancedProps {
   onSetKey: <K extends keyof DownloadOpts>(key: K, value: DownloadOpts[K]) => void;
 }
 
-/** Advanced draft fields: subtitles, thumbnail and filename template. */
 export const VideoOptsAdvanced = ({ eff, onSetKey }: VideoOptsAdvancedProps) => (
   <Stack gap="md" className="gap-3.25 pt-3">
     <Stack direction="row" gap="sm" align="center" className="gap-2.5">
       <Switch checked={eff.subs} onCheckedChange={(v) => onSetKey('subs', v)} />
-      <Span className="text-[13px] text-foreground">{t('Descargar subtítulos', 'Download subtitles')}</Span>
-      <Span className="ml-auto font-mono text-[11.5px] text-faint">ES</Span>
+      <Text variant="body-sm" className=" text-foreground">{t.common.downloadSubtitles()}</Text>
+      <Text variant="caption" className="ml-auto font-mono text-faint">ES</Text>
     </Stack>
     <Stack direction="row" gap="sm" align="center" className="gap-2.5">
       <Switch checked={eff.thumb} onCheckedChange={(v) => onSetKey('thumb', v)} />
-      <Span className="text-[13px] text-foreground">{t('Guardar miniatura', 'Save thumbnail')}</Span>
+      <Text variant="body-sm" className=" text-foreground">{t.download.saveThumbnail()}</Text>
     </Stack>
     <Stack gap="xs">
-      <Small className="text-[11.5px] font-semibold text-muted-foreground">
-        {t('Plantilla de nombre', 'Filename template')}
-      </Small>
+      <Text variant="caption" className=" font-semibold text-muted-foreground">
+        {t.common.nameTemplate()}
+      </Text>
       <Input
         value={eff.template}
         spellCheck={false}

@@ -9,8 +9,8 @@ import { MediaGrid } from '@/shared/components/media/MediaGrid';
 import { Button } from '@/shared/components/ui/button';
 import { ChipGroup } from '@/shared/components/ui/ChipGroup';
 import { PageLoading } from '@/shared/components/ui/PageLoading';
-import { H1, H4, P, Small } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { openYouTubeLogin, useAccountInfo, useLogout } from '@/features/session';
 import { AccountCard } from '../components/AccountCard';
 import { LoggedOutHero } from '../components/LoggedOutHero';
@@ -32,18 +32,18 @@ export const MiYoutubePage = () => {
   const loading = yt.feed.isFetching && !yt.feed.isFetchingNextPage;
 
   const handleLogin = () => {
-    openYouTubeLogin().catch(() => toast.error(t('No se pudo abrir el login', 'Could not open login')));
+    openYouTubeLogin().catch(() => toast.error(t.common.couldNotOpenLogin()));
   };
 
   const confirmLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
         setLogoutOpen(false);
-        toast.success(t('Sesión cerrada', 'Signed out'), {
-          description: t('Las cookies fueron eliminadas.', 'The cookies were deleted.'),
+        toast.success(t.youtube.loggedOutToast(), {
+          description: t.youtube.loggedOutToastBody(),
         });
       },
-      onError: (e) => toast.error(t('No se pudo cerrar sesión', 'Could not sign out'), { description: String(e) }),
+      onError: (e) => toast.error(t.youtube.logoutError(), { description: String(e) }),
     });
   };
 
@@ -51,32 +51,29 @@ export const MiYoutubePage = () => {
     void yt.feed.fetchNextPage().then((r) => {
       // Keep the loaded grid: page errors surface as a toast, not a state card.
       if (r.isError)
-        toast.error(t('No se pudieron cargar más', 'Could not load more'), { description: String(r.error) });
+        toast.error(t.common.couldNotLoadMore(), { description: String(r.error) });
     });
   };
 
   const reconnectAction = (
-    <Button className="h-9.5 rounded-[10px] px-4.5 text-[13px] font-semibold" onClick={handleLogin}>
-      {t('Volver a iniciar sesión', 'Sign in again')}
+    <Button className="h-9.5 rounded-[10px] px-4.5 text-body-sm font-semibold" onClick={handleLogin}>
+      {t.youtube.loginAgain()}
     </Button>
   );
 
   const sessionExpired = yt.session.data !== 'connected';
-  const emptyNoun = yt.isPlaylistGrid ? t('playlists', 'playlists') : t('videos', 'videos');
+  const emptyNoun = yt.isPlaylistGrid ? t.youtube.playlistsNoun() : t.youtube.videosNoun();
 
   return (
     <Stack gap="none" className="mx-auto w-full max-w-255 px-7.5 pt-6.5 pb-15">
       <Stack gap="none" className="mb-5.5">
-        <H1>{t('Mi YouTube', 'My YouTube')}</H1>
-        <P color="muted" className="mt-1.25 text-[13.5px]">
-          {t(
-            'Explora y descarga directamente desde tu propia cuenta.',
-            'Browse and download straight from your own account.',
-          )}
-        </P>
+        <Text variant="h1">{t.common.myYoutube()}</Text>
+        <Text variant="body-sm" color="muted" className="mt-1.25">
+          {t.youtube.pageSubtitle()}
+        </Text>
       </Stack>
 
-      {yt.session.isPending && <PageLoading message={t('Cargando sesión...', 'Loading session...')} />}
+      {yt.session.isPending && <PageLoading message={t.youtube.loadingSession()} />}
       {!yt.session.isPending && !yt.logged && <LoggedOutHero onLogin={handleLogin} />}
 
       {yt.logged && (
@@ -96,27 +93,27 @@ export const MiYoutubePage = () => {
 
           {/* min-height keeps the grid from jumping when the selection buttons appear */}
           <Stack direction="row" gap="md" align="center" className="mb-3.5 min-h-8.5 gap-3">
-            <H4 className="text-base">{yt.sourceLabel}</H4>
-            <Small color="muted" className="text-xs font-normal">
+            <Text variant="h4" className="text-base">{yt.sourceLabel}</Text>
+            <Text variant="small" color="muted" className="text-xs font-normal">
               {!loading && yt.videos.length > 0 ? `${yt.videos.length} ${emptyNoun}` : ''}
-            </Small>
+            </Text>
             <Box className="flex-1" />
             {chosen.length > 0 && !yt.isPlaylistGrid && (
               <>
                 <Button
                   size="sm"
-                  className="h-8.5 rounded-[9px] px-3.75 text-[12.5px]"
+                  className="h-8.5 rounded-[9px] px-3.75 text-small"
                   onClick={() => actions.downloadSelected(chosen)}
                 >
-                  {`${t('Descargar', 'Download')} ${chosen.length}`}
+                  {`${t.common.download()} ${chosen.length}`}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8.5 rounded-[9px] px-3.75 text-[12.5px]"
+                  className="h-8.5 rounded-[9px] px-3.75 text-small"
                   onClick={() => actions.customizeSelected(chosen)}
                 >
-                  {t('Personalizar', 'Customize')}
+                  {t.common.customize()}
                 </Button>
               </>
             )}
@@ -127,46 +124,37 @@ export const MiYoutubePage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 rounded-[9px] px-3.5 text-[12.5px]"
+                className="h-8 rounded-[9px] px-3.5 text-small"
                 onClick={yt.backToPlaylists}
               >
-                {t('← Volver a Playlists', '← Back to Playlists')}
+                {t.youtube.backToPlaylists()}
               </Button>
             </Box>
           )}
 
           <MediaGrid>
-            {loading && <GridStateCard loading title={`${t('Cargando', 'Loading')} ${yt.sourceLabel}…`} />}
+            {loading && <GridStateCard loading title={`${t.youtube.loading()} ${yt.sourceLabel}…`} />}
             {!loading && yt.feed.isError && isAuthError(yt.feed.error) && (
               <GridStateCard
-                title={t('Tu sesión no está activa', 'Your session is not active')}
-                message={t(
-                  'YouTube pidió iniciar sesión de nuevo para ver este contenido.',
-                  'YouTube asked to sign in again to view this content.',
-                )}
+                title={t.youtube.notActiveTitle()}
+                message={t.youtube.notActiveBody()}
                 action={reconnectAction}
               />
             )}
             {!loading && yt.feed.isError && !isAuthError(yt.feed.error) && (
-              <GridStateCard title={t('No se pudo cargar', 'Could not load')} message={String(yt.feed.error)} />
+              <GridStateCard title={t.youtube.loadError()} message={String(yt.feed.error)} />
             )}
             {!loading && yt.feed.isSuccess && yt.videos.length === 0 && sessionExpired && (
               <GridStateCard
-                title={t('Tu sesión no está activa', 'Your session is not active')}
-                message={t(
-                  'YouTube no reconoció la sesión. Vuelve a iniciar sesión para ver tu contenido.',
-                  'YouTube did not recognize the session. Sign in again to see your content.',
-                )}
+                title={t.youtube.notActiveTitle()}
+                message={t.youtube.sessionRejected()}
                 action={reconnectAction}
               />
             )}
             {!loading && yt.feed.isSuccess && yt.videos.length === 0 && !sessionExpired && (
               <GridStateCard
-                title={t('Nada por aquí', 'Nothing here')}
-                message={t(
-                  `No se encontraron ${emptyNoun} en ${yt.sourceLabel}.`,
-                  `No ${emptyNoun} found in ${yt.sourceLabel}.`,
-                )}
+                title={t.youtube.emptyFeed()}
+                message={t.youtube.emptyFeedFor({ noun: emptyNoun, source: yt.sourceLabel })}
               />
             )}
             {!loading &&
@@ -190,12 +178,12 @@ export const MiYoutubePage = () => {
             <Stack direction="row" justify="center" className="mt-4">
               <Button
                 variant="outline"
-                className="h-9.5 rounded-[10px] px-5.5 text-[13px]"
+                className="h-9.5 rounded-[10px] px-5.5 text-body-sm"
                 disabled={yt.feed.isFetchingNextPage}
                 onClick={loadMore}
               >
                 {yt.feed.isFetchingNextPage && <Loader2Icon className="size-4 animate-spin" />}
-                {yt.feed.isFetchingNextPage ? t('Cargando…', 'Loading…') : t('Ver más', 'Show more')}
+                {yt.feed.isFetchingNextPage ? t.common.loadingEllipsis() : t.common.seeMore()}
               </Button>
             </Stack>
           )}

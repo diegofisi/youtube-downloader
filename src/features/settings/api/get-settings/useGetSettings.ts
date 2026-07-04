@@ -9,9 +9,9 @@ export function useGetSettings(
   return useQuery<SettingsDTOResponse, Error, Settings>({
     queryKey: ['settings'],
     queryFn: () => invoke<SettingsDTOResponse>('get_settings'),
-    select: toSettings, // Adapter: DTO → Model
-    // The autosave form is the source of truth after load (useSetSettings patches
-    // the cache on save) — a background refetch mid-edit would clobber typing.
+    select: toSettings,
+    // The autosave form is source of truth after load — a background refetch mid-edit
+    // would clobber typing (useSetSettings patches the cache on save instead).
     staleTime: Infinity,
     ...options,
   });

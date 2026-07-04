@@ -67,6 +67,17 @@ const initialState = { lang: getInitialLang(), theme: getInitialTheme() };
 > The auth-flavored version of this pattern (stored token → `AuthStatus.Idle`)
 > lives in `web-app-patterns.md`.
 
+## Choosing: useState / useReducer / Zustand / React Query
+
+Escalate only as needed:
+- **`useState`** — simple local state (a couple of independent primitives).
+- **`useReducer`** — complex *local* state where several handlers drive related
+  transitions, or you keep hitting bugs from bad updates. Not a substitute for
+  `useMemo` chains, and never for derived data under react-hook-form.
+- **Zustand** — state shared across components / surviving unmount / living
+  outside the tree. Don't lift a reducer through context for this.
+- **React Query** — server state. Never model server data in `useState`/`useReducer`/Zustand.
+
 ## Live-process stores — a scheduler is not a query
 
 The "server state → React Query" rule assumes request/response. Some apps drive

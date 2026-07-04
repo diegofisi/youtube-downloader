@@ -1,7 +1,7 @@
 import { CheckIcon, PlayIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Span } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import { cn } from '@/shared/lib/utils';
 import { DownloadMenu } from './DownloadMenu';
 import { CARD_GRAD, formatDuration, type MediaItem } from './media-item';
@@ -14,12 +14,10 @@ interface MediaCardProps {
   onCustomize: (item: MediaItem) => void;
 }
 
-/** Grid video card: thumbnail (CARD_GRAD fallback), duration badge, selection
- * check overlay and split download action (ports shared/ui/media-card videoCard). */
 export const MediaCard = ({ item, selected, onToggleSelect, onDownload, onCustomize }: MediaCardProps) => (
   <Box className={cn('rounded-[13px] border bg-panel', selected ? 'border-primary' : 'border-border')}>
     <Box className="relative">
-      <Box className="aspect-video overflow-hidden rounded-t-[12px]" style={{ background: CARD_GRAD }}>
+      <Box className="aspect-video overflow-hidden rounded-t-xl" style={{ background: CARD_GRAD }}>
         {item.thumbnail ? (
           <img src={item.thumbnail} loading="lazy" alt="" className="size-full object-cover" />
         ) : (
@@ -44,16 +42,16 @@ export const MediaCard = ({ item, selected, onToggleSelect, onDownload, onCustom
         onCustomize={() => onCustomize(item)}
       />
       {item.duration ? (
-        <Span className="absolute right-2 bottom-2 rounded-[5px] bg-black/80 px-1.25 py-px font-mono text-[10.5px] font-semibold text-white">
+        <Text variant="micro" className="absolute right-2 bottom-2 rounded-[5px] bg-black/80 px-1.25 py-px font-mono font-semibold text-white">
           {formatDuration(item.duration)}
-        </Span>
+        </Text>
       ) : null}
     </Box>
     <Stack gap="none" className="px-2.75 pt-2.5 pb-3">
-      <Span className="line-clamp-2 min-h-8.5 text-[12.5px] leading-[1.35] font-semibold text-foreground">
+      <Text variant="small" className="line-clamp-2 min-h-8.5 leading-[1.35] font-semibold text-foreground">
         {item.title}
-      </Span>
-      <Span className="mt-1.25 truncate text-[11.5px] text-muted-foreground">{item.channel}</Span>
+      </Text>
+      <Text variant="caption" className="mt-1.25 truncate text-muted-foreground">{item.channel}</Text>
     </Stack>
   </Box>
 );

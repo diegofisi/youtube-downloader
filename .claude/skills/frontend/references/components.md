@@ -15,7 +15,7 @@ the project's i18n scheme (see `project.md` and `conventions.md` → i18n).
 import type { Entity } from "../models/entity.model";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Stack } from "@/shared/components/layout/Stack";
-import { P, Small } from "@/shared/components/ui/typography";
+import { Text } from "@/shared/components/ui/typography";
 
 interface EntityCardProps {
   entity: Entity;
@@ -28,8 +28,8 @@ export const EntityCard = ({ entity }: EntityCardProps) => (
     </CardHeader>
     <CardContent>
       <Stack gap="sm">
-        <P>{entity.status}</P>
-        <Small color="muted">{entity.description}</Small>
+        <Text variant="body">{entity.status}</Text>
+        <Text variant="small" color="muted">{entity.description}</Text>
       </Stack>
     </CardContent>
   </Card>
@@ -41,6 +41,13 @@ What makes a component presentational: **zero business logic** — no
 `register`/`Controller`, layout, props forwarding. If it computes derived
 business data or shows toasts, it's a container disguised as a component —
 refactor it.
+
+Presentational components MAY own **local, ephemeral, presentation-only state** —
+a disclosure/hover/focus toggle, an `open` flag for their own popover, `useRef`,
+`useId`, and the outside-click listener of their own widget. What they must NOT do
+is fetch, mutate, read/write stores, show toasts, or compute business-derived
+data. 'Zero hooks in a component' is a smell, not a rule (see
+`containers-pages.md` → The Container/Component boundary).
 
 Shadcn components are installed via `npx shadcn@latest add`, never written by
 hand. Use the existing design system before inventing new primitives.
@@ -55,73 +62,46 @@ hand. Use the existing design system before inventing new primitives.
 | `Grid` | `<div>` with grid | Grid container for layouts | `cols`, `gap` | CSS Grid |
 | `Box` | generic `<div>` | Polymorphic semantic wrapper | `className`, `as` | Block/Flex |
 
-## Typography primitives — from `@/shared/components/ui/typography`
+## Typography — the single `<Text>` component
 
-| Primitive | Replaces | Key props | Fixed size |
-|---|---|---|---|
-| `H1`–`H6` | `<h1>`–`<h6>` | `color` | Each has its own fixed responsive size |
-| `P` | `<p>` | `color` | `text-sm lg:text-base` + `leading-relaxed` |
-| `Small` | `<small>` | `color` | `text-xs lg:text-sm` + `font-medium leading-none` |
-| `Span` | `<span>` | `weight`, `color` | Inherits from parent |
-| `Blockquote` | `<blockquote>` | `color` | `text-sm lg:text-base` + `italic border-l-4` |
+All text renders through ONE component from `@/shared/components/ui/typography`:
+`<Text variant="..." as="..." color="..." weight="...">`. There are **no**
+`H1`–`H6`/`P`/`Small`/`Span` wrappers (removed) and **never** raw `<h1>`/`<p>`/`<span>`.
 
-One component = one fixed typographic level. **No `size` prop** — exceptional
-sizes go via `className`.
+- **`variant`** = role → size + default weight, from the fluid scale. Values:
+  `h1 h2 h3 h4 h5 h6 lead body body-sm small caption code inline`. `inline`
+  carries no size (inherits the parent's) — use it for inline emphasis.
+- **`as`** = constrained polymorphic tag. Each variant maps to a default semantic
+  tag (MUI `variantMapping` style); pass `as` only when the look must differ from
+  the element: `<Text variant="h1" as="h2">` renders a styled h1 as an `<h2>`.
+- **`color`**: `default | muted | primary | inherit`. **`weight`**: `normal | medium | semibold | bold`.
+- The call site carries **zero size classes**: `<Text variant="body" color="muted">`.
+  Need a new size? **Add a variant** — never an inline `text-[..px]`.
 
-### Responsive strategy
+### Type scale (fixed micro + fluid content)
 
-Single step up at one breakpoint: `P`/`Small`/`Blockquote` are one step smaller
-on mobile, full size at `lg` (1024px). `H1`–`H6` step up at `md` (e.g. `H4` =
-`text-lg` mobile → `md:text-xl`). `Span` inherits size; it only controls
-`weight` and `color`.
+Sizes live ONLY as `--text-*` tokens in `globals.css` `@theme`. Two tiers:
+- **Micro UI chrome is FIXED** — `micro` (10.5), `caption` (11.5), `small` (12.5),
+  `body-sm` (13.5). Labels/badges must not scale; a fluid micro size would shift
+  ~1px on large windows and stop "looking the same".
+- **Content is FLUID** — `body`, `lead`, and headings `h1`–`h6` use
+  `clamp(MIN, PREFERRED, MAX)`: grow with window width, then **hard-cap at MAX**
+  (caps at a project-chosen design-max viewport width, static beyond; the exact
+  interpolation window + sizes live in `project.md`). Rules for any fluid token:
+- **Keep a `rem` term** in PREFERRED (pure `vw` fails WCAG 1.4.4 on zoom).
+- **MAX ≤ 2.5 × MIN** per token (or the cap itself blocks 200% zoom).
+- Generate values with the Utopia calculator; headings scale expressively, body
+  gently.
 
-### When to use P vs Small
+### CRITICAL: register custom size tokens with tailwind-merge
 
-| Content | Component | Example |
-|---|---|---|
-| Body text, paragraphs, messages | `P` | descriptions, error messages, loading text |
-| Labels, annotations, compact data | `Small` | job speed/ETA, card metadata, table labels |
-| Inline emphasis inside P/Small | `Span` | `<Small>ETA: <Span weight="medium">2m</Span></Small>` |
-
-### Color handling
-
-Color is per-usage via the `color` prop: `default` (`text-foreground`), `muted`
-(`text-muted-foreground`), `primary` (`text-primary`), `inherit` (default).
-When nesting, set `color` explicitly to override inheritance:
-
-```tsx
-<Small color="muted">
-  <Span weight="medium" color="default">Format:</Span>{" "}
-  value text inherits muted from Small
-</Small>
-```
-
-> **Why wrappers instead of raw tags?** Centralizing defaults means one file
-> (`typography.tsx`) changes font-size/line-height/breakpoints app-wide.
-> One-off styles (`uppercase tracking-wide`) go via `className`; prefer the
-> built-in `color`/`weight` props for common patterns.
-
-### Usage examples
-
-```tsx
-<Stack gap="md" direction="col">
-  <H2>Section title</H2>
-  <P color="muted">Section description.</P>
-</Stack>
-
-<Stack gap="sm" direction="row" align="center">
-  <Thumbnail />
-  <P>{entity.title}</P>
-</Stack>
-
-<Grid cols={3} gap="lg">
-  <EntityCard /> <EntityCard /> <EntityCard />
-</Grid>
-
-<Box className="p-4 rounded-lg bg-panel">
-  <Content />
-</Box>
-```
+Custom font-size utilities (`text-h1`, `text-body`, …) MUST be registered with
+`tailwind-merge` in `cn` (`shared/lib/utils.ts`):
+`extendTailwindMerge({ extend: { classGroups: { 'font-size': [{ text: [...all --text-* names...] }] }}})`.
+Otherwise tailwind-merge classifies `text-h1` as a text **color**, and when a
+color class is merged (`text-h1` + `text-foreground`) it **silently drops the
+size**, so text falls back to the preflight ~14px reset (tiny, non-fluid). Any new
+`--text-*` token must be added to that list.
 
 ## Size limits & extraction
 
@@ -187,7 +167,7 @@ path.
 ## Shared state components
 
 Use these from `@/shared/components/ui/` for ALL loading/error/empty/not-found
-states. **Never** write inline `<P color="muted" className="py-12 text-center">`
+states. **Never** write inline `<Text variant="body" color="muted" className="py-12 text-center">`
 patterns.
 
 | Component | Default message | Usage |
@@ -272,15 +252,15 @@ Data tables: desktop `<Table>` (`hidden md:block`) + mobile `<Card>` list
         <Stack gap="sm">
           <Stack direction="row" gap="lg" className="flex-wrap">
             <Stack gap="none" className="flex-1 min-w-0">
-              <Small color="muted">Title</Small>
-              <P className="text-sm font-medium">{e.title}</P>
+              <Text variant="small" color="muted">Title</Text>
+              <Text variant="body" weight="medium">{e.title}</Text>
             </Stack>
           </Stack>
           <Separator />
           <Stack direction="row" gap="lg">
             <Stack gap="none">
-              <Small color="muted">Format</Small>
-              <P className="text-sm font-semibold">{e.format}</P>
+              <Text variant="small" color="muted">Format</Text>
+              <Text variant="body" weight="semibold">{e.format}</Text>
             </Stack>
           </Stack>
         </Stack>
@@ -290,7 +270,7 @@ Data tables: desktop `<Table>` (`hidden md:block`) + mobile `<Card>` list
 </Stack>
 ```
 
-Rules: **always show labels** on mobile cards (`Small color="muted"` above each
+Rules: **always show labels** on mobile cards (`<Text variant="small" color="muted">` above each
 value); group related fields in `Stack direction="row"` rows with `Separator`
 between logical groups; `flex-wrap` for long text.
 
@@ -299,9 +279,10 @@ between logical groups; `flex-wrap` for long text.
 | Do | Don't |
 |---|---|
 | `Stack`/`Grid`/`Box` for all layout | Raw `<div>` soup |
-| `P`/`Small`/`Span`/`H1–H6` for all text | Raw `<p>`/`<span>`/`<h*>` |
+| `<Text variant>` for all text | Raw `<p>`/`<span>`/`<h*>` |
 | Explicit `color` on nested typography | Rely on inheritance when parent is muted |
+| Add a variant to the `<Text>` scale | Inline `text-[..px]` font sizes |
 | Extract at ~200 JSX lines / 3+ blocks | 500-line mega-components |
-| `PageLoading`/`PageError`/`PageEmpty`/`PageNotFound` | Inline muted-`<P>` state markup |
+| `PageLoading`/`PageError`/`PageEmpty`/`PageNotFound` | Inline muted-`<Text>` state markup |
 | Keep states inside the content area | Early returns that unmount headers/filters |
 | Shadcn via `npx shadcn@latest add` | Hand-written copies of Shadcn primitives |

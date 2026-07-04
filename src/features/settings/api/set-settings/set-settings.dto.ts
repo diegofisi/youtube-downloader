@@ -1,7 +1,7 @@
 import type { SettingsUpdate } from '../../models/settings.model';
 import type { SettingsDTOResponse } from '../get-settings/get-settings.dto';
 
-/** set_settings takes camelCase args (Tauri command params) — mirrors the Rust command exactly. */
+// camelCase (Tauri command params), unlike the snake_case get_settings response DTO.
 export interface SetSettingsDTORequest {
   defaultQuality: string;
   defaultContainer: string;
@@ -26,7 +26,6 @@ export const toSetSettingsDTO = (model: SettingsUpdate): SetSettingsDTORequest =
   clearLinksAfterPreview: model.clearLinksAfterPreview,
 });
 
-/** Keeps the ['settings'] cache (snake_case DTO) in sync after a successful save. */
 export const patchSettingsDTO = (old: SettingsDTOResponse, model: SettingsUpdate): SettingsDTOResponse => ({
   ...old,
   default_quality: model.defaultQuality,

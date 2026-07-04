@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { DownloadIcon, SlidersHorizontalIcon } from 'lucide-react';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
+
+const ITEM_CLASS =
+  'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-small font-semibold text-foreground transition-colors hover:bg-accent';
 
 interface DownloadMenuProps {
   onDownload: () => void;
   onCustomize: () => void;
-  /** Positions the trigger (the parent card places it as an overlay). */
   className?: string;
 }
 
-/** Per-card split download action: direct "Download" + "Custom download".
- * Hand-rolled dropdown: @radix-ui/react-dropdown-menu is not in the dependency set. */
+// Hand-rolled dropdown: @radix-ui/react-dropdown-menu is not in the dependency set.
 export const DownloadMenu = ({ onDownload, onCustomize, className }: DownloadMenuProps) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -41,7 +42,7 @@ export const DownloadMenu = ({ onDownload, onCustomize, className }: DownloadMen
     <span ref={rootRef} className={cn('relative block', className)}>
       <button
         type="button"
-        title={t('Descargar', 'Download')}
+        title={t.common.download()}
         onClick={() => setOpen((v) => !v)}
         className="flex size-7.5 items-center justify-center rounded-lg bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
       >
@@ -52,18 +53,18 @@ export const DownloadMenu = ({ onDownload, onCustomize, className }: DownloadMen
           <button
             type="button"
             onClick={() => pick(onDownload)}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[12.5px] font-semibold text-foreground transition-colors hover:bg-accent"
+            className={ITEM_CLASS}
           >
             <DownloadIcon className="size-4 text-muted-foreground" />
-            {t('Descargar', 'Download')}
+            {t.common.download()}
           </button>
           <button
             type="button"
             onClick={() => pick(onCustomize)}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[12.5px] font-semibold text-foreground transition-colors hover:bg-accent"
+            className={ITEM_CLASS}
           >
             <SlidersHorizontalIcon className="size-4 text-muted-foreground" />
-            {t('Descarga personalizada', 'Custom download')}
+            {t.shell.customDownload()}
           </button>
         </span>
       )}

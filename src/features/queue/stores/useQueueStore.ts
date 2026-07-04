@@ -1,8 +1,7 @@
-// Download queue scheduler as a Zustand store — 1:1 port of vanilla queue.state.ts.
 // Live-process state (decision table): NEVER React Query. No React imports here.
 import { create } from 'zustand';
 import { toast } from 'sonner';
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import { queryClient } from '@/shared/lib/query-client';
 import { attemptSilentReconnect } from '@/features/session';
 import { QueueStatus, type EnqueueItem, type QueueItem, type QueueItemAction } from '../models/queue-item.model';
@@ -49,7 +48,7 @@ const LIVE_STATUSES: QueueStatus[] = [
   QueueStatus.Merging,
 ];
 
-/** Sidebar badge selector — replaces the vanilla 'queue:count' bus event. */
+/** Replaces the vanilla 'queue:count' bus event. */
 export const selectActiveCount = (s: QueueStore): number =>
   s.items.filter((i) => LIVE_STATUSES.includes(i.status)).length;
 
@@ -61,7 +60,7 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
     for (const it of list) {
       const dup = items.find((x) => x.url === it.url && PENDING_STATUSES.includes(x.status));
       if (dup) {
-        toast.warning(t('Ya está en la cola', 'Already in the queue'), { description: it.title });
+        toast.warning(t.queue.alreadyQueuedToast(), { description: it.title });
         continue;
       }
       items.push({ ...it, id: `q${++seq}`, status: QueueStatus.Queued, progress: 0, speed: '', eta: '' });
@@ -119,12 +118,11 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
       return;
     }
     if (act === 'folder') {
-      // Open the real file's containing folder if known; else the history folder,
-      // else the downloads folder — exact vanilla fallback chain.
+      // Fallback chain (vanilla parity): file's folder → history folder → downloads.
       const dir = (it.filePath && parentDir(it.filePath)) || it.folder;
       const p = dir ? Promise.resolve(dir) : getDownloadFolder();
       p.then((folder) => openHistoryFolder(folder)).catch(() =>
-        toast.error(t('No se pudo abrir la carpeta', 'Could not open the folder')),
+        toast.error(t.common.couldNotOpenFolder()),
       );
     }
   },
@@ -145,14 +143,14 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
       ),
     });
     pump();
-    // Original render → pump → toast order kept.
-    toast.info(t('Reintentando', 'Retrying'), {
-      description: t('Recargando y reintentando fallidos.', 'Re-queuing and retrying failed items.'),
+    // Keep the original render → pump → toast order.
+    toast.info(t.queue.retrying(), {
+      description: t.queue.retryAllToast(),
     });
   },
 
   clearFinished: () => {
-    // Only removes done/canceled; 'error' items stay — they have their own "Retry failed".
+    // 'error' items stay — they have their own "Retry failed" action.
     set({
       items: get().items.filter((i) => i.status !== QueueStatus.Done && i.status !== QueueStatus.Canceled),
     });
@@ -161,8 +159,6 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
 
   reset: () => set(initialState),
 }));
-
-// ---------- scheduler internals (plain functions over getState/setState) ----------
 
 function patch(id: string, changes: Partial<QueueItem>): void {
   useQueueStore.setState((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, ...changes } : i)) }));
@@ -190,8 +186,8 @@ function run(id: string): void {
   const it = findItem(id);
   if (!it) return;
   const runId = (it.runSeq ?? 0) + 1;
-  // Don't reset progress: on resume yt-dlp continues the .part file, so keep
-  // the shown progress until the first real progress event arrives.
+  // Don't reset progress: on resume yt-dlp continues the .part file, so keep the
+  // shown progress until the first real progress event arrives.
   patch(id, { status: QueueStatus.Downloading, runSeq: runId });
   startDownload(it.url, it.options)
     .then(async (res) => {
@@ -214,11 +210,11 @@ function run(id: string): void {
         } catch {
           // Download succeeded; a history failure must not break the flow.
         }
-        // Replaces the 'download:completed' bus event: Biblioteca refetches live.
+        // Replaces the 'download:completed' bus event so Biblioteca refetches live.
         void queryClient.invalidateQueries({ queryKey: ['library', 'history'] });
       } else if (res.errorKind === 'auth') {
-        // Expired/invalidated cookies: pause instead of erroring so the rest of
-        // the batch isn't burned (queued items would fail the same way).
+        // Expired cookies: pause instead of erroring so the rest of the batch
+        // isn't burned (queued items would fail the same way).
         useQueueStore.setState((s) => ({
           items: s.items.map((q) => {
             if (q.id === id) {
@@ -226,10 +222,7 @@ function run(id: string): void {
                 ...q,
                 status: QueueStatus.Paused,
                 pausedByAuth: true,
-                error: t(
-                  'Sesión caducada — se pausó para no fallar el resto',
-                  'Session expired — paused to avoid failing the rest',
-                ),
+                error: t.queue.authPausedToast(),
               };
             }
             if (q.status === QueueStatus.Queued) return { ...q, status: QueueStatus.Paused, pausedByAuth: true };
@@ -238,7 +231,7 @@ function run(id: string): void {
         }));
         void handleAuthFailure();
       } else {
-        patch(id, { status: QueueStatus.Error, error: res.error ?? t('Error desconocido', 'Unknown error') });
+        patch(id, { status: QueueStatus.Error, error: res.error ?? t.queue.unknownError() });
       }
       pump();
     })
@@ -246,7 +239,7 @@ function run(id: string): void {
       const cur = findItem(id);
       if (!cur || cur.runSeq !== runId) return; // a newer run owns this item
       if (cur.status !== QueueStatus.Canceled && cur.status !== QueueStatus.Paused) {
-        patch(id, { status: QueueStatus.Error, error: t('Error interno', 'Internal error') });
+        patch(id, { status: QueueStatus.Error, error: t.queue.internalError() });
       }
       pump();
     });
@@ -259,8 +252,8 @@ async function handleAuthFailure(): Promise<void> {
   try {
     const ok = await attemptSilentReconnect().catch(() => false);
     if (ok) {
-      toast.success(t('Sesión renovada', 'Session renewed'), {
-        description: t('Reanudando descargas pausadas.', 'Resuming paused downloads.'),
+      toast.success(t.queue.sessionRenewedToast(), {
+        description: t.queue.resumingToast(),
       });
       useQueueStore.setState((s) => ({
         items: s.items.map((i) =>
@@ -271,11 +264,8 @@ async function handleAuthFailure(): Promise<void> {
       }));
       pump();
     } else {
-      toast.warning(t('Tu sesión de YouTube caducó', 'Your YouTube session expired'), {
-        description: t(
-          'Reconecta en Mi YouTube y reanuda las descargas.',
-          'Reconnect in My YouTube and resume the downloads.',
-        ),
+      toast.warning(t.queue.sessionExpiredTitle(), {
+        description: t.queue.sessionExpiredBody(),
       });
     }
   } finally {
@@ -283,7 +273,7 @@ async function handleAuthFailure(): Promise<void> {
   }
 }
 
-/** Containing folder of a path (supports both \ and / separators). */
+/** Handles both \ and / separators. */
 function parentDir(p: string): string | undefined {
   const i = Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/'));
   return i > 0 ? p.slice(0, i) : undefined;

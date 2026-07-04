@@ -1,7 +1,6 @@
-/** Domain model for a finished download in the history. */
 export interface LibraryEntry {
   id: string;
-  /** Video id (e.g. YouTube id), independent of the exact URL. */
+  /** Independent of the exact URL, so re-downloads of the same video match. */
   videoId?: string;
   thumbnail?: string;
   /** Duration in seconds. */

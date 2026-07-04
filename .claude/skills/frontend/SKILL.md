@@ -66,7 +66,12 @@ Never a thin wrapper page around a single container. Register route + path const
 ## Workflow D — New component
 
 1. Presentational only: props in (Domain Models, never DTOs), JSX out. No API calls, no toasts, no business `useMemo`.
-2. Layout with `Stack`/`Grid`/`Box`; text with `H1–H6`/`P`/`Small`/`Span`. No raw `div/p/span/h*` — `references/components.md` → Layout primitives.
+2. Presentational: props in (Domain Models) + **local, ephemeral UI state only**
+   (toggles/hover/refs/own-popover); no data fetching, mutations, stores, or toasts.
+   Text via `<Text variant="...">` (no `H1`–`Span`, no raw tags, no inline
+   `text-[..px]`); layout via `Stack`/`Grid`/`Box`. The Container/Component
+   boundary rule is in `references/containers-pages.md` → The Container/Component
+   boundary (universal rule).
 3. Size limits (`references/components.md` → Size limits & extraction): >~200 JSX lines → extract sub-components; >10 props → regroup; internal helper >~20 JSX lines → own file.
 4. `components/` >~8 files → semantic subfolders by consumer view; max 2 nesting levels (`references/components.md` → Folder organization).
 5. Loading/error/empty → shared `PageLoading`/`PageError`/`PageEmpty` components (`references/components.md` → Shared state components), never inline text states.

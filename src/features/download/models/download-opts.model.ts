@@ -1,5 +1,3 @@
-// Download option state models (ports the vanilla opts-model state shapes).
-
 export interface DownloadOpts {
   mode: 'av' | 'video' | 'audio';
   quality: string; // max|4k|1440p|1080p|720p|480p
@@ -38,7 +36,7 @@ export interface BackendDownloadOptions {
   cookieMode: string; // file | none
 }
 
-/** Subset of the app settings that the download view consumes (§4.15 local model). */
+/** Subset of the app settings that the download view consumes. */
 export interface DownloadDefaults {
   quality: string;
   container: string;

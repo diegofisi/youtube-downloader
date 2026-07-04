@@ -7,7 +7,7 @@ import { toDownloadDefaults, type DownloadSettingsDTOResponse } from './get-sett
 export const fetchDownloadDefaults = async (): Promise<DownloadDefaults> =>
   toDownloadDefaults(await invoke<DownloadSettingsDTOResponse>('get_settings'));
 
-/** Local settings read (§4.15): distinct key so it never collides with the settings slice. */
+/** Local settings read: distinct key so it never collides with the settings slice. */
 export function useDownloadDefaults(
   options?: Omit<
     UseQueryOptions<DownloadSettingsDTOResponse, Error, DownloadDefaults>,

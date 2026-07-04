@@ -4,9 +4,7 @@ import { create } from 'zustand';
 // setUrls(urls) + navigate(AppPath.DESCARGAR); DescargarPage consumes and auto-analyzes.
 
 interface DownloadPrefillStore {
-  // State
   urls: string[];
-  // Actions
   setUrls: (urls: string[]) => void;
   /** Returns the pending urls and clears them (idempotent when empty). */
   consume: () => string[];

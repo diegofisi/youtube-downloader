@@ -1,4 +1,3 @@
-/** Optional metadata persisted with a finished download (vanilla AddHistoryMeta). */
 export interface AddHistoryMeta {
   videoId?: string;
   thumbnail?: string;
@@ -8,8 +7,7 @@ export interface AddHistoryMeta {
   filePath?: string;
 }
 
-/** Mirror of the Rust LibraryEntry the command returns — the queue only reads `folder`;
- * the library slice owns the full DTO/model for this struct. */
+/** Queue only reads `folder`; the library slice owns the full DTO for this struct. */
 export interface AddHistoryDTOResponse {
   id: string;
   url: string;

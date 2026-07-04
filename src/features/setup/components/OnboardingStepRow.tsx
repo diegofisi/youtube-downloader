@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { CheckIcon, Loader2Icon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Small } from '@/shared/components/ui/typography';
+import { Text } from '@/shared/components/ui/typography';
 import { cn } from '@/shared/lib/utils';
 
 export const StepState = {
@@ -35,13 +35,13 @@ export const OnboardingStepRow = ({ icon, name, desc, state }: OnboardingStepRow
       {icon}
     </Box>
     <Stack gap="none" className="min-w-0 flex-1">
-      <Small className="text-[13.5px] font-semibold leading-normal">{name}</Small>
-      <Small color="muted" className="text-[11.5px] font-normal leading-normal">
+      <Text variant="body-sm" className=" font-semibold leading-normal">{name}</Text>
+      <Text variant="caption" color="muted" className=" font-normal leading-normal">
         {desc}
-      </Small>
+      </Text>
     </Stack>
     {state === StepState.Done && (
-      <Box className="flex size-6 flex-none items-center justify-center rounded-full bg-success text-[#04140C]">
+      <Box className="flex size-6 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
         <CheckIcon className="size-3.5" />
       </Box>
     )}

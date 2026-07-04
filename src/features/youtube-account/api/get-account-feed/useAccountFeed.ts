@@ -3,14 +3,13 @@ import { invoke } from '@/shared/lib/tauri';
 import type { FeedVideo } from '../../models/feed-video.model';
 import { flattenEntries, toFeedVideo, type AnalyzedEntryDTO, type VideoMetaDTO } from './get-account-feed.dto';
 
-/** Page size for the "See more" pagination. */
 export const FEED_PAGE_SIZE = 50;
 
 interface FeedPageDTO {
   videos: VideoMetaDTO[];
 }
 
-/** Paged account feed via analyze_urls (local adapter, guideline §4.15).
+/** Paged account feed via analyze_urls (local adapter).
  * keyDetail: ['youtube', tab] for tabs, ['youtube', 'playlists', url] for a drill-down. */
 export function useAccountFeed(sourceUrl: string, keyDetail: readonly string[], enabled: boolean) {
   return useInfiniteQuery({

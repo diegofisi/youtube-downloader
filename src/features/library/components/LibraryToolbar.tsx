@@ -3,8 +3,8 @@ import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
-import { Small } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 
 interface LibraryToolbarProps {
   search: string;
@@ -19,16 +19,16 @@ export const LibraryToolbar = ({ search, countText, onSearchChange, onClearAll }
       <SearchIcon className="absolute left-3.25 top-1/2 size-4 -translate-y-1/2 text-faint" />
       <Input
         value={search}
-        placeholder={t('Buscar por título o URL…', 'Search by title or URL…')}
-        className="h-9.5 rounded-[10px] bg-panel pl-9 text-[13px]"
+        placeholder={t.library.searchPlaceholder()}
+        className="h-9.5 rounded-[10px] bg-panel pl-9 text-body-sm"
         onChange={(e) => onSearchChange(e.target.value)}
       />
     </Box>
-    <Button variant="outline" className="h-9.5 rounded-[10px] px-3.5 text-[12.5px]" onClick={onClearAll}>
-      {t('Vaciar', 'Clear')}
+    <Button variant="outline" className="h-9.5 rounded-[10px] px-3.5 text-small" onClick={onClearAll}>
+      {t.library.clear()}
     </Button>
-    <Small color="muted" className="font-mono text-xs font-normal">
+    <Text variant="small" color="muted" className="font-mono text-xs font-normal">
       {countText}
-    </Small>
+    </Text>
   </Stack>
 );

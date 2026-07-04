@@ -2,8 +2,8 @@ import { DownloadIcon, FilmIcon, SparklesIcon } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
 import { Button } from '@/shared/components/ui/button';
-import { H1, P, Small } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 import { OnboardingStepRow, StepState } from './OnboardingStepRow';
 
@@ -17,21 +17,21 @@ interface OnboardingScreenProps {
   onSkip: () => void;
 }
 
-// Lazy (function, not constant) so t() reads the current language on render.
+// Function, not constant, so t() reads the current language on render.
 const getSteps = () => [
   {
-    name: t('Preparando el descargador', 'Setting up the downloader'),
-    desc: t('Listo para bajar videos de YouTube', 'Ready to download YouTube videos'),
+    name: t.setup.step1Title(),
+    desc: t.setup.step1Desc(),
     icon: <DownloadIcon className="size-4" />,
   },
   {
-    name: t('Activando la alta calidad', 'Enabling high quality'),
-    desc: t('Video y audio en su mejor versión', 'Video and audio at their best'),
+    name: t.setup.step2Title(),
+    desc: t.setup.step2Desc(),
     icon: <FilmIcon className="size-4" />,
   },
   {
-    name: t('Casi listo', 'Almost ready'),
-    desc: t('Dando los últimos toques', 'Adding the finishing touches'),
+    name: t.setup.step3Title(),
+    desc: t.setup.step3Desc(),
     icon: <SparklesIcon className="size-4" />,
   },
 ];
@@ -42,7 +42,6 @@ const stateFor = (index: number, doneCount: number): StepState => {
   return StepState.Pending;
 };
 
-/** Full-screen first-run overlay (mirrors the vanilla #onboarding markup). */
 export const OnboardingScreen = ({
   stepsDone,
   detail,
@@ -64,13 +63,10 @@ export const OnboardingScreen = ({
       >
         <DownloadIcon className="size-7.5 text-white" />
       </Box>
-      <H1 className="text-[27px] tracking-[-0.5px]">{t('Bienvenido a Stash', 'Welcome to Stash')}</H1>
-      <P color="muted" className="mt-2 mb-7 text-sm">
-        {t(
-          'Preparamos todo la primera vez. Tarda solo unos segundos.',
-          'We set everything up the first time. It only takes a few seconds.',
-        )}
-      </P>
+      <Text variant="h2">{t.setup.welcomeTitle()}</Text>
+      <Text variant="body" color="muted" className="mt-2 mb-7 text-sm">
+        {t.setup.welcomeSubtitle()}
+      </Text>
       <Stack gap="none" className="mb-6.5 gap-2.5 text-left">
         {getSteps().map((step, i) => (
           <OnboardingStepRow
@@ -83,7 +79,7 @@ export const OnboardingScreen = ({
         ))}
       </Stack>
       <Button
-        className="h-12 w-full rounded-xl text-[14.5px] font-bold shadow-[0_8px_24px_rgba(124,107,240,.35)]"
+        className="h-12 w-full rounded-xl text-body-sm font-bold shadow-[0_8px_24px_rgba(124,107,240,.35)]"
         disabled={!finishEnabled}
         onClick={onFinish}
       >
@@ -92,18 +88,18 @@ export const OnboardingScreen = ({
       <Box className="mt-3.5">
         <button
           type="button"
-          className="text-[12.5px] text-faint transition-colors hover:text-foreground"
+          className="text-small text-faint transition-colors hover:text-foreground"
           onClick={onSkip}
         >
-          {t('Omitir e ir a la app', 'Skip and go to the app')}
+          {t.setup.skip()}
         </button>
       </Box>
       {detail !== '' && (
-        <Small
-          className={cn('mt-2.5 block text-[11.5px] font-normal', detailIsError ? 'text-destructive' : 'text-faint')}
+        <Text variant="caption"
+          className={cn('mt-2.5 block font-normal', detailIsError ? 'text-destructive' : 'text-faint')}
         >
           {detail}
-        </Small>
+        </Text>
       )}
     </Box>
   </Box>

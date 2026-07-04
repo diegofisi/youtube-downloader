@@ -7,8 +7,7 @@ export function useLogout() {
   return useMutation<void, Error, void>({
     mutationFn: () => invoke<void>('logout'),
     onSuccess: () => {
-      // Vanilla doLogout: status drops to 'none' immediately and the cached
-      // account info is invalidated (no refetch needed — cookies are gone).
+      // Drop to 'none' immediately; no refetch needed since cookies are gone.
       queryClient.setQueryData<SessionStatusDTOResponse>(['session', 'status'], 'none');
       queryClient.removeQueries({ queryKey: ['session', 'account'] });
     },

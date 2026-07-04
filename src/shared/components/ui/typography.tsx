@@ -1,64 +1,62 @@
-import type { HTMLAttributes } from 'react';
+import type { ElementType, HTMLAttributes } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 
-type Color = 'default' | 'muted' | 'primary' | 'inherit';
+// Sizes come from fluid --text-* clamp() tokens; add a variant here, never an inline text-[..px] at the call site.
+const textVariants = cva('', {
+  variants: {
+    variant: {
+      h1: 'font-display text-h1 font-bold',
+      h2: 'font-display text-h2 font-bold',
+      h3: 'font-display text-h3 font-semibold',
+      h4: 'font-display text-h4 font-semibold',
+      h5: 'font-display text-h5 font-semibold',
+      h6: 'font-display text-h6 font-semibold',
+      lead: 'text-lead',
+      body: 'text-body',
+      'body-sm': 'text-body-sm',
+      small: 'text-small font-medium',
+      caption: 'text-caption',
+      micro: 'text-micro',
+      code: 'font-mono text-body-sm',
+      inline: '', // inherits size from the parent
+    },
+    color: {
+      default: 'text-foreground',
+      muted: 'text-muted-foreground',
+      primary: 'text-primary',
+      inherit: '',
+    },
+    weight: {
+      normal: 'font-normal',
+      medium: 'font-medium',
+      semibold: 'font-semibold',
+      bold: 'font-bold',
+    },
+  },
+  defaultVariants: { variant: 'body', color: 'inherit' },
+});
 
-const COLOR: Record<Color, string> = {
-  default: 'text-foreground',
-  muted: 'text-muted-foreground',
-  primary: 'text-primary',
-  inherit: '',
+type TextVariant = NonNullable<VariantProps<typeof textVariants>['variant']>;
+
+type TextElement =
+  | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+  | 'p' | 'span' | 'small' | 'label' | 'code' | 'div' | 'blockquote';
+
+// Each variant's default semantic tag; override with `as` when the look must differ from the element.
+const VARIANT_TAG: Record<TextVariant, TextElement> = {
+  h1: 'h1', h2: 'h2', h3: 'h3', h4: 'h4', h5: 'h5', h6: 'h6',
+  lead: 'p', body: 'p', 'body-sm': 'p', small: 'small', caption: 'span',
+  micro: 'span', code: 'code', inline: 'span',
 };
 
-interface TypoProps extends HTMLAttributes<HTMLElement> {
-  color?: Color;
+interface TextProps
+  extends Omit<HTMLAttributes<HTMLElement>, 'color'>, // HTML's legacy `color` attr collides with our variant
+    VariantProps<typeof textVariants> {
+  as?: TextElement;
 }
 
-/* One component = one fixed typographic level; exceptional sizes go via className. */
-
-export const H1 = ({ color = 'default', className, ...p }: TypoProps) => (
-  <h1 className={cn('font-display text-2xl font-bold tracking-tight md:text-3xl', COLOR[color], className)} {...p} />
-);
-
-export const H2 = ({ color = 'default', className, ...p }: TypoProps) => (
-  <h2 className={cn('font-display text-xl font-bold tracking-tight md:text-2xl', COLOR[color], className)} {...p} />
-);
-
-export const H3 = ({ color = 'default', className, ...p }: TypoProps) => (
-  <h3 className={cn('font-display text-lg font-semibold md:text-xl', COLOR[color], className)} {...p} />
-);
-
-export const H4 = ({ color = 'default', className, ...p }: TypoProps) => (
-  <h4 className={cn('font-display text-base font-semibold md:text-lg', COLOR[color], className)} {...p} />
-);
-
-export const H5 = ({ color = 'default', className, ...p }: TypoProps) => (
-  <h5 className={cn('font-display text-sm font-semibold md:text-base', COLOR[color], className)} {...p} />
-);
-
-export const H6 = ({ color = 'default', className, ...p }: TypoProps) => (
-  <h6 className={cn('font-display text-xs font-semibold md:text-sm', COLOR[color], className)} {...p} />
-);
-
-export const P = ({ color = 'inherit', className, ...p }: TypoProps) => (
-  <p className={cn('text-sm leading-relaxed lg:text-base', COLOR[color], className)} {...p} />
-);
-
-export const Small = ({ color = 'inherit', className, ...p }: TypoProps) => (
-  <small className={cn('text-xs font-medium leading-none lg:text-sm', COLOR[color], className)} {...p} />
-);
-
-const WEIGHT = {
-  normal: 'font-normal',
-  medium: 'font-medium',
-  semibold: 'font-semibold',
-  bold: 'font-bold',
-} as const;
-
-interface SpanProps extends TypoProps {
-  weight?: keyof typeof WEIGHT;
-}
-
-export const Span = ({ color = 'inherit', weight = 'normal', className, ...p }: SpanProps) => (
-  <span className={cn(WEIGHT[weight], COLOR[color], className)} {...p} />
-);
+export const Text = ({ variant, color, weight, as, className, ...props }: TextProps) => {
+  const Tag = (as ?? VARIANT_TAG[variant ?? 'body']) as ElementType;
+  return <Tag className={cn(textVariants({ variant, color, weight }), className)} {...props} />;
+};

@@ -1,5 +1,4 @@
-// Recent links history persisted under the legacy 'stash.recentLinks' key.
-
+// Legacy key, kept for continuity with the vanilla history.
 const RECENT_KEY = 'stash.recentLinks';
 
 export interface RecentLink {

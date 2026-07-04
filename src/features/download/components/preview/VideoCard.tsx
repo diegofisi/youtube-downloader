@@ -1,7 +1,7 @@
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Small, Span } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 import { DUP_TONE, STATUS_META, dupLabel } from '../../helpers/analysis';
 import { fmtSize } from '../../helpers/format';
@@ -18,7 +18,6 @@ interface VideoCardProps {
   onOpenOpts: (url: string) => void;
 }
 
-/** Top-level preview card for a single (non-playlist) video. */
 export const VideoCard = ({ vm, onToggle, onOpenOpts }: VideoCardProps) => {
   const meta = STATUS_META[vm.status];
   const dup = vm.video.dup;
@@ -34,32 +33,32 @@ export const VideoCard = ({ vm, onToggle, onOpenOpts }: VideoCardProps) => {
       <SelectToggle on={vm.selected} disabled={!meta.downloadable} onToggle={() => onToggle(vm.video.url)} />
       <VideoThumb video={vm.video} width={120} height={68} />
       <Stack gap="xs" className="min-w-0 flex-1">
-        <Span className="truncate text-[13.5px] leading-[1.3] font-semibold text-foreground block">
+        <Text variant="body-sm" className="truncate leading-[1.3] font-semibold text-foreground block">
           {vm.video.title}
-        </Span>
-        <Span className="truncate text-xs text-muted-foreground block">{vm.video.channel}</Span>
+        </Text>
+        <Text variant="inline" className="truncate text-xs text-muted-foreground block">{vm.video.channel}</Text>
         <Stack direction="row" gap="sm" align="center" className="mt-px">
           <StatusBadge label={dup ? dupLabel() : meta.label()} tone={dup ? DUP_TONE : meta.tone} />
-          <Small className="font-mono text-[11.5px] text-faint">{fmtSize(vm.sizeMb)}</Small>
+          <Text variant="caption" className="font-mono text-faint">{fmtSize(vm.sizeMb)}</Text>
           {vm.hasOverride && (
-            <Span
-              title={t('Opciones personalizadas de este video', 'Custom options for this video')}
-              className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-1.75 py-0.5 text-[10px] font-semibold text-primary"
+            <Text variant="micro"
+              title={t.download.customVideoOptions()}
+              className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-1.75 py-0.5 font-semibold text-primary"
             >
               {fmtDescription(vm.eff)}
-            </Span>
+            </Text>
           )}
         </Stack>
       </Stack>
       <Stack gap="sm" align="end" className="flex-none self-start">
-        <Span
+        <Text variant="micro"
           className={cn(
-            'rounded-[5px] px-1.75 py-0.75 text-[9.5px] font-bold tracking-[.5px]',
+            'rounded-[5px] px-1.75 py-0.75 font-bold tracking-[.5px]',
             vm.eff.mode === 'audio' ? 'bg-success/15 text-success' : 'bg-accent text-faint',
           )}
         >
           {vm.eff.mode === 'audio' ? 'AUDIO' : 'VIDEO'}
-        </Span>
+        </Text>
         <GearButton hasOverride={vm.hasOverride} onClick={() => onOpenOpts(vm.video.url)} />
       </Stack>
     </Box>

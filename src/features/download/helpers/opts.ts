@@ -1,4 +1,4 @@
-import { t } from '@/shared/lib/i18n';
+import { t } from '@/shared/lib/messages/t';
 import type { AnalyzedVideo } from '../models/analyzed.model';
 import type {
   BackendDownloadOptions,
@@ -6,9 +6,6 @@ import type {
   DownloadOpts,
   OptsOverride,
 } from '../models/download-opts.model';
-
-// Pure option math ported verbatim from the vanilla opts-model: effective merge,
-// UI ↔ backend mappings, size estimate and settings defaults application.
 
 const Q_FACTOR: Record<string, number> = {
   max: 1.55,
@@ -30,7 +27,7 @@ const Q_LABEL_FIXED: Record<string, string> = {
 };
 
 export function qualityLabel(q: string): string {
-  if (q === 'max') return t('Máxima', 'Max');
+  if (q === 'max') return t.download.qualityMax();
   return Q_LABEL_FIXED[q] ?? q;
 }
 
@@ -43,8 +40,8 @@ const Q_BACKEND: Record<string, string> = {
   '480p': '480',
 };
 
-// Settings stores quality in backend format ('max', '2160'…) and container lowercase ('mp4');
-// map to this view's literals. 'auto' has no chip here: the default ('max') is kept.
+// Settings stores quality in backend format ('2160'…) and container lowercase; map to this
+// view's literals. 'auto' has no chip here, so the default ('max') is kept.
 const SETTINGS_Q: Record<string, string> = {
   max: 'max',
   '2160': '4k',
@@ -55,7 +52,7 @@ const SETTINGS_Q: Record<string, string> = {
 };
 const SETTINGS_C: Record<string, DownloadOpts['container']> = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
 
-// UI → backend mappings for container and audio format (avoid casts on toLowerCase()).
+// Explicit maps avoid casts on toLowerCase().
 const CONTAINER_BACKEND: Record<DownloadOpts['container'], BackendDownloadOptions['container']> = {
   MP4: 'mp4',
   MKV: 'mkv',
@@ -67,8 +64,6 @@ const AUDIO_BACKEND: Record<DownloadOpts['audioFmt'], BackendDownloadOptions['au
   Opus: 'opus',
 };
 
-// Effective options for a video: globals + partial override (avoids
-// "undefined" when the override only changes some fields).
 export function effectiveOpts(opts: DownloadOpts, override?: OptsOverride): DownloadOpts {
   return { ...opts, ...(override ?? {}) };
 }
@@ -100,8 +95,7 @@ export function sizeMB(v: Pick<AnalyzedVideo, 'sizeBytes'>, eff: DownloadOpts): 
   return base * rel * (eff.mode === 'audio' ? 0.08 : 1);
 }
 
-// Applies the "Default download" settings (unreadable values keep the current ones).
-// Pure: returns the merged options; the store commits them.
+// Unreadable settings values keep the current ones.
 export function applyDefaults(current: DownloadOpts, cfg: DownloadDefaults): DownloadOpts {
   const next = { ...current };
   const q = SETTINGS_Q[cfg.quality];
@@ -115,9 +109,9 @@ export function applyDefaults(current: DownloadOpts, cfg: DownloadDefaults): Dow
   return next;
 }
 
-// ---------- chip option lists (labels resolved at call time for live i18n) ----------
+// Labels resolved at call time for live i18n.
 export const qualityChips = (): { value: string; label: string }[] => [
-  { value: 'max', label: t('Máxima', 'Max') },
+  { value: 'max', label: t.download.qualityMax() },
   { value: '4k', label: '4K' },
   { value: '1440p', label: '1440p' },
   { value: '1080p', label: '1080p' },
@@ -141,7 +135,7 @@ export const bitrateChips = (): { value: string; label: string }[] => [
   { value: '320', label: '320' },
 ];
 export const modeChips = (): { value: DownloadOpts['mode']; label: string }[] => [
-  { value: 'av', label: t('Video + audio', 'Video + audio') },
-  { value: 'video', label: t('Solo video', 'Video only') },
-  { value: 'audio', label: t('Solo audio', 'Audio only') },
+  { value: 'av', label: t.common.videoAndAudio() },
+  { value: 'video', label: t.download.videoOnly() },
+  { value: 'audio', label: t.common.audioOnly() },
 ];

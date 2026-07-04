@@ -2,8 +2,8 @@ import { toast } from 'sonner';
 import { Stack } from '@/shared/components/layout/Stack';
 import { PageError } from '@/shared/components/ui/PageError';
 import { PageLoading } from '@/shared/components/ui/PageLoading';
-import { H1, P } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { useUiStore } from '@/shared/stores/useUiStore';
 import { useGetDownloadFolder } from '../api/get-download-folder/useGetDownloadFolder';
 import { useSetDownloadFolder } from '../api/set-download-folder/useSetDownloadFolder';
@@ -14,8 +14,6 @@ import { BehaviorSection } from '../components/BehaviorSection';
 import { DefaultsSection } from '../components/DefaultsSection';
 import { TroubleshootingSection } from '../components/TroubleshootingSection';
 
-// Pattern C (page + custom hooks): one route, several independent operations but no
-// dialog orchestration — the heavy logic lives in useSettingsAutosave/useTroubleshooting.
 export const AjustesPage = () => {
   const lang = useUiStore((s) => s.lang);
   const setLang = useUiStore((s) => s.setLang);
@@ -30,7 +28,7 @@ export const AjustesPage = () => {
   const onChangeFolder = () => {
     changeFolder(undefined, {
       onError: (e) =>
-        toast.error(t('No se pudo cambiar la carpeta', 'Could not change the folder'), {
+        toast.error(t.settings.folderChangeError(), {
           description: String(e),
         }),
     });
@@ -39,17 +37,14 @@ export const AjustesPage = () => {
   return (
     <Stack gap="lg" className="mx-auto w-full max-w-195 px-7.5 pt-6.5 pb-16">
       <Stack gap="xs">
-        <H1>{t('Ajustes', 'Settings')}</H1>
-        <P color="muted" className="text-[13.5px]">
-          {t(
-            'La calidad y el formato los eliges al momento de descargar. Aquí va lo demás.',
-            'You pick quality and format when downloading. Everything else lives here.',
-          )}
-        </P>
+        <Text variant="h1">{t.common.settings()}</Text>
+        <Text variant="body-sm" color="muted">
+          {t.settings.pageSubtitle()}
+        </Text>
       </Stack>
-      {settings.isLoading && <PageLoading message={t('Cargando ajustes...', 'Loading settings...')} />}
+      {settings.isLoading && <PageLoading message={t.settings.loading()} />}
       {settings.isError && (
-        <PageError message={t('No se pudieron cargar los ajustes.', 'Failed to load the settings.')} />
+        <PageError message={t.settings.loadError()} />
       )}
       {settings.ready && (
         <Stack gap="md">

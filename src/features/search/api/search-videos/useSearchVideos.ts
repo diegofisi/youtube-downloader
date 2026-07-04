@@ -10,7 +10,7 @@ interface SearchPageDTO {
   rawCount: number;
 }
 
-/** Paged yt-dlp search over /results (local analyze_urls adapter, guideline §4.15). */
+/** Paged yt-dlp search over /results (local analyze_urls adapter). */
 export function useSearchVideos(query: string, chip: SearchChip) {
   return useInfiniteQuery({
     queryKey: ['search', query, chip],

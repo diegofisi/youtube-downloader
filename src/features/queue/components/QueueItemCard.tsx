@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
-import { Span } from '@/shared/components/ui/typography';
-import { t } from '@/shared/lib/i18n';
+import { Text } from '@/shared/components/ui/typography';
+import { t } from '@/shared/lib/messages/t';
 import { QueueStatus, type QueueItem, type QueueItemAction } from '../models/queue-item.model';
 import { getQueueStatusMeta } from '../helpers/queue-status-meta';
 import { QueueActionButton } from './QueueActionButton';
@@ -31,7 +31,6 @@ interface QueueItemCardProps {
   onMove: (id: string, dir: number) => void;
 }
 
-/** Per-status detail text + available actions (vanilla queue-view render parity). */
 function getItemView(item: QueueItem): { detail: string; detailColor: string; actions: ActionDef[] } {
   if (item.status === QueueStatus.Downloading) {
     const detail =
@@ -40,52 +39,52 @@ function getItemView(item: QueueItem): { detail: string; detailColor: string; ac
       detail,
       detailColor: 'var(--text2)',
       actions: [
-        { act: 'pause', title: t('Pausar', 'Pause'), icon: PauseIcon },
-        { act: 'cancel', title: t('Cancelar', 'Cancel'), icon: XIcon, danger: true },
+        { act: 'pause', title: t.queue.pause(), icon: PauseIcon },
+        { act: 'cancel', title: t.common.cancel(), icon: XIcon, danger: true },
       ],
     };
   }
   if (item.status === QueueStatus.Merging) {
     return {
-      detail: t('Uniendo…', 'Merging…'),
+      detail: t.queue.merging(),
       detailColor: 'var(--text2)',
-      actions: [{ act: 'cancel', title: t('Cancelar', 'Cancel'), icon: XIcon, danger: true }],
+      actions: [{ act: 'cancel', title: t.common.cancel(), icon: XIcon, danger: true }],
     };
   }
   if (item.status === QueueStatus.Queued) {
     return {
-      detail: t('En espera', 'Waiting'),
+      detail: t.queue.waiting(),
       detailColor: 'var(--text2)',
-      actions: [{ act: 'remove', title: t('Quitar', 'Remove'), icon: XIcon }],
+      actions: [{ act: 'remove', title: t.queue.remove(), icon: XIcon }],
     };
   }
   if (item.status === QueueStatus.Paused) {
     return {
-      detail: t('Pausado', 'Paused'),
+      detail: t.queue.paused(),
       detailColor: 'var(--text2)',
       actions: [
-        { act: 'resume', title: t('Reanudar', 'Resume'), icon: PlayIcon },
-        { act: 'cancel', title: t('Cancelar', 'Cancel'), icon: XIcon, danger: true },
+        { act: 'resume', title: t.queue.resume(), icon: PlayIcon },
+        { act: 'cancel', title: t.common.cancel(), icon: XIcon, danger: true },
       ],
     };
   }
   if (item.status === QueueStatus.Done) {
     return {
-      detail: t('Listo', 'Done'),
+      detail: t.common.ready(),
       detailColor: 'var(--success)',
       actions: [
-        { act: 'folder', title: t('Abrir carpeta', 'Open folder'), icon: FolderOpenIcon },
-        { act: 'remove', title: t('Quitar de la lista', 'Remove from list'), icon: XIcon },
+        { act: 'folder', title: t.common.openFolder(), icon: FolderOpenIcon },
+        { act: 'remove', title: t.common.removeFromList(), icon: XIcon },
       ],
     };
   }
   // error | canceled
   return {
-    detail: item.status === QueueStatus.Error ? 'Error' : t('Cancelado', 'Canceled'),
+    detail: item.status === QueueStatus.Error ? 'Error' : t.queue.canceled(),
     detailColor: 'var(--danger)',
     actions: [
-      { act: 'retry', title: t('Reintentar', 'Retry'), icon: RotateCcwIcon },
-      { act: 'remove', title: t('Quitar de la lista', 'Remove from list'), icon: Trash2Icon },
+      { act: 'retry', title: t.common.retry(), icon: RotateCcwIcon },
+      { act: 'remove', title: t.common.removeFromList(), icon: Trash2Icon },
     ],
   };
 }
@@ -105,7 +104,7 @@ export const QueueItemCard = ({ item, onAction, onMove }: QueueItemCardProps) =>
         <Stack gap="none" className="-mr-1 flex-none gap-0.5">
           <button
             type="button"
-            title={t('Subir', 'Move up')}
+            title={t.queue.moveUp()}
             onClick={() => onMove(item.id, -1)}
             className="flex h-4.5 w-5.5 items-center justify-center rounded-[5px] text-faint hover:bg-accent hover:text-foreground"
           >
@@ -113,7 +112,7 @@ export const QueueItemCard = ({ item, onAction, onMove }: QueueItemCardProps) =>
           </button>
           <button
             type="button"
-            title={t('Bajar', 'Move down')}
+            title={t.queue.moveDown()}
             onClick={() => onMove(item.id, 1)}
             className="flex h-4.5 w-5.5 items-center justify-center rounded-[5px] text-faint hover:bg-accent hover:text-foreground"
           >
@@ -124,24 +123,24 @@ export const QueueItemCard = ({ item, onAction, onMove }: QueueItemCardProps) =>
         <Box className="relative h-15 w-26 flex-none overflow-hidden rounded-[9px]" style={{ background: item.grad }}>
           {item.thumbnail && <img src={item.thumbnail} alt="" className="size-full object-cover" />}
           {!item.thumbnail && (
-            <Span className="absolute inset-0 flex items-center justify-center text-white opacity-85">
+            <Text variant="inline" className="absolute inset-0 flex items-center justify-center text-white opacity-85">
               <PlayIcon className="size-5" fill="currentColor" />
-            </Span>
+            </Text>
           )}
         </Box>
 
         <Box className="min-w-0 flex-1">
           <Stack direction="row" align="center" gap="none" className="mb-0.75 gap-2.25">
-            <Span weight="semibold" className="truncate text-[13.5px]">
+            <Text variant="body-sm" weight="semibold" className="truncate">
               {item.title}
-            </Span>
-            <Span
+            </Text>
+            <Text variant="caption"
               weight="semibold"
-              className="inline-flex flex-none items-center rounded-[7px] px-2 py-0.5 text-[11px]"
+              className="inline-flex flex-none items-center rounded-[7px] px-2 py-0.5"
               style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 15%, transparent)` }}
             >
               {meta.label}
-            </Span>
+            </Text>
           </Stack>
           <Box className="mb-2 truncate text-xs text-muted-foreground">
             {[item.channel, item.fmt].filter(Boolean).join(' · ')}
@@ -163,9 +162,9 @@ export const QueueItemCard = ({ item, onAction, onMove }: QueueItemCardProps) =>
                 }}
               />
             </Box>
-            <Span className="font-mono text-[11.5px] whitespace-nowrap" style={{ color: detailColor }}>
+            <Text variant="caption" className="font-mono whitespace-nowrap" style={{ color: detailColor }}>
               {detail}
-            </Span>
+            </Text>
           </Stack>
         </Box>
 

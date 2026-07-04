@@ -11,7 +11,7 @@ export function useSessionStatus(
   return useQuery<SessionStatusDTOResponse, Error, SessionStatus>({
     queryKey: ['session', 'status'],
     queryFn: () => invoke<SessionStatusDTOResponse>('get_session_status'),
-    select: toSessionStatus, // Adapter: DTO → Model
+    select: toSessionStatus,
     // Cookie expiry has no push event: poll every 10 min like the vanilla setInterval.
     refetchInterval: SESSION_RECHECK_MS,
     ...options,

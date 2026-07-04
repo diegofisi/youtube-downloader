@@ -12,7 +12,6 @@ interface ChipGroupProps<T extends string> {
   disabled?: boolean;
 }
 
-/** Stash chip group: accent border when active (ports the vanilla `renderChipGroup`, compact pad). */
 export const ChipGroup = <T extends string>({ options, value, onChange, disabled }: ChipGroupProps<T>) => (
   <div className="flex flex-wrap justify-end gap-1.25">
     {options.map((o) => (
