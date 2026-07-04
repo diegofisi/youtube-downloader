@@ -1,12 +1,20 @@
-# Web-app patterns (preserved, not used in Stash)
+# Web-app patterns — HTTP client, auth, roles
 
-**Not used in Stash (desktop, single-user). Preserved from the base guideline for reuse in web projects.** Contains §4.12 (HTTP client & interceptors), the auth flavor of §4.8 (derived initial state), §8 (role-based routing), §9 (roles & permissions), §10.1 (AuthStatus). In Stash, transport is `invoke()` (see `data-flow.md` Adaptation 1) and routing is flat (see `routing-shell.md` Adaptation 4).
+> **Read this when:** the project is a multi-user **web** app (HTTP backend,
+> login, roles). Never for single-user desktop apps — their transport lives in
+> `data-flow.md` (Tauri section) and their routing in `routing-shell.md`.
 
-## HTTP client & interceptors (§4.12)
+## HTTP client & interceptors
 
-`shared/lib/http-client.ts` uses axios with two interceptors: (1) request — injects `Authorization` from `localStorage`; (2) response — unwraps the backend's `{ success, message, data }` wrapper and handles 401 token refresh.
+`shared/lib/http-client.ts` uses axios with two interceptors: (1) request —
+injects `Authorization` from `localStorage`; (2) response — unwraps the
+backend's `{ success, message, data }` wrapper and handles 401 token refresh.
 
-**Key pattern:** when a 401 occurs and refresh fails, call `useAuthStore.getState().logout()` — never manually clear localStorage + `window.location.href`. The store triggers reactive re-renders; route guards redirect naturally. It is also a no-op when not logged in (prevents unwanted reloads on failed login attempts).
+**Key pattern:** when a 401 occurs and refresh fails, call
+`useAuthStore.getState().logout()` — never manually clear localStorage +
+`window.location.href`. The store triggers reactive re-renders; route guards
+redirect naturally. It is also a no-op when not logged in (prevents unwanted
+reloads on failed login attempts).
 
 ```typescript
 // shared/lib/http-client.ts
@@ -61,9 +69,11 @@ httpClient.interceptors.response.use(
 );
 ```
 
-The fetcher pattern with this client (§4.3/§4.4): `const { data } = await httpClient.get<XDTOResponse>("/path"); return data;` inside `queryFn`/`mutationFn`, then `select: toModel`.
+The fetcher pattern with this client (see `data-flow.md` → Query/Mutation
+hooks): `const { data } = await httpClient.get<XDTOResponse>("/path"); return
+data;` inside `queryFn`/`mutationFn`, then `select: toModel`.
 
-## Auth store with derived initial state (§4.8, auth flavor)
+## Auth store with derived initial state
 
 ```typescript
 // features/auth/stores/useAuthStore.ts
@@ -87,13 +97,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
 }));
 ```
 
-Login container rule set (§4.6, auth flavor): on success store tokens in `localStorage`, `setUser(user)`, toast, `navigate(AuthPath.ROOT, { replace: true })` — all inside `mutate`'s `onSuccess`.
+Login container rule set (mutation flavor of `containers-pages.md` → Container
+— Mutation): on success store tokens in `localStorage`, `setUser(user)`, toast,
+`navigate(AuthPath.ROOT, { replace: true })` — all inside `mutate`'s
+`onSuccess`.
 
-## Role-based routing (§8)
+## Role-based routing
 
-Routes live in `src/shared/routes/`, grouped by role. Each role gets a folder with 4 files + a central router.
+Routes live in `src/shared/routes/`, grouped by role. Each role gets a folder
+with 4 files + a central router.
 
-### Directory structure (§8.1)
+### Directory structure
 
 ```text
 src/shared/
@@ -109,11 +123,14 @@ src/shared/
             └── RoleRoutes.tsx   # Route definitions object
 ```
 
-### RootLayout — auth initialization (§8.2)
+### RootLayout — auth initialization
 
-Top-level route component wrapping all groups: checks stored token, fetches the user via `useMe({ enabled: hasToken && status === AuthStatus.Idle })`, sets the store, shows a spinner while `status === Idle && hasToken`, then renders `<Outlet />`. On `isError` → `setStatus(AuthStatus.Unauthenticated)`.
+Top-level route component wrapping all groups: checks stored token, fetches the
+user via `useMe({ enabled: hasToken && status === AuthStatus.Idle })`, sets the
+store, shows a spinner while `status === Idle && hasToken`, then renders
+`<Outlet />`. On `isError` → `setStatus(AuthStatus.Unauthenticated)`.
 
-### The 4 files per group (§8.3)
+### The 4 files per group
 
 | File | Responsibility |
 |---|---|
@@ -122,7 +139,7 @@ Top-level route component wrapping all groups: checks stored token, fetches the 
 | `RoleRoot.tsx` | Default redirect: base path → default sub-route (`<Navigate to={UserPath.OVERVIEW} replace />`). |
 | `RoleRoutes.tsx` | Typed route map: each path key → `{ path, element, label, layout }`. |
 
-### Shared Route interface (§8.4)
+### Shared Route interface
 
 ```typescript
 export interface Route {
@@ -133,7 +150,7 @@ export interface Route {
 }
 ```
 
-### Code patterns (§8.5)
+### Code patterns
 
 ```typescript
 // user-path.ts — as const + keyof typeof = exhaustive key union
@@ -168,7 +185,7 @@ export const UserRoutes: { [key in UserPath]: Route } = {
 } as const;
 ```
 
-### Main router (§8.6) & LayoutWrapper (§8.7)
+### Main router & LayoutWrapper
 
 ```typescript
 export const router = createBrowserRouter([
@@ -191,11 +208,12 @@ export const LayoutWrapper: React.FC<LayoutWrapperProps> = ({ layout: Layout, el
 };
 ```
 
-### Flow summary (§8.8)
+### Flow summary
 
-`RootLayout` (token check → `useMe` → set store) → path constants → route map → `router.tsx` → guard (`<Outlet />`) → `LayoutWrapper` → feature page.
+`RootLayout` (token check → `useMe` → set store) → path constants → route map →
+`router.tsx` → guard (`<Outlet />`) → `LayoutWrapper` → feature page.
 
-### Rules (§8.9)
+### Rules
 
 - One folder per role group; never mix roles.
 - Paths are the single source of truth — `UserPath.OVERVIEW`, never `'/main/overview'`.
@@ -204,9 +222,9 @@ export const LayoutWrapper: React.FC<LayoutWrapperProps> = ({ layout: Layout, el
 - Layouts are assigned per route, not per group.
 - `RootLayout` wraps all groups; auth init happens once at the top.
 
-## Roles & permissions (§9)
+## Roles & permissions
 
-### Role definition (§9.1)
+### Role definition
 
 ```typescript
 // shared/types/roles.ts
@@ -223,7 +241,7 @@ export type UserRole = RoleType;
 export interface User { id: string; role: UserRole; /* ... */ }
 ```
 
-### Permission system (§9.2) — config-driven, granular CRUD per feature
+### Permission system — config-driven, granular CRUD per feature
 
 ```typescript
 // shared/helpers/permissions.ts
@@ -245,7 +263,7 @@ export const userPermissions = (currentRole: RoleType) => {
 export type UserPermissions = ReturnType<typeof userPermissions>;
 ```
 
-### useUserInfo hook (§9.3) — central auth info
+### useUserInfo hook — central auth info
 
 ```typescript
 // features/auth/hooks/useUserInfo.ts
@@ -265,13 +283,13 @@ export const useUserInfo = () => {
 // if (userPermissions?.isAdmin()) { /* admin-only */ }
 ```
 
-### Adding permissions for a new feature (§9.4)
+### Adding permissions for a new feature
 
 1. Add the CRUD config to `permissionConfig` in `shared/helpers/permissions.ts`.
 2. Add the corresponding methods to the `userPermissions` return object.
 3. Consume via `useUserInfo().userPermissions?.feature.action()` in guards or containers.
 
-## AuthStatus (§10.1)
+## AuthStatus
 
 ```typescript
 // shared/types/status.ts
@@ -283,4 +301,7 @@ export const AuthStatus = {
 export type AuthStatus = (typeof AuthStatus)[keyof typeof AuthStatus];
 ```
 
-Always compare against `AuthStatus.Authenticated`, never raw strings (autocomplete, refactoring safety, single source of truth). This is the canonical instance of the const-object pattern (§10.2, kept in `conventions.md`).
+Always compare against `AuthStatus.Authenticated`, never raw strings
+(autocomplete, refactoring safety, single source of truth). This is the
+canonical instance of the const-object pattern (see `conventions.md` → Const
+object + type pattern).

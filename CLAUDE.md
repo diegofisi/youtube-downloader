@@ -23,17 +23,17 @@ cd src-tauri && cargo test
 ## Where to look before writing code
 
 - New **backend** work (Tauri command, Rust service, backend event, FE↔BE contract change)
-  → skill `stash-backend`.
+  → skill `backend`.
 - New **frontend** work (view, component, state, data fetching, i18n)
-  → skill `stash-frontend`.
-- Frontend architecture doctrine lives in the stash-frontend skill (loaded on demand);
-  backend/contract doctrine in stash-backend. Do not duplicate skill content here.
+  → skill `frontend`.
+- Frontend architecture doctrine lives in the frontend skill (loaded on demand);
+  backend/contract doctrine in backend. Do not duplicate skill content here.
 
 ## Iron rules (transcend any skill)
 
 1. **Never break the FE↔BE serde contract**: new structs use `rename_all = "camelCase"`;
    legacy snake_case models (`AppConfig`, `VideoMeta`) are untouchable without a migration.
-   The contract table lives in the stash-backend skill (`references/tauri-commands.md`).
+   The contract table lives in the backend skill (`references/project.md`).
 2. **User-facing strings go through the i18n layer** `t(es, en)` (frontend); the backend
    currently returns user-facing error strings in the app's default language (es) — treat
    them as product copy, not code style. Code, file names, and identifiers: English.
