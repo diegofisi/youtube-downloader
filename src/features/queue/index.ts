@@ -1,5 +1,7 @@
-// Public facade of the queue slice (unchanged by the refactor). Logic lives in
-// queue.state.ts (no DOM) and rendering in ui/queue-view.ts.
-export { enqueue, setConcurrency } from './queue.state';
-export type { EnqueueItem } from './queue.state';
-export { initQueueView } from './ui/queue-view';
+// Public facade of the queue slice — other features/shared import ONLY from here.
+// Pinned contract: enqueue is usable as `useQueueStore.getState().enqueue(items)`.
+// Pages are NOT exported: the router lazy-loads them by path to keep chunks split.
+export { useQueueStore, selectActiveCount } from './stores/useQueueStore';
+export { QueueBridge } from './components/QueueBridge';
+export { QueueStatus, type EnqueueItem, type QueueItem } from './models/queue-item.model';
+export type { DownloadOptions } from './models/download-options.model';

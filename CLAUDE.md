@@ -6,8 +6,9 @@ with session login, a download queue, history library, and a bilingual (es/en) U
 ## Stack
 
 - **Backend**: Tauri 2 + Rust, vertical slices (`src-tauri/src/features/*` + `src-tauri/src/core/`).
-- **Frontend**: React 19 + Tailwind + Shadcn + Zustand + React Query (`src/`).
-  **UI migration from vanilla TS to React in progress** — expect mixed code until it is done.
+- **Frontend**: React 19 + Tailwind + Shadcn + Zustand + React Query (`src/`),
+  vertical slices (`src/features/*` + `src/shared/`). The vanilla-TS UI is gone —
+  the stack is React only.
 
 ## Verification (golden commands)
 

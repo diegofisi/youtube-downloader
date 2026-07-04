@@ -3,5 +3,3 @@ node_modules/
 src-tauri/
 build-output.log
 *.md
-# index.html compacto a mano: formatearlo genera un diff de miles de lineas
-index.html

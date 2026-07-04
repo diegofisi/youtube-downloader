@@ -1,180 +1,111 @@
-// Enforcement de la arquitectura del frontend (CONTEXT.md §4):
-//   core ← shared ← features ← app ← main
-//   - core no importa nada de la app.
-//   - shared solo importa core + shared.
-//   - features importan core/shared/su propio slice; de OTROS slices solo su index.ts.
-//   - features no importan app/ (navegación vía bus 'nav:goto').
-//   - invoke / @tauri-apps solo en *.api.ts (y en core/tauri/*, que es la fachada).
+// Frontend architecture enforcement (React vertical slices — stash-frontend skill):
+//   shared ← features ← shell (shared/routes) ← main
+//   - shared/ never imports features (the routes shell is the app composition layer
+//     and is the single exception: it mounts feature pages and app-level bridges).
+//   - features import shared/ and their own slice only. Cross-feature imports are
+//     FORBIDDEN except through a feature's index.ts facade, and ONLY for the
+//     sanctioned app-level contracts:
+//       '@/features/queue'    → useQueueStore + EnqueueItem (enqueue contract)
+//       '@/features/session'  → session hooks (status/account/login/logout/reconnect)
+//       '@/features/download' → useDownloadPrefill (prefill contract)
+//     Everything else (deep paths like '@/features/queue/stores/...') must fail:
+//     each feature owns its local API hooks (guideline §4.15).
+//   - invoke/onEvent (Tauri) only from shared/lib/tauri.ts (facade), shared/lib/window.ts,
+//     shared/hooks/useTauriEvent.ts and each feature's api/ and stores/ layers.
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import boundaries from 'eslint-plugin-boundaries';
 import reactHooks from 'eslint-plugin-react-hooks';
+
+const SANCTIONED_FACADES = ['queue', 'session', 'download'];
 
 export default tseslint.config(
   { ignores: ['dist/**', 'node_modules/**', 'src-tauri/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    plugins: { boundaries },
+    plugins: { boundaries, 'react-hooks': reactHooks },
     settings: {
       'import/resolver': {
-        // Resuelve imports relativos .ts y los alias @core/@shared/@features/@app (tsconfig paths).
+        // Resolves relative imports and the "@/" alias (tsconfig paths).
         typescript: { alwaysTryTypes: true },
       },
       'boundaries/elements': [
-        { type: 'main', mode: 'file', pattern: 'src/main.ts' },
-        { type: 'app', pattern: 'src/app' },
-        { type: 'core', pattern: 'src/core' },
+        // Order matters: first match wins (shell before shared).
+        { type: 'main', mode: 'file', pattern: 'src/main.tsx' },
+        { type: 'shell', pattern: 'src/shared/routes' },
         { type: 'shared', pattern: 'src/shared' },
         { type: 'features', pattern: 'src/features/*', capture: ['feature'] },
       ],
     },
     rules: {
-      // Promesas sueltas: origen típico de errores silenciosos en handlers de UI.
-      '@typescript-eslint/no-floating-promises': 'error',
-
-      // Convención del proyecto: prefijo _ para parámetros intencionalmente sin usar.
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
-      ],
-
-      // Capas: solo se importa "hacia abajo" (los imports internos de un mismo
-      // elemento no se comprueban). Entre slices de features solo se permite la
-      // fachada pública (index.ts) vía internalPath.
-      'boundaries/dependencies': [
-        'error',
-        {
-          default: 'disallow',
-          message: 'Import prohibido por la arquitectura (${file.type} -> ${dependency.type}). Ver CONTEXT.md §4.',
-          rules: [
-            // core no importa nada de la app (sin regla => todo denegado).
-            { from: { type: 'shared' }, allow: { to: { type: ['core', 'shared'] } } },
-            { from: { type: 'features' }, allow: { to: { type: ['core', 'shared'] } } },
-            {
-              from: { type: 'features' },
-              allow: { to: { type: 'features', internalPath: 'index.ts' } },
-              message: 'De otro feature solo puede importarse su index.ts (fachada pública). Ver CONTEXT.md §4.',
-            },
-            { from: { type: 'app' }, allow: { to: { type: ['core', 'shared', 'app'] } } },
-            { from: { type: 'app' }, allow: { to: { type: 'features', internalPath: 'index.ts' } } },
-            { from: { type: 'main' }, allow: { to: { type: ['core', 'shared', 'app'] } } },
-            { from: { type: 'main' }, allow: { to: { type: 'features', internalPath: 'index.ts' } } },
-          ],
-        },
-      ],
-
-      // Acceso a Tauri encapsulado: invoke/eventos solo desde *.api.ts vía core/tauri.
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@tauri-apps/*', '@tauri-apps/*/*'],
-              message: 'El acceso a Tauri va encapsulado: usa el *.api.ts del slice (o core/tauri/*).',
-            },
-            {
-              group: ['**/core/tauri/client', '@core/tauri/client'],
-              message: 'invoke/onEvent solo se consumen desde los *.api.ts de cada slice.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-
-  // Excepciones al encapsulado de Tauri: la propia fachada (core/tauri/*) y la
-  // única puerta al backend de cada slice (*.api.ts).
-  {
-    files: ['src/core/tauri/**/*.ts', 'src/**/*.api.ts'],
-    rules: { 'no-restricted-imports': 'off' },
-  },
-
-  // ============ App React (src-react) — migración en curso ============
-  // Boundaries completas llegarán con más slices; por ahora: hooks de React,
-  // promesas sueltas y prohibición de imports entre features.
-  {
-    files: ['src-react/**/*.{ts,tsx}'],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.react.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-    plugins: { 'react-hooks': reactHooks },
-    rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+
+      // Floating promises: the usual source of silent failures in UI handlers.
       '@typescript-eslint/no-floating-promises': 'error',
+
+      // Project convention: _ prefix for intentionally unused parameters.
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
-      // Acceso a Tauri encapsulado: invoke/onEvent solo desde api/ y stores/.
+
+      // Layer boundaries (see header comment for the full doctrine).
+      'boundaries/dependencies': [
+        'error',
+        {
+          default: 'disallow',
+          message:
+            'Import forbidden by the architecture (${file.type} -> ${dependency.type}). See eslint.config.js header.',
+          rules: [
+            { from: { type: 'shared' }, allow: { to: { type: 'shared' } } },
+            // Shell = composition layer: facades + lazy-loaded pages.
+            { from: { type: 'shell' }, allow: { to: { type: ['shared', 'shell'] } } },
+            {
+              from: { type: 'shell' },
+              allow: { to: { type: 'features', internalPath: '(index.ts|pages/*.tsx)' } },
+            },
+            { from: { type: 'features' }, allow: { to: { type: 'shared' } } },
+            // Features may read route path constants, nothing else from the shell.
+            {
+              from: { type: 'features' },
+              allow: { to: { type: 'shell', internalPath: 'app-path.ts' } },
+            },
+            // Sanctioned cross-feature contracts, facade-only (see header).
+            {
+              from: { type: 'features' },
+              allow: {
+                to: SANCTIONED_FACADES.map((feature) => ({
+                  type: 'features',
+                  captured: { feature },
+                  internalPath: 'index.ts',
+                })),
+              },
+              message:
+                'Cross-feature imports: only @/features/(queue|session|download) via their index.ts facade. Anything else: local hook (guideline §4.15).',
+            },
+            { from: { type: 'main' }, allow: { to: { type: ['shared', 'shell', 'features'] } } },
+          ],
+        },
+      ],
+
+      // Tauri access is encapsulated: invoke/onEvent only behind the facade.
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
               group: ['@/shared/lib/tauri', '@tauri-apps/*', '@tauri-apps/*/*'],
-              message: 'El acceso a Tauri va encapsulado: solo api/[endpoint]/ y stores/ pueden usar invoke/onEvent.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  // Excepciones al encapsulado de Tauri en React: la fachada, el hook de eventos,
-  // los helpers de ventana y las capas api/stores de cada feature.
-  {
-    files: [
-      'src-react/shared/lib/tauri.ts',
-      'src-react/shared/lib/window.ts',
-      'src-react/shared/hooks/useTauriEvent.ts',
-      'src-react/features/**/api/**/*.{ts,tsx}',
-      'src-react/features/**/stores/**/*.{ts,tsx}',
-    ],
-    rules: { 'no-restricted-imports': 'off' },
-  },
-  // No-cross-feature-imports (regla simple hasta tener boundaries completas):
-  // settings solo puede importar de sí mismo, shared/ y las restricciones de arriba.
-  {
-    files: ['src-react/features/settings/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@/features/*', '@/features/*/**', '!@/features/settings', '!@/features/settings/**'],
-              message: 'Prohibido importar de otros features: crea un hook local (guideline §4.15).',
-            },
-            {
-              group: ['@/shared/lib/tauri', '@tauri-apps/*', '@tauri-apps/*/*'],
-              message: 'El acceso a Tauri va encapsulado: solo api/[endpoint]/ y stores/ pueden usar invoke/onEvent.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    files: ['src-react/features/settings/api/**/*.{ts,tsx}', 'src-react/features/settings/stores/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@/features/*', '@/features/*/**', '!@/features/settings', '!@/features/settings/**'],
-              message: 'Prohibido importar de otros features: crea un hook local (guideline §4.15).',
+              message:
+                'Tauri access is encapsulated: only api/[endpoint]/ and stores/ may use invoke/onEvent (via @/shared/lib/tauri).',
             },
           ],
         },
@@ -182,24 +113,16 @@ export default tseslint.config(
     },
   },
 
-  // Deuda conocida y aceptada: dl-actions vive en shared/ pero orquesta fachadas
-  // de features (queue/session/download/preview) para compartir el flujo de
-  // descarga entre search y youtube-account. Moverlo a app/ rompería la regla
-  // "features no importan app". Se le permite shared -> features, pero SOLO
-  // entrando por el index.ts de cada slice.
+  // Exceptions to the Tauri encapsulation: the facade itself, the event hook,
+  // the window helpers, and each feature's api/stores layers.
   {
-    files: ['src/shared/ui/dl-actions.ts'],
-    rules: {
-      'boundaries/dependencies': [
-        'error',
-        {
-          default: 'disallow',
-          rules: [
-            { from: { type: 'shared' }, allow: { to: { type: ['core', 'shared'] } } },
-            { from: { type: 'shared' }, allow: { to: { type: 'features', internalPath: 'index.ts' } } },
-          ],
-        },
-      ],
-    },
+    files: [
+      'src/shared/lib/tauri.ts',
+      'src/shared/lib/window.ts',
+      'src/shared/hooks/useTauriEvent.ts',
+      'src/features/**/api/**/*.{ts,tsx}',
+      'src/features/**/stores/**/*.{ts,tsx}',
+    ],
+    rules: { 'no-restricted-imports': 'off' },
   },
 );
