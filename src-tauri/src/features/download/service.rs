@@ -245,6 +245,30 @@ fn run_with_retry(
 
     let kind = classify_error(&error_text);
 
+    // Stale cookies are rejected server-side even before they expire: a public video still
+    // downloads without them, so retry ONCE cookie-less and let the frontend renew the session.
+    let used_cookies = matches!(options.cookie_mode.as_str(), "file" | "cookies")
+        && session::get_cookies_path(app_dir).exists();
+    if kind == Some("auth") && used_cookies && !registry.is_cancelled(run_id) {
+        println!(
+            "[download] Sesión rechazada por YouTube en {}. Reintentando sin cookies (1/1)...",
+            url
+        );
+        let mut anonymous = options.clone();
+        anonymous.cookie_mode = "none".into();
+        if let Ok(retry) = run_once(app, registry, app_dir, url, &anonymous, run_id) {
+            if retry.exit_ok {
+                let _ = app.emit("session-rejected", ());
+                return DownloadResult {
+                    success: true,
+                    error: None,
+                    error_kind: None,
+                    file_path: retry.file_path,
+                };
+            }
+        }
+    }
+
     // HTTP 403 / forbidden: stale yt-dlp cache -> clear it and retry ONCE,
     // unless the user cancelled the download.
     if kind == Some("cache") && !registry.is_cancelled(run_id) {

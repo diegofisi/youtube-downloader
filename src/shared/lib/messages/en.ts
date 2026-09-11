@@ -155,6 +155,8 @@ export const en: Record<MessageKey, string> = {
   "session.expiredBanner": "Your YouTube session expired. Reconnect to access members-only content.",
   "session.dismiss": "Dismiss",
   "session.cookiesExtractFailed": "Could not save the YouTube session. Please try signing in again.",
+  "session.rejectedTitle": "YouTube rejected your saved session",
+  "session.rejectedBody": "Public videos keep working without it. Reconnect your account in My YouTube for members-only content.",
   "settings.pickFolder": "Choose the downloads folder",
   "settings.appearance": "Appearance",
   "settings.appearanceHint": "Applies instantly",

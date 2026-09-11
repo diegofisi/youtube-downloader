@@ -250,6 +250,7 @@ pub fn classify_error(error_text: &str) -> Option<&'static str> {
         || e.contains("not a bot")
         || e.contains("login required")
         || e.contains("login details are needed")
+        || e.contains("the page needs to be reloaded")
         || e.contains("http error 401");
     if is_auth {
         return Some("auth");
@@ -304,6 +305,7 @@ mod tests {
             "HTTP Error 401: Unauthorized",
             "[youtube:tab] Login required to access this page",
             "[youtube:tab] subscriptions: Login details are needed to download this content.",
+            "[youtube] hILfVX2Dtx8: The page needs to be reloaded.",
         ];
         for p in patrones {
             assert_eq!(

@@ -109,7 +109,7 @@ before classifying (`preview/service.rs::without_query_text`):
 
 | kind | Patterns (lowercase) | Reaction |
 |---|---|---|
-| `auth` | "sign in to confirm", "members-only", "cookies are no longer valid", "please sign in", "not a bot", "login required", "login details are needed", "http error 401" | Fixed `AUTH_ERROR_MSG` message. The frontend queue pauses the batch and attempts a silent session reconnect (frontend skill). `auth` takes priority over `cache`. |
+| `auth` | "sign in to confirm", "members-only", "cookies are no longer valid", "please sign in", "not a bot", "login required", "login details are needed", "the page needs to be reloaded", "http error 401" | Fixed `AUTH_ERROR_MSG` message. The frontend queue pauses the batch and attempts a silent session reconnect (frontend skill). `auth` takes priority over `cache`. |
 | `cache` | "http error 403", "forbidden", fragment+403 | The BACKEND clears yt-dlp's cache (`--rm-cache-dir`) and retries ONCE, checking `is_cancelled` before respawning |
 | `other` / None | everything else | Regular error: the message travels to the frontend as-is |
 | `cancelled` | registry says the user cancelled | Fixed "Descarga cancelada" message; the queue ignores results of cancelled/paused items |

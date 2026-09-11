@@ -1,6 +1,7 @@
 import { Box } from '@/shared/components/layout/Box';
 import { Stack } from '@/shared/components/layout/Stack';
 import { Text } from '@/shared/components/ui/typography';
+import { parseAnalyzeEntryError } from '@/shared/lib/analyze-entry-error';
 import { t } from '@/shared/lib/messages/t';
 import { cn } from '@/shared/lib/utils';
 import { DUP_TONE, STATUS_META, dupLabel } from '../../helpers/analysis';
@@ -21,6 +22,8 @@ interface VideoCardProps {
 export const VideoCard = ({ vm, onToggle, onOpenOpts }: VideoCardProps) => {
   const meta = STATUS_META[vm.status];
   const dup = vm.video.dup;
+  // A failed URL has no channel: show yt-dlp's reason there instead of a blank line.
+  const subtitle = parseAnalyzeEntryError(vm.video.availability)?.message ?? vm.video.channel;
   return (
     <Box
       className={cn(
@@ -36,7 +39,9 @@ export const VideoCard = ({ vm, onToggle, onOpenOpts }: VideoCardProps) => {
         <Text variant="body-sm" className="truncate leading-[1.3] font-semibold text-foreground block">
           {vm.video.title}
         </Text>
-        <Text variant="inline" className="truncate text-xs text-muted-foreground block">{vm.video.channel}</Text>
+        <Text variant="inline" title={subtitle} className="truncate text-xs text-muted-foreground block">
+          {subtitle}
+        </Text>
         <Stack direction="row" gap="sm" align="center" className="mt-px">
           <StatusBadge label={dup ? dupLabel() : meta.label()} tone={dup ? DUP_TONE : meta.tone} />
           <Text variant="caption" className="font-mono text-faint">{fmtSize(vm.sizeMb)}</Text>

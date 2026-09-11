@@ -17,13 +17,20 @@ const RADIO_CAP: u32 = 25;
 /// Cap for account feeds (subscriptions, history): continuous, no real end.
 const FEED_CAP: u32 = 50;
 
+/// Result of `analyze`: the entry plus whether the stored cookies had to be dropped
+/// because YouTube rejected them (the frontend then renews the session).
+pub struct Analysis {
+    pub entry: AnalyzedEntry,
+    pub session_rejected: bool,
+}
+
 /// Analyzes a URL (single video or playlist/channel), resolving metadata with yt-dlp.
 /// `range`: 1-based (start, end) mapped to `--playlist-items START:END`; `None` applies the default caps.
 pub fn analyze(
     app_dir: &Path,
     url: &str,
     range: Option<(u32, u32)>,
-) -> Result<AnalyzedEntry, AnalyzeError> {
+) -> Result<Analysis, AnalyzeError> {
     // Mix/radio (list=RD…, start_radio): infinite → cap at 25 like YouTube. Account
     // feeds (/feed/...): continuous → cap at 50. Real playlists/channels: no cap.
     let is_radio = url.contains("list=RD") || url.contains("start_radio=");
@@ -35,8 +42,29 @@ pub fn analyze(
     } else {
         None
     };
-    let json = run_dump_json(app_dir, url, cap, range)?;
-    Ok(map_entry(&json, url))
+    let cookies = session::get_cookies_path(app_dir);
+    match run_dump_json(app_dir, url, cap, range, true) {
+        Ok(json) => Ok(Analysis {
+            entry: map_entry(&json, url),
+            session_rejected: false,
+        }),
+        // Stale cookies are rejected server-side even before they expire; a public URL
+        // still resolves without them, so retry cookie-less and report the rejection.
+        Err(e) if e.kind == Some("auth") && cookies.exists() => {
+            eprintln!(
+                "[preview] Sesión rechazada por YouTube; reintento sin cookies: {}",
+                url
+            );
+            match run_dump_json(app_dir, url, cap, range, false) {
+                Ok(json) => Ok(Analysis {
+                    entry: map_entry(&json, url),
+                    session_rejected: true,
+                }),
+                Err(_) => Err(e),
+            }
+        }
+        Err(e) => Err(e),
+    }
 }
 
 /// Error entry for a failed URL. The frontend reads the class from the `availability` prefix
@@ -67,6 +95,7 @@ fn run_dump_json(
     url: &str,
     cap: Option<u32>,
     range: Option<(u32, u32)>,
+    use_cookies: bool,
 ) -> Result<Value, AnalyzeError> {
     // The builder resolves the binary and adds --encoding utf-8 and `-- <url>`.
     let mut builder = YtdlpCmd::new(app_dir, url)
@@ -84,11 +113,12 @@ fn run_dump_json(
         builder = builder.arg("--playlist-end").arg(c.to_string());
     }
 
-    // Unconditional cookies (if present): previews always benefit from the
-    // session for private/members-only content.
-    builder = builder
-        .deno_runtime()
-        .cookies(&session::get_cookies_path(app_dir));
+    // Cookies by default (if present): previews benefit from the session for
+    // private/members-only content; `analyze` drops them once YouTube rejects them.
+    builder = builder.deno_runtime();
+    if use_cookies {
+        builder = builder.cookies(&session::get_cookies_path(app_dir));
+    }
 
     let mut run = builder.build();
     let out = run.output().map_err(|e| AnalyzeError {

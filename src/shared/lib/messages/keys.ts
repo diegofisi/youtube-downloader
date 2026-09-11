@@ -154,6 +154,8 @@ export type MessageKey =
   | "session.expiredBanner"
   | "session.dismiss"
   | "session.cookiesExtractFailed"
+  | "session.rejectedTitle"
+  | "session.rejectedBody"
   | "settings.pickFolder"
   | "settings.appearance"
   | "settings.appearanceHint"

@@ -179,6 +179,8 @@ export const t = {
     expiredBanner: () => translate('session.expiredBanner'),
     dismiss: () => translate('session.dismiss'),
     cookiesExtractFailed: () => translate('session.cookiesExtractFailed'),
+    rejectedTitle: () => translate('session.rejectedTitle'),
+    rejectedBody: () => translate('session.rejectedBody'),
   },
   settings: {
     pickFolder: () => translate('settings.pickFolder'),

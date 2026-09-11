@@ -155,6 +155,8 @@ export const es: Record<MessageKey, string> = {
   "session.expiredBanner": "Tu sesión de YouTube caducó. Vuelve a conectarte para el contenido de miembros.",
   "session.dismiss": "Descartar",
   "session.cookiesExtractFailed": "No se pudo guardar la sesión de YouTube. Vuelve a intentar el inicio de sesión.",
+  "session.rejectedTitle": "YouTube rechazó tu sesión guardada",
+  "session.rejectedBody": "Los videos públicos siguen funcionando sin ella. Reconecta tu cuenta en Mi YouTube para el contenido de miembros.",
   "settings.pickFolder": "Selecciona la carpeta de descargas",
   "settings.appearance": "Apariencia",
   "settings.appearanceHint": "Se aplica al instante",
