@@ -9,7 +9,9 @@ import { MediaGrid } from '@/shared/components/media/MediaGrid';
 import { Button } from '@/shared/components/ui/button';
 import { ChipGroup } from '@/shared/components/ui/ChipGroup';
 import { Text } from '@/shared/components/ui/typography';
+import { errorText } from '@/shared/lib/error-text';
 import { t } from '@/shared/lib/messages/t';
+import { isSessionAuthError, openYouTubeLogin, SessionStatus, useSessionStatus } from '@/features/session';
 import { useSearchVideos } from '../api/search-videos/useSearchVideos';
 import { SearchBar } from '../components/SearchBar';
 import { SearchChip, searchChipLabel, searchChipOptions } from '../helpers/search-chips';
@@ -30,6 +32,29 @@ export const BuscarPage = () => {
   const chosen = videos.filter((v) => selected.has(v.url));
   // First page in flight (initial or re-submitted search) — not "See more".
   const searching = search.isFetching && !search.isFetchingNextPage;
+  const { data: sessionStatus } = useSessionStatus();
+  // No results on screen: the failure gets a state card. With results kept by React
+  // Query (re-submit / "See more"), it gets a toast instead so the grid stays usable.
+  const failed = query !== '' && !searching && search.isError && !search.data;
+  const sessionRejected = failed && isSessionAuthError(search.error);
+  // Without a stored session there is nothing to renew: YouTube simply demands a login.
+  const sessionBody =
+    sessionStatus === SessionStatus.None ? t.search.sessionNeededBody() : t.search.sessionExpiredBody();
+
+  const reconnect = () => {
+    openYouTubeLogin().catch(() => toast.error(t.common.couldNotOpenLogin()));
+  };
+
+  const notifyError = (e: unknown) => {
+    if (isSessionAuthError(e)) {
+      toast.warning(t.search.sessionExpiredTitle(), {
+        description: sessionBody,
+        action: { label: t.common.reconnect(), onClick: reconnect },
+      });
+    } else {
+      toast.error(t.search.searchError(), { description: errorText(e) });
+    }
+  };
 
   const submit = () => {
     const next = input.trim();
@@ -39,7 +64,9 @@ export const BuscarPage = () => {
     }
     clearSelection();
     if (next === query) {
-      void search.refetch();
+      void search.refetch().then((r) => {
+        if (r.isError && r.data) notifyError(r.error);
+      });
       return;
     }
     setQuery(next);
@@ -63,8 +90,7 @@ export const BuscarPage = () => {
   const loadMore = () => {
     void search.fetchNextPage().then((r) => {
       // Keep the loaded grid: page errors surface as a toast, not a state card.
-      if (r.isError)
-        toast.error(t.common.couldNotLoadMore(), { description: String(r.error) });
+      if (r.isError) notifyError(r.error);
     });
   };
 
@@ -122,8 +148,19 @@ export const BuscarPage = () => {
           />
         )}
         {query !== '' && searching && <GridStateCard loading title={`${t.search.searching()} “${query}”…`} />}
-        {query !== '' && !searching && search.isError && !search.data && (
-          <GridStateCard title={t.search.searchError()} message={String(search.error)} />
+        {sessionRejected && (
+          <GridStateCard
+            title={t.search.sessionExpiredTitle()}
+            message={`${sessionBody} ${t.search.errorDetail({ detail: errorText(search.error) })}`}
+            action={
+              <Button className="h-9.5 rounded-[10px] px-4.5 text-body-sm font-semibold" onClick={reconnect}>
+                {t.common.reconnect()}
+              </Button>
+            }
+          />
+        )}
+        {failed && !sessionRejected && (
+          <GridStateCard title={t.search.searchError()} message={errorText(search.error)} />
         )}
         {query !== '' && !searching && search.isSuccess && videos.length === 0 && !search.hasNextPage && (
           <GridStateCard

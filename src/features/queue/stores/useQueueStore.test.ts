@@ -151,6 +151,29 @@ describe('pump (concurrencia)', () => {
 });
 
 describe('handleProgress', () => {
+  it('con runId, el progreso llega al item de esa ejecución aunque otro comparta URL', async () => {
+    const { useQueueStore: S } = await loadStore();
+    eternalDownload();
+    S.getState().enqueue([mkItem('u1')]);
+    S.getState().action(items(S)[0].id, 'cancel');
+    S.getState().enqueue([mkItem('u1')]); // a cancelled item is not a pending duplicate
+    S.getState().action(items(S)[0].id, 'retry');
+    await flush();
+    const [first, second] = items(S);
+    expect(first.status).toBe('downloading');
+    expect(second.status).toBe('downloading');
+    S.getState().handleProgress({
+      url: 'u1',
+      percent: 42,
+      speed: '',
+      eta: '',
+      status: 'downloading',
+      runId: `${second.id}:${second.runSeq}`,
+    });
+    expect(items(S)[1].progress).toBe(42);
+    expect(items(S)[0].progress).toBe(0);
+  });
+
   it('actualiza progreso/velocidad y pasa a merging con status processing', async () => {
     const { useQueueStore: S } = await loadStore();
     eternalDownload();
@@ -220,7 +243,8 @@ describe('resume vs retry', () => {
 
     S.getState().action(items(S)[0].id, 'pause');
     expect(items(S)[0].status).toBe('paused');
-    expect(mocks.cancelDownload).toHaveBeenCalledWith('u1');
+    // Cancels target the run id (`<item>:<runSeq>`), never the URL.
+    expect(mocks.cancelDownload).toHaveBeenCalledWith('q1:1');
 
     S.getState().action(items(S)[0].id, 'resume');
     await flush();

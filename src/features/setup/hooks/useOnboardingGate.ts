@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { errorText } from '@/shared/lib/error-text';
 import { t } from '@/shared/lib/messages/t';
 import { useTauriEvent } from '@/shared/hooks/useTauriEvent';
 import { useCheckDependencies } from '../api/check-dependencies/useCheckDependencies';
@@ -16,6 +17,11 @@ export type OnboardingPhase = (typeof OnboardingPhase)[keyof typeof OnboardingPh
 const ONBOARDED_KEY = 'stash-onboarded';
 const FAKE_STEP_MS = 520;
 const TOTAL_STEPS = 3;
+
+// The app root remounts the gate on every language switch: remember the verdict and
+// that the boot logic already ran, or a remount mid-install would fire a second install.
+let gateDone = false;
+let gateBooted = false;
 
 const wasOnboarded = (): boolean => {
   try {
@@ -36,7 +42,9 @@ const markOnboarded = (): void => {
 export function useOnboardingGate() {
   const { data: status } = useCheckDependencies();
   const { mutate: install, isPending: installing } = useDownloadDependencies();
-  const [phase, setPhase] = useState<OnboardingPhase>(OnboardingPhase.Checking);
+  const [phase, setPhase] = useState<OnboardingPhase>(() =>
+    gateDone ? OnboardingPhase.Done : OnboardingPhase.Checking,
+  );
   const [stepsDone, setStepsDone] = useState(0);
   const [detail, setDetail] = useState('');
   const [retryMode, setRetryMode] = useState(false);
@@ -66,7 +74,7 @@ export function useOnboardingGate() {
       },
       onError: (e) => {
         // Keep the error visible and offer retry; don't continue as if all went well.
-        setDetail(`${t.common.error()}: ${String(e)}`);
+        setDetail(`${t.common.error()}: ${errorText(e)}`);
         setRetryMode(true);
         setFinishEnabled(true);
       },
@@ -74,8 +82,13 @@ export function useOnboardingGate() {
   }, [install]);
 
   useEffect(() => {
-    if (status === undefined || bootedRef.current) return;
+    if (phase === OnboardingPhase.Done) gateDone = true;
+  }, [phase]);
+
+  useEffect(() => {
+    if (status === undefined || bootedRef.current || gateBooted || gateDone) return;
     bootedRef.current = true;
+    gateBooted = true;
     if (status.ready && wasOnboarded()) {
       setPhase(OnboardingPhase.Done);
       return;

@@ -1,3 +1,4 @@
+import { parseAnalyzeEntryError } from '@/shared/lib/analyze-entry-error';
 import { t } from '@/shared/lib/messages/t';
 import type { AnalyzedEntry, AnalyzedVideo, FlatVideo } from '../models/analyzed.model';
 
@@ -7,22 +8,25 @@ export function flattenVideos(entries: AnalyzedEntry[]): FlatVideo[] {
   for (const e of entries) {
     const vids = e.isPlaylist ? e.entries : [e];
     // Two passes per entry: dups are only marked across entries, like vanilla.
-    for (const v of vids) out.push({ ...v, dup: seenIds.has(v.id) });
-    for (const v of vids) seenIds.add(v.id);
+    // Error entries have no id and must never count as duplicates of each other.
+    for (const v of vids) out.push({ ...v, dup: v.id !== '' && seenIds.has(v.id) });
+    for (const v of vids) if (v.id) seenIds.add(v.id);
   }
   return out;
 }
 
-export type VideoStatus = 'ok' | 'members' | 'downloaded' | 'private' | 'region' | 'error';
+export type VideoStatus = 'ok' | 'members' | 'downloaded' | 'private' | 'region' | 'error' | 'auth';
 
+/** Unavailable states win over "already downloaded": a blocked video must not be enqueueable. */
 export function statusOf(v: AnalyzedVideo, downloaded: ReadonlySet<string>): VideoStatus {
-  if (downloaded.has(v.id) || downloaded.has(v.url)) return 'downloaded';
   const a = v.availability;
-  if (!a) return 'ok';
-  if (a.startsWith('error')) return 'error';
+  const err = parseAnalyzeEntryError(a);
+  if (err) return err.auth ? 'auth' : 'error';
   if (a === 'private') return 'private';
+  if (a?.includes('region')) return 'region';
+  if (downloaded.has(v.id) || downloaded.has(v.url)) return 'downloaded';
+  if (!a) return 'ok';
   if (a === 'subscriber_only' || a === 'premium_only' || a === 'needs_auth') return 'members';
-  if (a.includes('region')) return 'region';
   return 'ok';
 }
 
@@ -61,6 +65,11 @@ export const STATUS_META: Record<VideoStatus, StatusMeta> = {
   error: {
     label: () => t.download.statusUnavailable(),
     tone: 'text-destructive bg-destructive/15',
+    downloadable: false,
+  },
+  auth: {
+    label: () => t.download.statusNeedsSession(),
+    tone: 'text-warn bg-warn/15',
     downloadable: false,
   },
 };

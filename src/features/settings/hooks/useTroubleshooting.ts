@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { errorText } from '@/shared/lib/error-text';
 import { toast } from 'sonner';
 import { t } from '@/shared/lib/messages/t';
 import { useTauriEvent } from '@/shared/hooks/useTauriEvent';
@@ -27,8 +28,8 @@ export function useTroubleshooting() {
       },
       onError: (e) => {
         // The error stays visible in the panel (not cleared) in addition to the toast.
-        setError(String(e));
-        toast.error(t.settings.repairErrorToast(), { description: String(e) });
+        setError(errorText(e));
+        toast.error(t.settings.repairErrorToast(), { description: errorText(e) });
       },
     });
   }, [repair, repairing]);

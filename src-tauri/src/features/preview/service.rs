@@ -3,8 +3,14 @@ use std::path::Path;
 use serde_json::Value;
 
 use super::models::{AnalyzedEntry, PlaylistMeta, VideoMeta};
-use crate::core::ytdlp::YtdlpCmd;
+use crate::core::ytdlp::{classify_error, YtdlpCmd};
 use crate::features::session::service as session;
+
+/// Failed analysis: yt-dlp's message plus its class ("auth" when the session was rejected).
+pub struct AnalyzeError {
+    pub kind: Option<&'static str>,
+    pub message: String,
+}
 
 /// Entry cap for Mixes/radios (YouTube's infinite auto-generated lists).
 const RADIO_CAP: u32 = 25;
@@ -17,7 +23,7 @@ pub fn analyze(
     app_dir: &Path,
     url: &str,
     range: Option<(u32, u32)>,
-) -> Result<AnalyzedEntry, String> {
+) -> Result<AnalyzedEntry, AnalyzeError> {
     // Mix/radio (list=RD…, start_radio): infinite → cap at 25 like YouTube. Account
     // feeds (/feed/...): continuous → cap at 50. Real playlists/channels: no cap.
     let is_radio = url.contains("list=RD") || url.contains("start_radio=");
@@ -33,9 +39,13 @@ pub fn analyze(
     Ok(map_entry(&json, url))
 }
 
-/// Error entry for a URL that failed analysis; the frontend detects it via
-/// `availability = "error: …"` (domain mapping lives here, not in the command).
-pub fn error_entry(url: &str, msg: &str) -> AnalyzedEntry {
+/// Error entry for a failed URL. The frontend reads the class from the `availability` prefix
+/// (`error: …` generic, `error:auth: …` session rejected): legacy `VideoMeta` stays untouched.
+pub fn error_entry(url: &str, err: &AnalyzeError) -> AnalyzedEntry {
+    let availability = match err.kind {
+        Some("auth") => format!("error:auth: {}", err.message),
+        _ => format!("error: {}", err.message),
+    };
     AnalyzedEntry::Video(VideoMeta {
         id: String::new(),
         url: url.to_string(),
@@ -44,7 +54,7 @@ pub fn error_entry(url: &str, msg: &str) -> AnalyzedEntry {
         duration: None,
         thumbnail: None,
         view_count: None,
-        availability: Some(format!("error: {}", msg)),
+        availability: Some(availability),
         size_bytes: None,
         playlist_count: None,
         flat: false,
@@ -57,7 +67,7 @@ fn run_dump_json(
     url: &str,
     cap: Option<u32>,
     range: Option<(u32, u32)>,
-) -> Result<Value, String> {
+) -> Result<Value, AnalyzeError> {
     // The builder resolves the binary and adds --encoding utf-8 and `-- <url>`.
     let mut builder = YtdlpCmd::new(app_dir, url)
         .arg("-J")
@@ -80,10 +90,11 @@ fn run_dump_json(
         .deno_runtime()
         .cookies(&session::get_cookies_path(app_dir));
 
-    let out = builder
-        .build()
-        .output()
-        .map_err(|e| format!("No se pudo ejecutar yt-dlp: {}", e))?;
+    let mut run = builder.build();
+    let out = run.output().map_err(|e| AnalyzeError {
+        kind: None,
+        message: format!("No se pudo ejecutar yt-dlp: {}", e),
+    })?;
 
     if !out.status.success() {
         let err = String::from_utf8_lossy(&out.stderr);
@@ -92,12 +103,17 @@ fn run_dump_json(
             .find(|l| l.trim_start().starts_with("ERROR:"))
             .map(|l| l.trim().trim_start_matches("ERROR:").trim().to_string())
             .unwrap_or_else(|| "No se pudo analizar la URL".into());
-        // TODO(error_kind): classify auth errors here (see download::classify_error) and return
-        // a structured {message, kind}. Don't change the contract yet: preview UI doesn't branch on kind.
-        return Err(msg);
+        eprintln!("[preview] yt-dlp falló para {}: {}", url, msg);
+        return Err(AnalyzeError {
+            kind: classify_error(&msg),
+            message: msg,
+        });
     }
 
-    serde_json::from_slice(&out.stdout).map_err(|e| format!("JSON inválido de yt-dlp: {}", e))
+    serde_json::from_slice(&out.stdout).map_err(|e| AnalyzeError {
+        kind: None,
+        message: format!("JSON inválido de yt-dlp: {}", e),
+    })
 }
 
 fn map_entry(v: &Value, url: &str) -> AnalyzedEntry {
@@ -256,5 +272,58 @@ fn estimate_size(v: &Value) -> Option<u64> {
     match (best_video, best_audio) {
         (Some(vsz), Some(asz)) => Some(vsz + asz),
         _ => best_progressive.or(best_video),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn availability_of(entry: AnalyzedEntry) -> String {
+        match entry {
+            AnalyzedEntry::Video(v) => v.availability.unwrap_or_default(),
+            AnalyzedEntry::Playlist(_) => panic!("error_entry must be a Video"),
+        }
+    }
+
+    #[test]
+    fn error_entry_generic_uses_error_prefix() {
+        let err = AnalyzeError {
+            kind: None,
+            message: "Video unavailable".into(),
+        };
+        assert_eq!(
+            availability_of(error_entry("https://youtu.be/x", &err)),
+            "error: Video unavailable"
+        );
+    }
+
+    #[test]
+    fn error_entry_auth_uses_error_auth_prefix() {
+        let err = AnalyzeError {
+            kind: Some("auth"),
+            message: "cookies are no longer valid".into(),
+        };
+        let entry = error_entry("https://youtu.be/x", &err);
+        let AnalyzedEntry::Video(ref v) = entry else {
+            panic!()
+        };
+        assert!(v.id.is_empty(), "an error entry has no id");
+        assert_eq!(
+            availability_of(entry),
+            "error:auth: cookies are no longer valid"
+        );
+    }
+
+    #[test]
+    fn error_entry_cache_is_treated_as_generic() {
+        let err = AnalyzeError {
+            kind: Some("cache"),
+            message: "HTTP Error 403".into(),
+        };
+        assert_eq!(
+            availability_of(error_entry("u", &err)),
+            "error: HTTP Error 403"
+        );
     }
 }

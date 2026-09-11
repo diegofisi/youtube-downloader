@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 
 use super::models::AppConfig;
 use crate::core::fsx;
+use crate::core::ytdlp::is_safe_output_template;
+use crate::features::download::models::UNSAFE_TEMPLATE_MSG;
 
 const CONFIG_FILE: &str = "config.json";
 
@@ -30,6 +32,9 @@ pub fn set_defaults(
         config.default_mode = v;
     }
     if let Some(v) = template {
+        if !is_safe_output_template(&v) {
+            return Err(UNSAFE_TEMPLATE_MSG.into());
+        }
         config.default_template = v;
     }
     if let Some(v) = subtitles {
@@ -53,10 +58,19 @@ pub fn load(app_dir: &Path) -> AppConfig {
     if !path.exists() {
         return AppConfig::default();
     }
-    match fs::read_to_string(&path) {
+    let mut config: AppConfig = match fs::read_to_string(&path) {
         Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
         Err(_) => AppConfig::default(),
+    };
+    // Older builds accepted absolute templates; keeping one would fail every save and download.
+    if !is_safe_output_template(&config.default_template) {
+        eprintln!(
+            "[settings] Plantilla guardada insegura, se restaura la predeterminada: {}",
+            config.default_template
+        );
+        config.default_template = AppConfig::default().default_template;
     }
+    config
 }
 
 pub fn save(app_dir: &Path, config: &AppConfig) -> Result<(), String> {

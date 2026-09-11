@@ -17,7 +17,12 @@ export function useSetDownloadFolder() {
       return invoke<string>('set_download_folder', { folder });
     },
     onSuccess: (path) => {
-      if (path !== null) queryClient.setQueryData(['settings', 'downloadFolder'], path);
+      if (path === null) return;
+      queryClient.setQueryData(['settings', 'downloadFolder'], path);
+      // The full settings DTO caches the folder too (legacy snake_case field).
+      queryClient.setQueryData<{ download_folder: string } | undefined>(['settings'], (old) =>
+        old ? { ...old, download_folder: path } : old,
+      );
     },
   });
 }

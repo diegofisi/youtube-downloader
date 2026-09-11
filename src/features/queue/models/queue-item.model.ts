@@ -37,6 +37,8 @@ export interface QueueItem extends EnqueueItem {
   filePath?: string;
   /** Paused by an expired session, not by the user. */
   pausedByAuth?: boolean;
+  /** Already re-run once after a session renewal: a second auth failure is final. */
+  authRetried?: boolean;
   /** Run generation: stale startDownload settlements (fast pause→resume) are ignored. */
   runSeq?: number;
 }

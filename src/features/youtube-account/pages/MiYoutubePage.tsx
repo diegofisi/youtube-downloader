@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Box } from '@/shared/components/layout/Box';
@@ -10,15 +10,16 @@ import { Button } from '@/shared/components/ui/button';
 import { ChipGroup } from '@/shared/components/ui/ChipGroup';
 import { PageLoading } from '@/shared/components/ui/PageLoading';
 import { Text } from '@/shared/components/ui/typography';
+import { errorText } from '@/shared/lib/error-text';
 import { t } from '@/shared/lib/messages/t';
-import { openYouTubeLogin, useAccountInfo, useLogout } from '@/features/session';
+import { isSessionAuthError, openYouTubeLogin, useAccountInfo, useLogout } from '@/features/session';
 import { AccountCard } from '../components/AccountCard';
 import { LoggedOutHero } from '../components/LoggedOutHero';
 import { LogoutDialog } from '../components/LogoutDialog';
 import { PlaylistCard } from '../components/PlaylistCard';
 import { feedTabOptions } from '../helpers/feed-tabs';
 import { useFeedActions } from '../hooks/useFeedActions';
-import { isAuthError, useYoutubeFeed } from '../hooks/useYoutubeFeed';
+import { useYoutubeFeed } from '../hooks/useYoutubeFeed';
 
 // Pattern C: heavy state lives in useYoutubeFeed/useFeedActions; the page composes.
 export const MiYoutubePage = () => {
@@ -43,17 +44,35 @@ export const MiYoutubePage = () => {
           description: t.youtube.loggedOutToastBody(),
         });
       },
-      onError: (e) => toast.error(t.youtube.logoutError(), { description: String(e) }),
+      onError: (e) => toast.error(t.youtube.logoutError(), { description: errorText(e) }),
     });
+  };
+
+  // Keep the loaded grid: page and background-refetch errors surface as a toast, not a card.
+  const notifyError = (e: unknown) => {
+    if (isSessionAuthError(e)) {
+      toast.warning(t.youtube.notActiveTitle(), {
+        description: t.youtube.notActiveBody(),
+        action: { label: t.youtube.loginAgain(), onClick: handleLogin },
+      });
+    } else {
+      toast.error(t.common.couldNotLoadMore(), { description: errorText(e) });
+    }
   };
 
   const loadMore = () => {
     void yt.feed.fetchNextPage().then((r) => {
-      // Keep the loaded grid: page errors surface as a toast, not a state card.
-      if (r.isError)
-        toast.error(t.common.couldNotLoadMore(), { description: String(r.error) });
+      if (r.isError) notifyError(r.error);
     });
   };
+
+  // A refetch after reconnecting keeps the old pages: without this the failure is invisible.
+  // "See more" failures are already reported by loadMore, hence the next-page exclusion.
+  const { isRefetchError, isFetchNextPageError, error: feedError } = yt.feed;
+  useEffect(() => {
+    if (isRefetchError && !isFetchNextPageError) notifyError(feedError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- notify only when the error changes
+  }, [isRefetchError, isFetchNextPageError, feedError]);
 
   const reconnectAction = (
     <Button className="h-9.5 rounded-[10px] px-4.5 text-body-sm font-semibold" onClick={handleLogin}>
@@ -134,15 +153,15 @@ export const MiYoutubePage = () => {
 
           <MediaGrid>
             {loading && <GridStateCard loading title={`${t.youtube.loading()} ${yt.sourceLabel}…`} />}
-            {!loading && yt.feed.isError && isAuthError(yt.feed.error) && (
+            {!loading && yt.feed.isError && !yt.feed.data && isSessionAuthError(yt.feed.error) && (
               <GridStateCard
                 title={t.youtube.notActiveTitle()}
                 message={t.youtube.notActiveBody()}
                 action={reconnectAction}
               />
             )}
-            {!loading && yt.feed.isError && !isAuthError(yt.feed.error) && (
-              <GridStateCard title={t.youtube.loadError()} message={String(yt.feed.error)} />
+            {!loading && yt.feed.isError && !yt.feed.data && !isSessionAuthError(yt.feed.error) && (
+              <GridStateCard title={t.youtube.loadError()} message={errorText(yt.feed.error)} />
             )}
             {!loading && yt.feed.isSuccess && yt.videos.length === 0 && sessionExpired && (
               <GridStateCard

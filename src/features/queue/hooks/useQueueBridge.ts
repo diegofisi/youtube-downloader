@@ -9,7 +9,8 @@ import { useQueueStore } from '../stores/useQueueStore';
 /** Call once from the shell so the scheduler runs even when /cola is not mounted. */
 export function useQueueBridge() {
   useTauriEvent<DownloadProgress>('download-progress', (p) => useQueueStore.getState().handleProgress(p));
-  useCookiesExtractedSync();
+  // Any login (silent or manual) wakes the items an auth failure paused.
+  useCookiesExtractedSync(() => useQueueStore.getState().resumeAuthPaused());
 
   useEffect(() => {
     getConcurrency()

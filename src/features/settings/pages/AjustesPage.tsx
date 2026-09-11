@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { errorText } from '@/shared/lib/error-text';
 import { Stack } from '@/shared/components/layout/Stack';
 import { PageError } from '@/shared/components/ui/PageError';
 import { PageLoading } from '@/shared/components/ui/PageLoading';
@@ -29,7 +30,7 @@ export const AjustesPage = () => {
     changeFolder(undefined, {
       onError: (e) =>
         toast.error(t.settings.folderChangeError(), {
-          description: String(e),
+          description: errorText(e),
         }),
     });
   };

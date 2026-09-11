@@ -35,8 +35,14 @@ export function useLibraryList() {
 
   const onRemove = (entry: LibraryEntry) =>
     removeItem({ id: entry.id }, { onError: () => toast.error(t.library.removeErrorToast()) });
-  const onOpenFolder = (entry: LibraryEntry) =>
-    openFolder({ folder: entry.folder }, { onError: () => toast.error(t.common.couldNotOpenFolder()) });
+  // Templates may add subfolders: the file's own directory beats the download root.
+  const onOpenFolder = (entry: LibraryEntry) => {
+    const sep = Math.max(entry.filePath?.lastIndexOf('\\') ?? -1, entry.filePath?.lastIndexOf('/') ?? -1);
+    const parent = entry.filePath && sep >= 0 ? entry.filePath.slice(0, sep) || '/' : entry.folder;
+    // "D:" alone is drive-relative for explorer; the root needs its separator.
+    const folder = /^[A-Za-z]:$/.test(parent) ? `${parent}\\` : parent;
+    openFolder({ folder }, { onError: () => toast.error(t.common.couldNotOpenFolder()) });
+  };
 
   return { entries, isLoading, isError, search, shown, hasMore, countText, onSearchChange, showMore, onRemove, onOpenFolder };
 }

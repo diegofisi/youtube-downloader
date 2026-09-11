@@ -47,43 +47,47 @@ fn parse_netscape(content: &str) -> impl Iterator<Item = CookieRecord<'_>> {
     })
 }
 
-/// REAL YouTube session state per cookies.txt: "connected" (valid strong auth cookies on `.youtube.com`), "expired" (YouTube cookies but auth missing/expired), "none" (no file / nothing from YouTube).
-/// Browser exports often carry SAPISID only on `.google.com`; yt-dlp needs the auth on `.youtube.com`, hence that exact domain check.
-pub fn session_status(app_dir: &Path) -> &'static str {
-    let path = get_cookies_path(app_dir);
-    let Ok(content) = fs::read_to_string(&path) else {
-        return "none";
-    };
+/// Strong auth cookies on `.youtube.com`: (valid, expired). Browser exports often carry SAPISID
+/// only on `.google.com`, but yt-dlp needs the auth on `.youtube.com`, hence that domain check.
+fn auth_cookies(content: &str) -> (bool, bool) {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
 
     const STRONG: [&str; 4] = ["SAPISID", "__Secure-3PAPISID", "LOGIN_INFO", "SSID"];
-    let mut has_any_yt = false;
-    let mut strong_valid = false;
-    let mut strong_expired = false;
+    let mut valid = false;
+    let mut expired = false;
 
-    for c in parse_netscape(&content) {
-        if !c.domain.contains("youtube.com") {
+    for c in parse_netscape(content) {
+        if !c.domain.contains("youtube.com") || !STRONG.contains(&c.name) {
             continue;
         }
-        has_any_yt = true;
-        if STRONG.contains(&c.name) {
-            if c.expiry != 0 && c.expiry < now {
-                strong_expired = true;
-            } else {
-                strong_valid = true;
-            }
+        if c.expiry != 0 && c.expiry < now {
+            expired = true;
+        } else {
+            valid = true;
         }
     }
+    (valid, expired)
+}
 
-    if strong_valid {
-        "connected"
-    } else if has_any_yt || strong_expired {
-        "expired"
-    } else {
-        "none"
+/// True when a Netscape cookie file carries a currently valid YouTube auth cookie.
+pub fn has_valid_auth(content: &str) -> bool {
+    auth_cookies(content).0
+}
+
+/// REAL YouTube session state per cookies.txt: "connected" (valid strong auth cookie), "expired"
+/// (only expired auth cookies), "none" (no file, or only anonymous cookies: never a session).
+pub fn session_status(app_dir: &Path) -> &'static str {
+    let path = get_cookies_path(app_dir);
+    let Ok(content) = fs::read_to_string(&path) else {
+        return "none";
+    };
+    match auth_cookies(&content) {
+        (true, _) => "connected",
+        (false, true) => "expired",
+        (false, false) => "none",
     }
 }
 
@@ -369,10 +373,29 @@ mod tests {
     }
 
     #[test]
-    fn session_status_expired_con_cookies_de_youtube_sin_auth() {
+    fn session_status_is_none_with_only_anonymous_youtube_cookies() {
+        // PREF/YSC/VISITOR_INFO1_LIVE exist without any login: not an expired session.
         let dir = TempDir::new("weak");
         escribir_cookies(&dir, &linea(".youtube.com", "0", "PREF", "v"));
-        assert_eq!(session_status(&dir.0), "expired");
+        assert_eq!(session_status(&dir.0), "none");
+    }
+
+    #[test]
+    fn has_valid_auth_requires_a_strong_youtube_cookie() {
+        assert!(!has_valid_auth(&linea(".youtube.com", "0", "PREF", "v")));
+        assert!(!has_valid_auth(&linea(".google.com", "0", "SAPISID", "v")));
+        assert!(!has_valid_auth(&linea(
+            ".youtube.com",
+            "1000000",
+            "SAPISID",
+            "v"
+        )));
+        assert!(has_valid_auth(&linea(
+            ".youtube.com",
+            "0",
+            "LOGIN_INFO",
+            "v"
+        )));
     }
 
     // ---------- sapisidhash ----------

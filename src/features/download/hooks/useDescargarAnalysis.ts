@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { errorText } from '@/shared/lib/error-text';
 import { toast } from 'sonner';
 import { t } from '@/shared/lib/messages/t';
 import { queryClient } from '@/shared/lib/query-client';
@@ -74,7 +75,7 @@ export function useDescargarAnalysis() {
       {
         // mutate-level callbacks fire only for the latest call, so stale runs are dropped.
         onSuccess: (entries) => void handleAnalyzed(entries, urls, seq),
-        onError: (e) => useDownloadStore.getState().setAnalyzeError(String(e)),
+        onError: (e) => useDownloadStore.getState().setAnalyzeError(errorText(e)),
         onSettled: () => setProgress(null),
       },
     );

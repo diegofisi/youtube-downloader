@@ -5,4 +5,6 @@ export interface DownloadProgress {
   /** Rust only emits these two; the end (success/error) comes from start_download's result. */
   status: 'downloading' | 'processing';
   url: string;
+  /** `<item>:<runSeq>` of the emitting run; absent only from older backends. */
+  runId?: string;
 }

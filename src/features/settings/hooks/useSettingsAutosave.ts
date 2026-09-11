@@ -22,7 +22,13 @@ export function useSettingsAutosave() {
   const values = form.watch();
   const templateError = form.formState.errors.defaultTemplate?.message;
 
-  const save = useCallback(() => {
+  // The whole form travels on every save: with an invalid template the other fields cannot
+  // be persisted either, so say so instead of dropping the change silently.
+  const save = useCallback(async () => {
+    if (!(await form.trigger())) {
+      toast.error(t.settings.saveError(), { description: t.settings.templateUnsafeError() });
+      return;
+    }
     saveSettings(form.getValues(), {
       onError: () => toast.error(t.settings.saveError()),
     });
@@ -34,7 +40,7 @@ export function useSettingsAutosave() {
       form.setValue(field as Path<SettingsForm>, value as PathValue<SettingsForm, Path<SettingsForm>>, {
         shouldDirty: true,
       });
-      save();
+      void save();
     },
     [form, save],
   );
@@ -45,7 +51,7 @@ export function useSettingsAutosave() {
   const saveTemplateIfValid = useCallback(async () => {
     // Empty template never reaches the backend — the error stays visible instead.
     const valid = await form.trigger('defaultTemplate');
-    if (valid) save();
+    if (valid) await save();
   }, [form, save]);
 
   const onTemplateChange = useCallback(

@@ -7,12 +7,12 @@ use tauri::{AppHandle, Url};
 use super::service;
 use crate::core::{fsx, paths};
 
-/// Reads webview cookies (several Google/YouTube domains, HttpOnly included)
-/// and saves them to cookies.txt. Returns how many were saved.
+/// Reads webview cookies (several Google/YouTube domains, HttpOnly included) and saves them to
+/// cookies.txt. Ok(None) = no valid YouTube auth cookie yet (file untouched); Ok(Some(n)) = saved.
 pub fn extract_and_save_cookies(
     webview_window: &WebviewWindow,
     app: &AppHandle,
-) -> Result<usize, String> {
+) -> Result<Option<usize>, String> {
     // Query several domains to capture ALL session cookies
     // (including HttpOnly ones like LOGIN_INFO, SID, __Secure-3PSID...).
     let urls = [
@@ -27,13 +27,21 @@ pub fn extract_and_save_cookies(
 
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut count = 0;
+    let mut read_errors = 0;
 
     for raw in urls {
         let url: Url = match raw.parse() {
             Ok(u) => u,
             Err(_) => continue,
         };
-        let cookies = webview_window.cookies_for_url(url).unwrap_or_default();
+        let cookies = match webview_window.cookies_for_url(url) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("[login] No se pudieron leer cookies de {}: {}", raw, e);
+                read_errors += 1;
+                continue;
+            }
+        };
 
         for cookie in cookies.iter() {
             let domain = cookie.domain().unwrap_or(".youtube.com");
@@ -80,11 +88,20 @@ pub fn extract_and_save_cookies(
         }
     }
 
+    if read_errors == urls.len() {
+        return Err("El navegador no devolvió cookies (ventana cerrada?)".into());
+    }
+    // Mid-login hops (accounts.youtube.com) and anonymous pages carry no auth cookie:
+    // saving them would overwrite a valid session with junk.
+    if !service::has_valid_auth(&output) {
+        return Ok(None);
+    }
+
     // Single source of the path + atomic write: never a half-written
     // cookies.txt if something dies here.
     let cookies_path = service::get_cookies_path(&paths::app_dir(app));
     fsx::write_atomic(&cookies_path, &output)
         .map_err(|e| format!("No se pudo escribir cookies.txt: {}", e))?;
 
-    Ok(count)
+    Ok(Some(count))
 }

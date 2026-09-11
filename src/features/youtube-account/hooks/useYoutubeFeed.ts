@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSessionStatus } from '@/features/session';
+import { isSessionAuthError, useSessionStatus } from '@/features/session';
 import { useAccountFeed } from '../api/get-account-feed/useAccountFeed';
 import { FEED_TAB_URLS, FeedTab, feedTabLabel } from '../helpers/feed-tabs';
 import type { FeedVideo } from '../models/feed-video.model';
@@ -8,11 +8,6 @@ import type { FeedVideo } from '../models/feed-video.model';
 interface OpenPlaylist {
   url: string;
   title: string;
-}
-
-/** Matches the backend messages yt-dlp emits when the session is rejected. */
-export function isAuthError(e: unknown): boolean {
-  return /login|account|cookies|autenticaci/i.test(String(e));
 }
 
 export function useYoutubeFeed() {
@@ -37,24 +32,31 @@ export function useYoutubeFeed() {
 
   const clearSelection = () => setSelected(new Set());
 
-  // session:changed equivalent: on login/reconnect drop every cached feed so the
-  // grids reload from scratch; on logout clear the local view state too.
+  // Login/logout (to or from 'none') drops every cached feed; expired→connected only
+  // invalidates without cancelling the in-flight retry (removing it would run yt-dlp twice).
   const prevStatus = useRef(status);
+  const feedErrored = useRef(false);
+  feedErrored.current = feed.isError;
   useEffect(() => {
-    if (prevStatus.current === status || status === undefined) return;
+    const before = prevStatus.current;
+    if (before === status || status === undefined) return;
     prevStatus.current = status;
-    if (status === 'connected' || status === 'none') {
+    if (before === undefined) return;
+    if (status === 'none' || before === 'none') {
       setSelected(new Set());
       setOpenPlaylist(null);
       void queryClient.removeQueries({ queryKey: ['youtube'] });
+    } else if (status === 'connected' && feedErrored.current) {
+      // Only a feed that failed needs the reload: a healthy grid would refetch every page.
+      void queryClient.invalidateQueries({ queryKey: ['youtube'] }, { cancelRefetch: false });
     }
   }, [status, queryClient]);
 
-  // Empty feed or auth-shaped error: re-check the session (it may have expired
+  // Empty feed or session rejection: re-check the session (it may have expired
   // silently) so the empty state can offer "Sign in again" (ports refreshSession()).
   const refetchSession = session.refetch;
   const isEmpty = feed.isSuccess && videos.length === 0;
-  const authFailed = feed.isError && isAuthError(feed.error);
+  const authFailed = feed.isError && isSessionAuthError(feed.error);
   useEffect(() => {
     if (isEmpty || authFailed) void refetchSession();
   }, [isEmpty, authFailed, refetchSession]);

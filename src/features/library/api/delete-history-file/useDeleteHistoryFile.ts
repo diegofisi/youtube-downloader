@@ -16,5 +16,7 @@ export function useDeleteHistoryFile() {
         old?.filter((e) => e.id !== id),
       );
     },
+    // A failed deletion keeps the entry on the backend: re-sync so the row reflects reality.
+    onError: () => queryClient.invalidateQueries({ queryKey: LIBRARY_HISTORY_KEY }),
   });
 }

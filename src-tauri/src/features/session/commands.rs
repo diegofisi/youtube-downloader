@@ -38,7 +38,7 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
         .parse()
         .map_err(|e| format!("URL inválida: {}", e))?;
 
-    let _login_window = WebviewWindowBuilder::new(
+    let login_window = WebviewWindowBuilder::new(
         &app,
         "youtube-login",
         tauri::WebviewUrl::External(login_url),
@@ -57,11 +57,14 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
 
                 tauri::async_runtime::spawn(async move {
                     match extract_and_save_cookies(&ww, &app_handle) {
-                        Ok(count) => {
+                        Ok(Some(count)) => {
                             println!("[login] {} cookies guardadas", count);
                             app_handle.emit("cookies-extracted", true).ok();
                             ww.close().ok();
                         }
+                        // Not signed in yet (Google hop / anonymous page): keep the window open.
+                        Ok(None) => println!("[login] Página sin sesión aún: {}", url),
+                        // Keep the window: the next page load retries the extraction.
                         Err(e) => {
                             eprintln!("[login] Error extrayendo cookies: {}", e);
                             app_handle.emit("cookies-extracted", false).ok();
@@ -74,11 +77,19 @@ pub async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
     .build()
     .map_err(|e| format!("No se pudo crear ventana de login: {}", e))?;
 
+    // Closing the window without signing in must still refresh the UI (banner, account card).
+    let app_for_close = app.clone();
+    login_window.on_window_event(move |event| {
+        if let tauri::WindowEvent::Destroyed = event {
+            app_for_close.emit("login-window-closed", ()).ok();
+        }
+    });
+
     Ok(())
 }
 
 /// Refreshes the YouTube session WITHOUT user interaction: a hidden window loads the passive login URL; if Google's session is still alive it redirects straight to youtube.com and fresh cookies are re-extracted.
-/// Still on accounts.google.com after ~20s (interaction required) resolves `false`.
+/// `true` only when a valid auth cookie was saved; an anonymous landing or ~20s on accounts.google.com resolves `false`.
 #[tauri::command]
 pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
     const LABEL: &str = "youtube-login-silent";
@@ -109,16 +120,18 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
                     let url = payload.url().to_string();
 
                     if url.contains("youtube.com") && !url.contains("accounts.google.com") {
-                        // Landed on YouTube without interaction: the session is still alive.
-                        let sender = tx_for_cb.lock().unwrap().take();
-                        let Some(sender) = sender else { return };
-
+                        // Landed on YouTube: only a page carrying auth cookies settles the result;
+                        // an anonymous landing keeps waiting (timeout → false).
+                        if tx_for_cb.lock().unwrap().is_none() {
+                            return;
+                        }
                         let ww = webview_window.clone();
                         let app_handle = webview_window.app_handle().clone();
+                        let tx_for_task = std::sync::Arc::clone(&tx_for_cb);
 
                         tauri::async_runtime::spawn(async move {
                             let ok = match extract_and_save_cookies(&ww, &app_handle) {
-                                Ok(count) => {
+                                Ok(Some(count)) => {
                                     println!(
                                         "[silent-login] {} cookies refrescadas sin interacción",
                                         count
@@ -126,12 +139,28 @@ pub async fn refresh_session_silent(app: AppHandle) -> Result<bool, String> {
                                     app_handle.emit("cookies-extracted", true).ok();
                                     true
                                 }
+                                Ok(None) => {
+                                    println!(
+                                        "[silent-login] YouTube respondió sin sesión: {}",
+                                        url
+                                    );
+                                    // Only the final landing settles: consent/sign-in hops may still
+                                    // redirect, and cookies can lag one load behind.
+                                    let final_landing = url.starts_with("https://www.youtube.com/")
+                                        && !url.contains("/signin");
+                                    if !final_landing {
+                                        return;
+                                    }
+                                    false
+                                }
                                 Err(e) => {
                                     eprintln!("[silent-login] Error extrayendo cookies: {}", e);
                                     false
                                 }
                             };
-                            sender.send(ok).ok();
+                            if let Some(sender) = tx_for_task.lock().unwrap().take() {
+                                sender.send(ok).ok();
+                            }
                         });
                     }
                 }

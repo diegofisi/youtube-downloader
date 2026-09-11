@@ -39,12 +39,24 @@ fn main() {
             setup::commands::check_dependencies,
             setup::commands::download_dependencies,
         ])
+        .setup(|app| {
+            let app_dir = core::paths::app_dir(app.handle());
+            core::fsx::clean_stale_temps(&app_dir);
+            core::ytdlp::clean_stale_run_cookies(&app_dir);
+            Ok(())
+        })
         .on_window_event(|window, event| {
-            // On main window close, kill in-flight downloads (yt-dlp/ffmpeg)
-            // so no orphan processes keep downloading in the background.
+            // On main window close, kill in-flight downloads (yt-dlp/ffmpeg) and any login
+            // window, so neither orphan processes nor a hidden webview outlive the app.
             if window.label() == "main" {
                 if let tauri::WindowEvent::Destroyed = event {
-                    window.app_handle().state::<DownloadRegistry>().kill_all();
+                    let app = window.app_handle();
+                    app.state::<DownloadRegistry>().kill_all();
+                    for label in ["youtube-login", "youtube-login-silent"] {
+                        if let Some(w) = app.get_webview_window(label) {
+                            w.close().ok();
+                        }
+                    }
                 }
             }
         })

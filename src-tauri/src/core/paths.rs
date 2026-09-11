@@ -52,12 +52,16 @@ fn binary_name(name: &str) -> String {
     }
 }
 
-/// Looks for a binary in app_dir and in its parent directory (dev mode).
+/// Looks for a binary in app_dir and, in dev builds only, in its parent directory.
+/// In release the parent is %LOCALAPPDATA%: user-writable, never a place to pick binaries from.
 pub fn find_executable(app_dir: &Path, name: &str) -> Option<PathBuf> {
     let bin = binary_name(name);
     let local = app_dir.join(&bin);
     if local.exists() {
         return Some(local);
+    }
+    if !cfg!(debug_assertions) {
+        return None;
     }
     if let Some(parent) = app_dir.parent() {
         let parent_path = parent.join(&bin);

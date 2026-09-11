@@ -9,6 +9,8 @@ export interface VideoMetaDTO {
   duration?: number;
   thumbnail?: string;
   playlist_count?: number;
+  /** yt-dlp availability; `error: …` / `error:auth: …` mark a failed analysis (see shared/lib). */
+  availability?: string;
   flat: boolean;
   is_playlist: boolean;
 }

@@ -45,8 +45,8 @@ pub fn remove_history_item(app: AppHandle, id: String) -> Result<(), String> {
     service::remove(&app_dir, &id)
 }
 
-/// Deletes an entry's file (trash → permanent fallback) and removes the
-/// history entry. Returns "trash" | "permanent" | "no_file".
+/// Deletes an entry's file (trash → permanent fallback) and removes the history
+/// entry; on a failed deletion the entry stays. Returns "trash" | "permanent" | "no_file".
 #[tauri::command]
 pub async fn delete_history_file(app: AppHandle, id: String) -> Result<String, String> {
     let app_dir = paths::app_dir(&app);

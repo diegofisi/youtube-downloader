@@ -25,7 +25,7 @@ pub async fn analyze_urls(
 
         for (i, url) in urls.iter().enumerate() {
             let entry = service::analyze(&app_dir, url, range)
-                .unwrap_or_else(|msg| service::error_entry(url, &msg));
+                .unwrap_or_else(|err| service::error_entry(url, &err));
             out.push(entry);
             let _ = app.emit("preview-progress", (i + 1, total));
         }

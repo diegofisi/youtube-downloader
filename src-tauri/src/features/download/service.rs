@@ -8,7 +8,7 @@ use tauri::{AppHandle, Emitter};
 use super::models::{DownloadOptions, DownloadResult};
 use crate::core::models::ProgressData;
 use crate::core::process::{self, DownloadRegistry};
-use crate::core::ytdlp::{self, YtdlpCmd};
+use crate::core::ytdlp::{self, classify_error, YtdlpCmd};
 use crate::features::session::service as session;
 use crate::features::settings::service as settings;
 
@@ -18,34 +18,9 @@ fn get_output_dir(app_dir: &Path) -> PathBuf {
     dir
 }
 
-/// Classifies yt-dlp error text: "auth" (invalid session/cookies),
-/// "cache" (HTTP 403 / forbidden fragments, typical of a stale cache) or None.
-fn classify_error(error_text: &str) -> Option<&'static str> {
-    let e = error_text.to_lowercase();
-
-    let is_auth = e.contains("sign in to confirm")
-        || e.contains("this video is available to this channel's members")
-        || e.contains("members-only")
-        || e.contains("cookies are no longer valid")
-        || e.contains("please sign in")
-        || e.contains("not a bot")
-        || e.contains("http error 401");
-    if is_auth {
-        return Some("auth");
-    }
-
-    let is_cache = e.contains("http error 403")
-        || e.contains("forbidden")
-        || (e.contains("fragment") && e.contains("403"));
-    if is_cache {
-        return Some("cache");
-    }
-
-    None
-}
-
 const AUTH_ERROR_MSG: &str =
     "Sesión de YouTube caducada o inválida. Reconecta tu cuenta de YouTube para descargar este contenido.";
+const CANCELLED_MSG: &str = "Descarga cancelada por el usuario.";
 
 /// Clears the yt-dlp cache (`yt-dlp --rm-cache-dir`).
 /// Not via YtdlpCmd because it doesn't operate on a URL.
@@ -68,24 +43,32 @@ pub fn start(
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
+    run_id: &str,
 ) -> DownloadResult {
-    registry.begin(url);
+    if let Err(msg) = options.validate() {
+        registry.finish(run_id);
+        return failure(msg, Some("other"));
+    }
 
     // Windows/macOS-style duplicate handling: if the expected file already
     // exists, download with an " (N)" suffix instead of yt-dlp skipping it.
     let mut effective = options.clone();
-    if let Some(tpl) = resolve_duplicate_template(registry, app_dir, url, options) {
+    if let Some(tpl) = resolve_duplicate_template(registry, app_dir, url, options, run_id) {
         effective.output_template = Some(tpl);
     }
 
     // The simulation takes ~1-2s: abort if the user cancelled meanwhile.
-    if registry.is_cancelled(url) {
-        registry.finish(url);
-        return failure("Descarga cancelada por el usuario.".into(), Some("other"));
+    if registry.is_cancelled(run_id) {
+        registry.finish(run_id);
+        return failure(CANCELLED_MSG.into(), Some("cancelled"));
     }
 
-    let result = run_with_retry(app, registry, app_dir, url, &effective);
-    registry.finish(url);
+    let mut result = run_with_retry(app, registry, app_dir, url, &effective, run_id);
+    // A killed yt-dlp exits without an ERROR line: report the cancel, not a generic failure.
+    if !result.success && registry.is_cancelled(run_id) {
+        result = failure(CANCELLED_MSG.into(), Some("cancelled"));
+    }
+    registry.finish(run_id);
     result
 }
 
@@ -116,18 +99,15 @@ fn path_with_suffix(path: &Path, n: u32) -> PathBuf {
 /// if there is postprocessing (audio extraction/merge), the same with the real final extension.
 fn expected_final_paths(simulated: &Path, options: &DownloadOptions) -> Vec<PathBuf> {
     let mut paths = vec![simulated.to_path_buf()];
+    // Every non-audio mode passes --merge-output-format <container> (videoonly included).
     let final_ext = if options.mode == "audio" {
-        Some(options.audio_format.as_str())
-    } else if options.mode == "video" {
-        Some(options.container.as_str())
+        options.audio_format.as_str()
     } else {
-        None
+        options.container.as_str()
     };
-    if let Some(ext) = final_ext {
-        let alt = simulated.with_extension(ext);
-        if alt != paths[0] {
-            paths.push(alt);
-        }
+    let alt = simulated.with_extension(final_ext);
+    if alt != paths[0] {
+        paths.push(alt);
     }
     paths
 }
@@ -140,6 +120,7 @@ fn simulate_filename(
     output_dir: &Path,
     url: &str,
     options: &DownloadOptions,
+    run_id: &str,
 ) -> Option<PathBuf> {
     let mut builder = YtdlpCmd::new(app_dir, url)
         .args(options.to_ytdlp_args(output_dir))
@@ -148,6 +129,9 @@ fn simulate_filename(
         .arg("--no-download")
         .no_warnings()
         .no_update()
+        // Same runtime as the real run, or the simulated name can diverge or fail.
+        .ffmpeg_location()
+        .deno_runtime()
         .stderr(Stdio::null());
 
     if matches!(options.cookie_mode.as_str(), "file" | "cookies") {
@@ -156,10 +140,11 @@ fn simulate_filename(
 
     // spawn (not output()) so the PID gets registered: cancelling during the
     // simulation also kills this process (it used to be orphaned).
-    let child = builder.build().spawn().ok()?;
-    registry.set_pid(url, child.id());
+    let mut run = builder.build();
+    let child = run.spawn().ok()?;
+    registry.set_pid(run_id, child.id());
     let output = child.wait_with_output();
-    registry.clear_pid(url);
+    registry.clear_pid(run_id);
 
     let output = output.ok()?;
     if !output.status.success() {
@@ -182,8 +167,9 @@ fn resolve_duplicate_template(
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
+    run_id: &str,
 ) -> Option<String> {
-    if registry.is_cancelled(url) {
+    if registry.is_cancelled(run_id) {
         return None;
     }
 
@@ -192,7 +178,7 @@ fn resolve_duplicate_template(
         "[download] Simulando nombre de salida para {} (~1-2s)...",
         url
     );
-    let simulated = match simulate_filename(registry, app_dir, &output_dir, url, options) {
+    let simulated = match simulate_filename(registry, app_dir, &output_dir, url, options, run_id) {
         Some(p) => p,
         None => {
             println!("[download] Simulación de nombre fallida; se usa la plantilla original.");
@@ -209,11 +195,7 @@ fn resolve_duplicate_template(
         simulated.display()
     );
 
-    let base_tpl = options
-        .output_template
-        .clone()
-        .filter(|t| !t.trim().is_empty())
-        .unwrap_or_else(|| "%(title)s [%(id)s].%(ext)s".into());
+    let base_tpl = options.effective_template();
 
     for n in 1..=20u32 {
         let free = existing.iter().all(|p| !path_with_suffix(p, n).exists());
@@ -238,10 +220,16 @@ fn run_with_retry(
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
+    run_id: &str,
 ) -> DownloadResult {
     // First attempt.
-    let first = run_once(app, registry, app_dir, url, options);
-    let (exit_ok, error_text, file_path) = match first {
+    let first = run_once(app, registry, app_dir, url, options, run_id);
+    let RunOutcome {
+        exit_ok,
+        error_text,
+        detail,
+        file_path,
+    } = match first {
         Ok(triple) => triple,
         Err(result) => return result, // yt-dlp failed to launch
     };
@@ -259,7 +247,7 @@ fn run_with_retry(
 
     // HTTP 403 / forbidden: stale yt-dlp cache -> clear it and retry ONCE,
     // unless the user cancelled the download.
-    if kind == Some("cache") && !registry.is_cancelled(url) {
+    if kind == Some("cache") && !registry.is_cancelled(run_id) {
         println!(
             "[download] HTTP 403 detectado en {}. Limpiando cache de yt-dlp y reintentando (1/1)...",
             url
@@ -268,12 +256,17 @@ fn run_with_retry(
 
         // Check cancelled right before the spawn: no relaunch if cancelled in the PID-less
         // window; a cancel right AFTER this check is caught by set_pid() (anti-race in core::process).
-        if registry.is_cancelled(url) {
+        if registry.is_cancelled(run_id) {
             return failure(error_text, Some("cache"));
         }
 
-        let retry = run_once(app, registry, app_dir, url, options);
-        let (retry_ok, retry_error, retry_file_path) = match retry {
+        let retry = run_once(app, registry, app_dir, url, options, run_id);
+        let RunOutcome {
+            exit_ok: retry_ok,
+            error_text: retry_error,
+            file_path: retry_file_path,
+            ..
+        } = match retry {
             Ok(triple) => triple,
             Err(result) => return result,
         };
@@ -320,10 +313,16 @@ fn run_with_retry(
             Some("cache"),
         ),
         _ => {
-            let message = if error_text.is_empty() {
+            // No ERROR line: generic copy plus the last stderr line as a diagnostic hint.
+            let message = if !error_text.is_empty() {
+                error_text
+            } else if detail.is_empty() {
                 "La descarga fallo. Revisa la URL o vuelve a cargar las cookies.".to_string()
             } else {
-                error_text
+                format!(
+                    "La descarga fallo. Revisa la URL o vuelve a cargar las cookies.\nDetalle: {}",
+                    detail
+                )
             };
             failure(message, Some("other"))
         }
@@ -339,15 +338,24 @@ fn failure(message: String, kind: Option<&str>) -> DownloadResult {
     }
 }
 
-/// Runs yt-dlp once. Ok((exit_ok, last_error, final_path)) if the process
-/// launched, Err(DownloadResult) if it couldn't even start.
+/// One yt-dlp run. `error_text` holds only `ERROR:` lines (the classifier's input);
+/// `detail` is the last other stderr line, for the message when no ERROR was printed.
+struct RunOutcome {
+    exit_ok: bool,
+    error_text: String,
+    detail: String,
+    file_path: Option<String>,
+}
+
+/// Runs yt-dlp once. Ok(outcome) if the process launched, Err(DownloadResult) if it couldn't even start.
 fn run_once(
     app: &AppHandle,
     registry: &DownloadRegistry,
     app_dir: &Path,
     url: &str,
     options: &DownloadOptions,
-) -> Result<(bool, String, Option<String>), DownloadResult> {
+    run_id: &str,
+) -> Result<RunOutcome, DownloadResult> {
     let output_dir = get_output_dir(app_dir);
 
     // Args derived from the options (format/quality/audio/subs/template)
@@ -369,7 +377,9 @@ fn run_once(
         builder = builder.cookies(&session::get_cookies_path(app_dir));
     }
 
-    let mut child = match builder.build().spawn() {
+    // `run` must outlive the process: it owns the per-run cookie copy.
+    let mut run = builder.build();
+    let mut child = match run.spawn() {
         Ok(child) => child,
         Err(e) => {
             return Err(DownloadResult {
@@ -386,11 +396,13 @@ fn run_once(
 
     // set_pid catches a cancel that happened during the spawn and kills the
     // process under the same lock (closes the post-cache retry race).
-    registry.set_pid(url, child.id());
+    registry.set_pid(run_id, child.id());
 
     let app_handle = app.clone();
     let last_error = Arc::new(Mutex::new(String::new()));
     let last_error_clone = Arc::clone(&last_error);
+    let last_detail = Arc::new(Mutex::new(String::new()));
+    let last_detail_clone = Arc::clone(&last_detail);
     // Last stdout line that is an existing absolute path (the one
     // `--print after_move:filepath` prints at the end).
     let final_path: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
@@ -401,6 +413,7 @@ fn run_once(
 
     let app_for_stdout = app_handle.clone();
     let url_for_progress = url.to_string();
+    let run_id_for_progress = run_id.to_string();
     let stdout_thread = std::thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
@@ -411,7 +424,21 @@ fn run_once(
                 continue;
             }
 
-            if let Some(pct) = ytdlp::parse_percent(trimmed) {
+            // The path from `--print after_move:filepath` comes first: a title with "%"
+            // would otherwise be swallowed by the progress parser.
+            if !trimmed.starts_with('[') {
+                let p = Path::new(trimmed);
+                if p.is_absolute() && p.exists() {
+                    *final_path_clone.lock().unwrap() = Some(trimmed.to_string());
+                    continue;
+                }
+            }
+
+            let pct = trimmed
+                .starts_with("[download]")
+                .then(|| ytdlp::parse_percent(trimmed))
+                .flatten();
+            if let Some(pct) = pct {
                 let speed = ytdlp::parse_field(trimmed, "at ", " ETA").unwrap_or_default();
                 let eta = ytdlp::parse_field(trimmed, "ETA ", "").unwrap_or_default();
 
@@ -423,6 +450,7 @@ fn run_once(
                         eta,
                         status: "downloading".into(),
                         url: url_for_progress.clone(),
+                        run_id: Some(run_id_for_progress.clone()),
                     },
                 );
             } else if trimmed.contains("[Merger]") || trimmed.contains("Merging") {
@@ -434,15 +462,9 @@ fn run_once(
                         eta: String::new(),
                         status: "processing".into(),
                         url: url_for_progress.clone(),
+                        run_id: Some(run_id_for_progress.clone()),
                     },
                 );
-            } else if !trimmed.starts_with('[') {
-                // Candidate for the path printed by `--print after_move:filepath`:
-                // absolute and existing on disk.
-                let p = Path::new(trimmed);
-                if p.is_absolute() && p.exists() {
-                    *final_path_clone.lock().unwrap() = Some(trimmed.to_string());
-                }
             }
         }
     });
@@ -455,9 +477,12 @@ fn run_once(
             if trimmed.is_empty() {
                 continue;
             }
-            // Only "ERROR:" lines count as real errors.
+            // Only "ERROR:" lines are classified; the last other line (ffmpeg, postprocessor)
+            // is kept apart as a diagnostic detail.
             if let Some(rest) = trimmed.strip_prefix("ERROR:") {
                 *last_error_clone.lock().unwrap() = rest.trim().to_string();
+            } else if !trimmed.starts_with("WARNING:") {
+                *last_detail_clone.lock().unwrap() = trimmed.to_string();
             }
         }
     });
@@ -469,74 +494,22 @@ fn run_once(
 
     // Only the PID is cleared: the entry (and its cancelled flag) lives until
     // start() calls finish(), covering a possible retry.
-    registry.clear_pid(url);
+    registry.clear_pid(run_id);
 
     let error_text = last_error.lock().unwrap().clone();
+    let detail = last_detail.lock().unwrap().clone();
     let file_path = final_path.lock().unwrap().clone();
-    Ok((exit_ok, error_text, file_path))
+    Ok(RunOutcome {
+        exit_ok,
+        error_text,
+        detail,
+        file_path,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // ---------- classify_error ----------
-
-    #[test]
-    fn classify_error_detecta_cada_patron_de_auth() {
-        let patrones = [
-            "Sign in to confirm you're not a bot",
-            "This video is available to this channel's members on level: X",
-            "Join this channel to get access to members-only content",
-            "The provided YouTube account cookies are no longer valid",
-            "Please sign in to view this video",
-            "confirm you are not a bot",
-            "HTTP Error 401: Unauthorized",
-        ];
-        for p in patrones {
-            assert_eq!(
-                classify_error(p),
-                Some("auth"),
-                "patrón no clasificado como auth: {}",
-                p
-            );
-        }
-    }
-
-    #[test]
-    fn classify_error_es_case_insensitive() {
-        assert_eq!(classify_error("SIGN IN TO CONFIRM your age"), Some("auth"));
-        assert_eq!(classify_error("http ERROR 403: FORBIDDEN"), Some("cache"));
-    }
-
-    #[test]
-    fn classify_error_detecta_cache_por_403_y_forbidden() {
-        assert_eq!(classify_error("HTTP Error 403: Forbidden"), Some("cache"));
-        assert_eq!(
-            classify_error("unable to download: Forbidden"),
-            Some("cache")
-        );
-        assert_eq!(
-            classify_error("fragment 3 not found, HTTP error 403"),
-            Some("cache")
-        );
-    }
-
-    #[test]
-    fn classify_error_auth_tiene_prioridad_sobre_cache() {
-        // An error mentioning both: the invalid session is the root cause.
-        assert_eq!(
-            classify_error("HTTP Error 401 then forbidden"),
-            Some("auth")
-        );
-    }
-
-    #[test]
-    fn classify_error_devuelve_none_para_otros_errores() {
-        assert_eq!(classify_error("Video unavailable"), None);
-        assert_eq!(classify_error("HTTP Error 404: Not Found"), None);
-        assert_eq!(classify_error(""), None);
-    }
 
     // ---------- template_with_suffix ----------
 
@@ -615,8 +588,14 @@ mod tests {
     }
 
     #[test]
-    fn expected_final_paths_videoonly_solo_la_simulada() {
+    fn expected_final_paths_videoonly_uses_the_container_too() {
         let paths = expected_final_paths(Path::new("C:/dl/video.webm"), &opciones("videoonly"));
-        assert_eq!(paths, vec![PathBuf::from("C:/dl/video.webm")]);
+        assert_eq!(
+            paths,
+            vec![
+                PathBuf::from("C:/dl/video.webm"),
+                PathBuf::from("C:/dl/video.mp4")
+            ]
+        );
     }
 }

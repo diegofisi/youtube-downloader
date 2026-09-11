@@ -1,13 +1,14 @@
 import { Outlet } from 'react-router-dom';
 import { Box } from '@/shared/components/layout/Box';
 import { useQueueBridge } from '@/features/queue';
-import { SessionExpiredBanner } from '@/features/session';
+import { SessionExpiredBanner, useSilentReconnectOnExpiry } from '@/features/session';
 import { Titlebar } from './Titlebar';
 import { Sidebar } from './Sidebar';
 
 // useQueueBridge keeps the download scheduler fed even when /cola is not mounted.
 export const AppShell = () => {
   useQueueBridge();
+  useSilentReconnectOnExpiry();
 
   return (
     <Box className="flex h-screen flex-col overflow-hidden">

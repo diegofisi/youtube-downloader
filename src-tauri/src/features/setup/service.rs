@@ -59,14 +59,23 @@ pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
 static INSTALL_IN_PROGRESS: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
+/// Releases the install flag on every exit path, panics included (a latched flag would
+/// block onboarding and Repair until restart).
+struct InstallGuard;
+
+impl Drop for InstallGuard {
+    fn drop(&mut self) {
+        INSTALL_IN_PROGRESS.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
 pub fn download_dependencies(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     use std::sync::atomic::Ordering;
     if INSTALL_IN_PROGRESS.swap(true, Ordering::SeqCst) {
         return Err("Ya hay una instalación de componentes en curso.".into());
     }
-    let result = download_dependencies_inner(app, app_dir);
-    INSTALL_IN_PROGRESS.store(false, Ordering::SeqCst);
-    result
+    let _guard = InstallGuard;
+    download_dependencies_inner(app, app_dir)
 }
 
 fn download_dependencies_inner(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
@@ -307,8 +316,16 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<
     let total_size = response.content_length().unwrap_or(0);
     let mut downloaded: u64 = 0;
 
-    let mut file = fs::File::create(dest)
-        .map_err(|e| format!("No se pudo crear archivo {}: {}", dest.display(), e))?;
+    // Stream into a .part and rename at the end: a kill/power loss mid-download must
+    // never leave a truncated binary at the final path (check_dependencies only tests existence).
+    let part = dest.with_file_name(format!(
+        "{}.part",
+        dest.file_name()
+            .map(|n| n.to_string_lossy())
+            .unwrap_or_default()
+    ));
+    let mut file = fs::File::create(&part)
+        .map_err(|e| format!("No se pudo crear archivo {}: {}", part.display(), e))?;
 
     let mut reader = response;
     let mut buffer = [0u8; 8192];
@@ -345,13 +362,24 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<
         }
     };
 
-    // A truncated file must not survive: check_dependencies only tests
-    // existence and would treat a half-downloaded binary as installed.
+    let copy_result = copy_result.and_then(|()| {
+        if total_size > 0 && downloaded != total_size {
+            Err(format!(
+                "Descarga incompleta de {} ({} de {} bytes)",
+                step, downloaded, total_size
+            ))
+        } else {
+            Ok(())
+        }
+    });
+
+    drop(file);
     if let Err(e) = copy_result {
-        drop(file);
-        fs::remove_file(dest).ok();
+        fs::remove_file(&part).ok();
         return Err(e);
     }
-
-    Ok(())
+    fs::rename(&part, dest).map_err(|e| {
+        fs::remove_file(&part).ok();
+        format!("No se pudo mover {} a su destino: {}", step, e)
+    })
 }

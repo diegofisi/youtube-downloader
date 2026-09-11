@@ -24,6 +24,8 @@ interface QueueActions {
   move: (id: string, dir: number) => void;
   retryAllFailed: () => void;
   clearFinished: () => void;
+  /** Re-queues items paused by an auth failure (after any successful login, silent or manual). */
+  resumeAuthPaused: () => void;
   reset: () => void;
 }
 export type QueueStore = QueueState & QueueActions;
@@ -75,8 +77,11 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
   },
 
   handleProgress: (p) => {
+    // Two items may share a URL (retry of a cancelled one): the run id is the real key.
     const it = get().items.find(
-      (i) => i.url === p.url && (i.status === QueueStatus.Downloading || i.status === QueueStatus.Merging),
+      (i) =>
+        (i.status === QueueStatus.Downloading || i.status === QueueStatus.Merging) &&
+        (p.runId ? `${i.id}:${i.runSeq ?? 0}` === p.runId : i.url === p.url),
     );
     if (!it) return;
     if (p.status === 'processing') {
@@ -89,8 +94,12 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
   action: (id, act) => {
     const it = get().items.find((i) => i.id === id);
     if (!it) return;
+    // Only a live run has a process to kill; the run id keeps a late cancel from ever
+    // touching a later run of the same item.
+    const live = it.status === QueueStatus.Downloading || it.status === QueueStatus.Merging;
+    const runKey = `${it.id}:${it.runSeq ?? 0}`;
     if (act === 'pause') {
-      void cancelDownload(it.url).catch(() => {});
+      if (live) void cancelDownload(runKey).catch(() => {});
       patch(id, { status: QueueStatus.Paused, speed: '', eta: '' });
       pump();
       return;
@@ -102,12 +111,13 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
         ...(act === 'retry' ? { progress: 0 } : {}),
         error: undefined,
         pausedByAuth: false,
+        ...(act === 'retry' ? { authRetried: false } : {}),
       });
       pump();
       return;
     }
     if (act === 'cancel') {
-      void cancelDownload(it.url).catch(() => {});
+      if (live) void cancelDownload(runKey).catch(() => {});
       patch(id, { status: QueueStatus.Canceled });
       pump();
       return;
@@ -139,7 +149,9 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
   retryAllFailed: () => {
     set({
       items: get().items.map((i) =>
-        i.status === QueueStatus.Error ? { ...i, status: QueueStatus.Queued, progress: 0, error: undefined } : i,
+        i.status === QueueStatus.Error
+          ? { ...i, status: QueueStatus.Queued, progress: 0, error: undefined, authRetried: false }
+          : i,
       ),
     });
     pump();
@@ -153,6 +165,18 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
     // 'error' items stay — they have their own "Retry failed" action.
     set({
       items: get().items.filter((i) => i.status !== QueueStatus.Done && i.status !== QueueStatus.Canceled),
+    });
+    pump();
+  },
+
+  resumeAuthPaused: () => {
+    if (!get().items.some((i) => i.status === QueueStatus.Paused && i.pausedByAuth)) return;
+    set({
+      items: get().items.map((i) =>
+        i.status === QueueStatus.Paused && i.pausedByAuth
+          ? { ...i, status: QueueStatus.Queued, pausedByAuth: false, error: undefined }
+          : i,
+      ),
     });
     pump();
   },
@@ -189,7 +213,7 @@ function run(id: string): void {
   // Don't reset progress: on resume yt-dlp continues the .part file, so keep the
   // shown progress until the first real progress event arrives.
   patch(id, { status: QueueStatus.Downloading, runSeq: runId });
-  startDownload(it.url, it.options)
+  startDownload(it.url, it.options, `${id}:${runId}`)
     .then(async (res) => {
       const cur = findItem(id);
       if (!cur || cur.runSeq !== runId) return; // a newer run owns this item
@@ -212,9 +236,12 @@ function run(id: string): void {
         }
         // Replaces the 'download:completed' bus event so Biblioteca refetches live.
         void queryClient.invalidateQueries({ queryKey: ['library', 'history'] });
-      } else if (res.errorKind === 'auth') {
-        // Expired cookies: pause instead of erroring so the rest of the batch
-        // isn't burned (queued items would fail the same way).
+      } else if (res.errorKind === 'cancelled') {
+        // A cancel for this exact run landed before the backend registered it.
+        patch(id, { status: QueueStatus.Canceled });
+      } else if (res.errorKind === 'auth' && !cur.authRetried) {
+        // Expired cookies: pause instead of erroring so the rest of the batch isn't burned.
+        // A second auth failure after a renewed session is final (falls to the error branch).
         useQueueStore.setState((s) => ({
           items: s.items.map((q) => {
             if (q.id === id) {
@@ -222,6 +249,7 @@ function run(id: string): void {
                 ...q,
                 status: QueueStatus.Paused,
                 pausedByAuth: true,
+                authRetried: true,
                 error: t.queue.authPausedToast(),
               };
             }
@@ -250,19 +278,12 @@ async function handleAuthFailure(): Promise<void> {
   if (authReconnectInFlight) return;
   authReconnectInFlight = true;
   try {
-    const ok = await attemptSilentReconnect().catch(() => false);
+    const ok = await attemptSilentReconnect();
     if (ok) {
       toast.success(t.queue.sessionRenewedToast(), {
         description: t.queue.resumingToast(),
       });
-      useQueueStore.setState((s) => ({
-        items: s.items.map((i) =>
-          i.status === QueueStatus.Paused && i.pausedByAuth
-            ? { ...i, status: QueueStatus.Queued, pausedByAuth: false, error: undefined }
-            : i,
-        ),
-      }));
-      pump();
+      useQueueStore.getState().resumeAuthPaused();
     } else {
       toast.warning(t.queue.sessionExpiredTitle(), {
         description: t.queue.sessionExpiredBody(),

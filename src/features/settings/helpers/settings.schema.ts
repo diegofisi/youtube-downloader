@@ -2,6 +2,12 @@ import { z } from 'zod/v4';
 import { t } from '@/shared/lib/messages/t';
 import { Container, DownloadMode, type Settings } from '../models/settings.model';
 
+/** Mirrors the backend's `is_safe_output_template`: rooted/absolute or `..` would leave the download folder. */
+export const isSafeTemplate = (raw: string): boolean => {
+  const tpl = raw.trim();
+  return !/^[\\/]/.test(tpl) && !/^[A-Za-z]:/.test(tpl) && !tpl.split(/[\\/]/).includes('..');
+};
+
 // Builder, not a const, so the template error message follows the live language.
 export const buildSettingsSchema = () =>
   z.object({
@@ -10,7 +16,10 @@ export const buildSettingsSchema = () =>
     defaultAudioFormat: z.string().min(1),
     defaultConcurrency: z.number().int().min(0),
     defaultMode: z.enum([DownloadMode.Video, DownloadMode.Audio]),
-    defaultTemplate: z.string().min(1, t.settings.templateEmptyError()),
+    defaultTemplate: z
+      .string()
+      .min(1, t.settings.templateEmptyError())
+      .refine(isSafeTemplate, t.settings.templateUnsafeError()),
     defaultSubtitles: z.boolean(),
     defaultThumbnail: z.boolean(),
     clearLinksAfterPreview: z.boolean(),

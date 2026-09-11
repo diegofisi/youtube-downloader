@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::models::{LibraryEntry, NewEntry};
@@ -24,11 +25,32 @@ fn now_nanos() -> u128 {
         .unwrap_or(0)
 }
 
+/// Serializes every read-modify-write of history.json: `add` (sync command) and
+/// `delete_file` (blocking thread) can otherwise interleave and drop entries.
+static HISTORY_LOCK: Mutex<()> = Mutex::new(());
+
+fn lock_history() -> std::sync::MutexGuard<'static, ()> {
+    HISTORY_LOCK.lock().unwrap_or_else(|p| p.into_inner())
+}
+
 pub fn list(app_dir: &Path) -> Vec<LibraryEntry> {
     let path = history_path(app_dir);
-    match fs::read_to_string(&path) {
-        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-        Err(_) => Vec::new(),
+    let Ok(content) = fs::read_to_string(&path) else {
+        return Vec::new();
+    };
+    match serde_json::from_str(&content) {
+        Ok(entries) => entries,
+        Err(e) => {
+            // Never let the next write persist an empty list over a corrupt file: keep a copy.
+            let backup = path.with_extension(format!("json.corrupt-{}", now_secs()));
+            eprintln!(
+                "[library] history.json ilegible ({}); copia en {}",
+                e,
+                backup.display()
+            );
+            fs::rename(&path, &backup).ok();
+            Vec::new()
+        }
     }
 }
 
@@ -41,6 +63,7 @@ fn write(app_dir: &Path, entries: &[LibraryEntry]) -> Result<(), String> {
 }
 
 pub fn add(app_dir: &Path, new: NewEntry) -> Result<LibraryEntry, String> {
+    let _guard = lock_history();
     let mut all = list(app_dir);
     let folder = settings::get_download_folder(app_dir)
         .to_string_lossy()
@@ -65,13 +88,14 @@ pub fn add(app_dir: &Path, new: NewEntry) -> Result<LibraryEntry, String> {
 }
 
 pub fn remove(app_dir: &Path, id: &str) -> Result<(), String> {
+    let _guard = lock_history();
     let mut all = list(app_dir);
     all.retain(|e| e.id != id);
     write(app_dir, &all)
 }
 
-/// Deletes the file behind a history entry (trash if possible, permanent as
-/// fallback) and ALWAYS removes the entry. Returns "trash" | "permanent" | "no_file".
+/// Deletes the file behind a history entry (trash if possible, permanent as fallback) and
+/// removes the entry; a failed deletion keeps the entry. Returns "trash" | "permanent" | "no_file".
 pub fn delete_file(app_dir: &Path, id: &str) -> Result<String, String> {
     let all = list(app_dir);
     let entry = all.iter().find(|e| e.id == id);
@@ -109,16 +133,17 @@ pub fn delete_file(app_dir: &Path, id: &str) -> Result<String, String> {
         }
     }
 
-    // The history entry is ALWAYS removed, even if the file deletion failed.
-    remove(app_dir, id)?;
-
     match delete_error {
         Some(e) => Err(e),
-        None => Ok(outcome),
+        None => {
+            remove(app_dir, id)?;
+            Ok(outcome)
+        }
     }
 }
 
 pub fn clear(app_dir: &Path) -> Result<(), String> {
+    let _guard = lock_history();
     write(app_dir, &[])
 }
 
