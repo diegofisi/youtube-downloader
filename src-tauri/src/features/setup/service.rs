@@ -270,8 +270,10 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
 fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     let (asset, bin_name) = if cfg!(target_os = "windows") {
         ("deno-x86_64-pc-windows-msvc.zip", "deno.exe")
-    } else if cfg!(target_os = "macos") {
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
         ("deno-aarch64-apple-darwin.zip", "deno")
+    } else if cfg!(target_os = "macos") {
+        ("deno-x86_64-apple-darwin.zip", "deno")
     } else {
         ("deno-x86_64-unknown-linux-gnu.zip", "deno")
     };
@@ -326,9 +328,24 @@ fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Downloads with one automatic retry on transport errors (flaky Wi-Fi); an HTTP error
+/// status is final so a missing asset fails fast to the next candidate URL.
 fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<(), String> {
+    match download_file_once(app, url, dest, step) {
+        Err(e) if !e.contains("(HTTP ") => {
+            eprintln!("[setup] {} — reintentando una vez", e);
+            download_file_once(app, url, dest, step)
+        }
+        other => other,
+    }
+}
+
+fn download_file_once(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<(), String> {
+    // The ffmpeg archive is ~190 MB: a slow line legitimately needs well over the old
+    // 5-minute cap, so the whole-request budget is 30 min (the blocking client has no per-read timeout).
     let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(30 * 60))
         .build()
         .map_err(|e| format!("Error creando cliente HTTP: {}", e))?;
 
