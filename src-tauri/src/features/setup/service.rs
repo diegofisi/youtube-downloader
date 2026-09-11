@@ -41,10 +41,14 @@ fn ytdlp_is_current(app_dir: &Path) -> bool {
 // Tested version — update deliberately.
 const DENO_VERSION: &str = "v2.9.1";
 
-// Tested version — update deliberately. BtbN's stable "latest" tag ships assets
-// pinned per series: this one tracks the 7.1 branch (7.1.x patches only, no major jumps).
-const FFMPEG_WINDOWS_URL: &str =
-    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.1-latest-win64-gpl-7.1.zip";
+// Tested build — update deliberately. The dated autobuild tag is permanent; assets under
+// BtbN's rolling "latest" tag get renamed when a series is dropped (the 7.1 one 404'd on
+// fresh installs), so they are only fallbacks, tried in order.
+const FFMPEG_WINDOWS_URLS: [&str; 3] = [
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-11-13-20/ffmpeg-n8.1.2-52-g5a03dfa0f6-win64-gpl-8.1.zip",
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-gpl-8.1.zip",
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
+];
 
 // Tested version — update deliberately.
 // evermeet.cx publishes versioned zips; pinned to 7.1 (same series as Windows).
@@ -167,10 +171,25 @@ fn download_ffmpeg(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
 }
 
 fn download_ffmpeg_windows(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
-    let url = FFMPEG_WINDOWS_URL;
     let zip_path = app_dir.join("ffmpeg-temp.zip");
 
-    download_file(app, url, &zip_path, "ffmpeg")?;
+    let mut last_error = String::new();
+    let mut downloaded = false;
+    for url in FFMPEG_WINDOWS_URLS {
+        match download_file(app, url, &zip_path, "ffmpeg") {
+            Ok(()) => {
+                downloaded = true;
+                break;
+            }
+            Err(e) => {
+                eprintln!("[setup] ffmpeg no disponible en {}: {}", url, e);
+                last_error = e;
+            }
+        }
+    }
+    if !downloaded {
+        return Err(last_error);
+    }
     emit_progress(app, "ffmpeg", 80.0, "Extrayendo ffmpeg...");
 
     let file = fs::File::open(&zip_path).map_err(|e| format!("No se pudo abrir zip: {}", e))?;
