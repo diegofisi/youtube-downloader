@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="src-tauri/icons/128x128.png" alt="Stash logo" width="110" />
+<img src="src-tauri/icons/128x128.png" alt="YouTube Downloader logo" width="110" />
 
-# Stash
+# YouTube Downloader
 
 **Your YouTube downloads, organized.**
 
@@ -55,12 +55,12 @@ Watch Later, liked videos and members-only content — with a live queue and a p
 -->
 
 <div align="center">
-  <img src="docs/screenshots/app.png" alt="Stash — main window" width="850" />
+  <img src="docs/screenshots/app.png" alt="YouTube Downloader — main window" width="850" />
 </div>
 
 ## 🚀 Install (users)
 
-1. Download **`Stash_x64-setup.exe`** from the [latest release](https://github.com/diegofisi/youtube-downloader/releases/latest).
+1. Download **`YouTube Downloader_x64-setup.exe`** from the [latest release](https://github.com/diegofisi/youtube-downloader/releases/latest).
 2. Run it. Windows 10/11 x64 — nothing else to install.
 3. First launch downloads yt-dlp & ffmpeg automatically (needs internet, ~1 min).
 

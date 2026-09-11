@@ -1,5 +1,5 @@
 {
-  "productName": "Stash",
+  "productName": "YouTube Downloader",
   "version": "1.0.1",
   "identifier": "com.youtube.downloader",
   "build": {
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Stash",
+        "title": "YouTube Downloader",
         "width": 1160,
         "height": 900,
         "minWidth": 940,

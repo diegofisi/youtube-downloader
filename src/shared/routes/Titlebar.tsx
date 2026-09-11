@@ -52,7 +52,7 @@ export const Titlebar = () => {
           <DownloadIcon className="size-3.5 text-white" strokeWidth={2.6} />
         </Box>
         <Text variant="inline" weight="bold" className="font-display text-body tracking-tight">
-          Stash
+          YouTube Downloader
         </Text>
       </Stack>
       <Box data-tauri-drag-region className="flex min-w-0 flex-1 items-center justify-center">

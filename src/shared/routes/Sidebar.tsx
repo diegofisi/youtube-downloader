@@ -68,7 +68,7 @@ export const Sidebar = () => {
       </Stack>
       <Box className="flex-1" />
       <Text variant="caption" color="muted" className="px-2.5 pb-0.5 font-mono text-faint">
-        Stash · React
+        YouTube Downloader
       </Text>
     </Box>
   );
