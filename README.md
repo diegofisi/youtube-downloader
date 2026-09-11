@@ -60,7 +60,7 @@ Watch Later, liked videos and members-only content — with a live queue and a p
 
 ## 🚀 Install (users)
 
-1. Download **`YouTube.Downloader_1.1.1_x64-setup.exe`** from the [latest release](https://github.com/diegofisi/youtube-downloader/releases/latest).
+1. Download **`YouTube.Downloader_1.1.2_x64-setup.exe`** from the [latest release](https://github.com/diegofisi/youtube-downloader/releases/latest).
 2. Run it. Windows 10/11 x64 — nothing else to install.
 3. First launch downloads yt-dlp & ffmpeg automatically (needs internet, ~1 min).
 
