@@ -1,6 +1,6 @@
 {
   "productName": "YouTube Downloader",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "identifier": "com.youtube.downloader",
   "build": {
     "frontendDist": "../dist",
