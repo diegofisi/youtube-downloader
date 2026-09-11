@@ -17,7 +17,7 @@ fn extract_entry(entry: &mut impl Read, dest: &Path) -> Result<(), String> {
 
 use tauri::{AppHandle, Emitter};
 
-use super::models::{DependencyStatus, SetupProgress};
+use super::models::{DependencyStatus, SetupProgress, SourceStatus};
 use crate::core::paths;
 
 // ── Pinned dependency versions ─────────────────────────────────────────────
@@ -131,7 +131,8 @@ fn emit_progress(app: &AppHandle, step: &str, percent: f64, message: &str) {
     );
 }
 
-fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
+/// (download URL, installed file name) of the pinned yt-dlp release for this platform.
+fn ytdlp_source() -> (String, &'static str) {
     let (asset, filename) = if cfg!(target_os = "windows") {
         ("yt-dlp.exe", "yt-dlp.exe")
     } else if cfg!(target_os = "macos") {
@@ -139,12 +140,82 @@ fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
     } else {
         ("yt-dlp", "yt-dlp")
     };
-
     let url = format!(
         "https://github.com/yt-dlp/yt-dlp/releases/download/{}/{}",
         YTDLP_VERSION, asset
     );
+    (url, filename)
+}
 
+/// (download URL, binary name inside the zip) of the pinned deno release for this platform.
+fn deno_source() -> (String, &'static str) {
+    let (asset, bin_name) = if cfg!(target_os = "windows") {
+        ("deno-x86_64-pc-windows-msvc.zip", "deno.exe")
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
+        ("deno-aarch64-apple-darwin.zip", "deno")
+    } else if cfg!(target_os = "macos") {
+        ("deno-x86_64-apple-darwin.zip", "deno")
+    } else {
+        ("deno-x86_64-unknown-linux-gnu.zip", "deno")
+    };
+    let url = format!(
+        "https://github.com/denoland/deno/releases/download/{}/{}",
+        DENO_VERSION, asset
+    );
+    (url, bin_name)
+}
+
+/// Every pinned source this platform would download, primary first. ffmpeg lists its
+/// fallbacks too so a dead primary shows up before it bites a fresh install.
+fn dependency_sources() -> Vec<(String, String)> {
+    let mut list = vec![("yt-dlp".to_string(), ytdlp_source().0)];
+    if cfg!(target_os = "windows") {
+        for (i, url) in FFMPEG_WINDOWS_URLS.iter().enumerate() {
+            let name = if i == 0 {
+                "ffmpeg".to_string()
+            } else {
+                format!("ffmpeg (respaldo {})", i)
+            };
+            list.push((name, url.to_string()));
+        }
+    } else {
+        list.push(("ffmpeg".to_string(), FFMPEG_MACOS_URL.to_string()));
+    }
+    list.push(("deno".to_string(), deno_source().0));
+    list
+}
+
+/// Probes each pinned source with a HEAD request. Network-bound: call from a blocking thread.
+pub fn check_sources() -> Vec<SourceStatus> {
+    let client = reqwest::blocking::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(20))
+        .build();
+    dependency_sources()
+        .into_iter()
+        .map(|(name, url)| {
+            let (ok, detail) = match &client {
+                Ok(c) => match c.head(&url).send() {
+                    Ok(resp) => (
+                        resp.status().is_success(),
+                        format!("HTTP {}", resp.status().as_u16()),
+                    ),
+                    Err(e) => (false, e.to_string()),
+                },
+                Err(e) => (false, e.to_string()),
+            };
+            SourceStatus {
+                name,
+                url,
+                ok,
+                detail,
+            }
+        })
+        .collect()
+}
+
+fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
+    let (url, filename) = ytdlp_source();
     let dest = app_dir.join(filename);
     download_file(app, &url, &dest, "yt-dlp")?;
     fs::write(app_dir.join(YTDLP_VERSION_FILE), YTDLP_VERSION)
@@ -268,20 +339,7 @@ fn download_ffmpeg_macos(app: &AppHandle, app_dir: &Path) -> Result<(), String> 
 }
 
 fn download_deno(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
-    let (asset, bin_name) = if cfg!(target_os = "windows") {
-        ("deno-x86_64-pc-windows-msvc.zip", "deno.exe")
-    } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
-        ("deno-aarch64-apple-darwin.zip", "deno")
-    } else if cfg!(target_os = "macos") {
-        ("deno-x86_64-apple-darwin.zip", "deno")
-    } else {
-        ("deno-x86_64-unknown-linux-gnu.zip", "deno")
-    };
-
-    let url = format!(
-        "https://github.com/denoland/deno/releases/download/{}/{}",
-        DENO_VERSION, asset
-    );
+    let (url, bin_name) = deno_source();
 
     let zip_path = app_dir.join("deno-temp.zip");
     download_file(app, &url, &zip_path, "deno")?;
@@ -450,6 +508,17 @@ mod tests {
         fn drop(&mut self) {
             fs::remove_dir_all(&self.0).ok();
         }
+    }
+
+    #[test]
+    fn dependency_sources_list_every_pinned_url_primary_first() {
+        let sources = dependency_sources();
+        assert_eq!(sources[0].0, "yt-dlp");
+        assert!(sources[0].1.contains(YTDLP_VERSION));
+        assert_eq!(sources[1].0, "ffmpeg");
+        assert_eq!(sources.last().unwrap().0, "deno");
+        assert!(sources.last().unwrap().1.contains(DENO_VERSION));
+        assert!(sources.iter().all(|(_, url)| url.starts_with("https://")));
     }
 
     #[test]

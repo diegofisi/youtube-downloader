@@ -4,6 +4,7 @@ import { t } from '@/shared/lib/messages/t';
 import { useTauriEvent } from '@/shared/hooks/useTauriEvent';
 import { useCheckDependencies } from '../api/check-dependencies/useCheckDependencies';
 import { useDownloadDependencies } from '../api/download-dependencies/useDownloadDependencies';
+import { warnIfDependencySourcesDown } from '../api/check-dependency-sources/checkDependencySources';
 import type { SetupProgress } from '../models/setup-progress.model';
 
 export const OnboardingPhase = {
@@ -82,7 +83,9 @@ export function useOnboardingGate() {
   }, [install]);
 
   useEffect(() => {
-    if (phase === OnboardingPhase.Done) gateDone = true;
+    if (phase !== OnboardingPhase.Done) return;
+    gateDone = true;
+    warnIfDependencySourcesDown();
   }, [phase]);
 
   useEffect(() => {

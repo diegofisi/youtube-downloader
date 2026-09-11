@@ -78,6 +78,7 @@ Params = keys of the object the frontend passes to the invoke adapter (real JS c
 | `clear_history` | — | void |
 | `open_history_folder` | `{folder}` | void |
 | `check_dependencies` | — | `DependencyStatus` |
+| `check_dependency_sources` | — | `SourceStatus[]` (camelCase; HEAD-probes every pinned URL, primary first; settings button + one startup warning) |
 | `download_dependencies` | — | void |
 
 ## Tauri events (backend → frontend)

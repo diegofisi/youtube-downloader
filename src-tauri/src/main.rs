@@ -38,6 +38,7 @@ fn main() {
             library::commands::open_history_folder,
             setup::commands::check_dependencies,
             setup::commands::download_dependencies,
+            setup::commands::check_dependency_sources,
         ])
         .setup(|app| {
             let app_dir = core::paths::app_dir(app.handle());

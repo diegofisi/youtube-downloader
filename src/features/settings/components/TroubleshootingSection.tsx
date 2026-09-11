@@ -5,6 +5,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Text } from '@/shared/components/ui/typography';
 import { cn } from '@/shared/lib/utils';
 import { t } from '@/shared/lib/messages/t';
+import type { DependencySource } from '../models/dependency-source.model';
 import type { DependencyStatus } from '../models/dependency-status.model';
 import type { SetupProgress } from '../models/setup-progress.model';
 import { SettingsSection } from './SettingsSection';
@@ -15,6 +16,9 @@ interface TroubleshootingSectionProps {
   progress: SetupProgress | null;
   error: string | null;
   onRepair: () => void;
+  sources: DependencySource[] | null;
+  checkingSources: boolean;
+  onCheckSources: () => void;
 }
 
 const DependencyRow = ({ name, ok }: { name: string; ok: boolean }) => (
@@ -31,12 +35,35 @@ const DependencyRow = ({ name, ok }: { name: string; ok: boolean }) => (
   </Stack>
 );
 
+const SourceRow = ({ source }: { source: DependencySource }) => (
+  <Stack direction="row" align="center" justify="between" gap="md" className="border-t border-border py-3.25">
+    <Stack gap="none" className="min-w-0">
+      <Text variant="body-sm" className="font-mono">{source.name}</Text>
+      <Text variant="caption" color="muted" title={source.url} className="truncate font-mono text-faint">
+        {source.url}
+      </Text>
+    </Stack>
+    <Text variant="caption"
+      title={source.detail}
+      className={cn(
+        'flex-none rounded-md px-2.25 py-0.75 font-bold',
+        source.ok ? 'bg-success-soft text-success' : 'bg-destructive-soft text-destructive',
+      )}
+    >
+      {source.ok ? t.settings.sourceOk() : `${t.settings.sourceDown()} · ${source.detail}`}
+    </Text>
+  </Stack>
+);
+
 export const TroubleshootingSection = ({
   status,
   repairing,
   progress,
   error,
   onRepair,
+  sources,
+  checkingSources,
+  onCheckSources,
 }: TroubleshootingSectionProps) => (
   <SettingsSection title={t.settings.troubleshoot()}>
     <Stack direction="row" gap="md" align="center" className="border-t border-border py-3.25">
@@ -104,6 +131,19 @@ export const TroubleshootingSection = ({
         <DependencyRow name="yt-dlp" ok={status?.ytdlp === true} />
         <DependencyRow name="ffmpeg" ok={status?.ffmpeg === true} />
         <DependencyRow name="deno" ok={status?.deno === true} />
+        <Stack direction="row" gap="md" align="center" className="border-t border-border py-3.25">
+          <Text variant="small" color="muted" className="min-w-0 flex-1 font-normal">
+            {sources === null
+              ? t.settings.sourcesHint()
+              : sources.every((s) => s.ok)
+                ? t.settings.sourcesAllOk()
+                : t.settings.sourcesSomeDown()}
+          </Text>
+          <Button variant="outline" size="sm" className="h-8.5" disabled={checkingSources} onClick={onCheckSources}>
+            {checkingSources ? t.settings.checkingSources() : t.settings.checkSources()}
+          </Button>
+        </Stack>
+        {sources?.map((source) => <SourceRow key={source.url} source={source} />)}
       </Box>
     </Box>
   </SettingsSection>

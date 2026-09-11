@@ -77,6 +77,9 @@ export const AjustesPage = () => {
             progress={troubleshooting.progress}
             error={troubleshooting.error}
             onRepair={troubleshooting.onRepair}
+            sources={troubleshooting.sources}
+            checkingSources={troubleshooting.checkingSources}
+            onCheckSources={troubleshooting.onCheckSources}
           />
         </Stack>
       )}
