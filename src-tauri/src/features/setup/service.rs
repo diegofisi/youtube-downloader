@@ -24,8 +24,19 @@ use crate::core::paths;
 // Concrete tags are downloaded (not `releases/latest`) so an untested new
 // version can't silently break the app.
 
-// Tested version — update deliberately.
-const YTDLP_VERSION: &str = "2026.03.17";
+// Tested version — update deliberately. YouTube breaks old releases within months
+// (HTTP 403 on media), so bumping this is the fix when downloads start failing everywhere.
+const YTDLP_VERSION: &str = "2026.08.19";
+
+/// Marker next to the binary recording which yt-dlp release was installed: lets a version
+/// bump re-download on existing installs without spawning `yt-dlp --version` at startup.
+const YTDLP_VERSION_FILE: &str = "yt-dlp.version";
+
+fn ytdlp_is_current(app_dir: &Path) -> bool {
+    fs::read_to_string(app_dir.join(YTDLP_VERSION_FILE))
+        .map(|v| v.trim() == YTDLP_VERSION)
+        .unwrap_or(false)
+}
 
 // Tested version — update deliberately.
 const DENO_VERSION: &str = "v2.9.1";
@@ -39,9 +50,9 @@ const FFMPEG_WINDOWS_URL: &str =
 // evermeet.cx publishes versioned zips; pinned to 7.1 (same series as Windows).
 const FFMPEG_MACOS_URL: &str = "https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip";
 
-/// Checks whether the dependencies exist in app_dir.
+/// Checks whether the dependencies exist in app_dir (yt-dlp must also be the pinned release).
 pub fn check_dependencies(app_dir: &Path) -> DependencyStatus {
-    let ytdlp = paths::has_binary(app_dir, "yt-dlp");
+    let ytdlp = paths::has_binary(app_dir, "yt-dlp") && ytdlp_is_current(app_dir);
     let ffmpeg = paths::has_binary(app_dir, "ffmpeg");
     let deno = paths::has_binary(app_dir, "deno");
 
@@ -132,6 +143,8 @@ fn download_ytdlp(app: &AppHandle, app_dir: &Path) -> Result<(), String> {
 
     let dest = app_dir.join(filename);
     download_file(app, &url, &dest, "yt-dlp")?;
+    fs::write(app_dir.join(YTDLP_VERSION_FILE), YTDLP_VERSION)
+        .map_err(|e| format!("No se pudo registrar la versión de yt-dlp: {}", e))?;
 
     #[cfg(unix)]
     {
@@ -382,4 +395,57 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, step: &str) -> Result<
         fs::remove_file(&part).ok();
         format!("No se pudo mover {} a su destino: {}", step, e)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct TempDir(std::path::PathBuf);
+    impl TempDir {
+        fn new(tag: &str) -> Self {
+            let dir =
+                std::env::temp_dir().join(format!("ytd-setup-{}-{}", tag, std::process::id()));
+            fs::create_dir_all(&dir).unwrap();
+            TempDir(dir)
+        }
+    }
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            fs::remove_dir_all(&self.0).ok();
+        }
+    }
+
+    #[test]
+    fn ytdlp_without_a_version_marker_is_not_current() {
+        let dir = TempDir::new("nomarker");
+        assert!(!ytdlp_is_current(&dir.0));
+    }
+
+    #[test]
+    fn ytdlp_with_an_older_marker_is_not_current() {
+        let dir = TempDir::new("old");
+        fs::write(
+            dir.0.join(YTDLP_VERSION_FILE),
+            "2026.03.17
+",
+        )
+        .unwrap();
+        assert!(!ytdlp_is_current(&dir.0));
+    }
+
+    #[test]
+    fn ytdlp_with_the_pinned_marker_is_current() {
+        let dir = TempDir::new("current");
+        fs::write(
+            dir.0.join(YTDLP_VERSION_FILE),
+            format!(
+                "{}
+",
+                YTDLP_VERSION
+            ),
+        )
+        .unwrap();
+        assert!(ytdlp_is_current(&dir.0));
+    }
 }
