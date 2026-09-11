@@ -1,18 +1,18 @@
-# Project binding — Stash
+# Project binding — YouTube Downloader
 
 **Replace or delete this file when reusing this skill in another project.** Everything
-below binds the generic doctrine of this skill to THIS repo (Stash: a desktop YouTube
+below binds the generic doctrine of this skill to THIS repo (YouTube Downloader: a desktop YouTube
 downloader built on Tauri 2 + Rust + yt-dlp/ffmpeg). Nothing here is doctrine — it is the
 project's live data: real names, the FE↔BE contract, and the decision log.
 
 ## Placeholder bindings
 
-| Placeholder in doctrine | Stash value |
+| Placeholder in doctrine | YouTube Downloader value |
 |---|---|
 | `{tool}` / `{Tool}Cmd` | yt-dlp / `YtdlpCmd` (`core/ytdlp.rs`) |
 | process registry | `DownloadRegistry` (`core/process.rs`) |
 | bundled helper binaries | ffmpeg, deno (`.ffmpeg_location().deno_runtime()` on the builder) |
-| auth file | `cookies.txt` (`.cookies(&session::get_cookies_path(app_dir))` — only if the file exists) |
+| auth file | `cookies.txt` (`.cookies(&session::get_cookies_path(app_dir))` — only if the file exists; yt-dlp receives a per-run copy) |
 | product-copy language | Spanish (es) — openers "No se pudo …" / "Error …", action hints like "Verifica que la configuración inicial se completó correctamente." |
 | model slices for Workflow A | `library` or `settings` |
 | heavy-command models | `download/commands.rs::start_download`, `library/commands.rs::delete_history_file` |
@@ -102,20 +102,31 @@ rename example: `#[serde(rename = "errorKind")]` in `DownloadResult`.
 
 ## `error_kind` binding (download failure classification)
 
-`DownloadResult` carries `errorKind?: 'auth' | 'cache' | 'other'`. Classification lives in
-`download/service.rs::classify_error` over yt-dlp's `ERROR:` lines (only `ERROR:` lines
-count; the rest of stderr is noise):
+`DownloadResult` carries `errorKind?: 'auth' | 'cache' | 'other' | 'cancelled'`. Classification
+lives in `core/ytdlp.rs::classify_error` over yt-dlp's `ERROR:` lines (only `ERROR:` lines
+count; the rest of stderr is noise). Preview strips the user's search query from the line
+before classifying (`preview/service.rs::without_query_text`):
 
 | kind | Patterns (lowercase) | Reaction |
 |---|---|---|
-| `auth` | "sign in to confirm", "members-only", "cookies are no longer valid", "please sign in", "not a bot", "http error 401" | Fixed `AUTH_ERROR_MSG` message. The frontend queue pauses the batch and attempts a silent session reconnect (frontend skill). `auth` takes priority over `cache`. |
+| `auth` | "sign in to confirm", "members-only", "cookies are no longer valid", "please sign in", "not a bot", "login required", "login details are needed", "http error 401" | Fixed `AUTH_ERROR_MSG` message. The frontend queue pauses the batch and attempts a silent session reconnect (frontend skill). `auth` takes priority over `cache`. |
 | `cache` | "http error 403", "forbidden", fragment+403 | The BACKEND clears yt-dlp's cache (`--rm-cache-dir`) and retries ONCE, checking `is_cancelled` before respawning |
 | `other` / None | everything else | Regular error: the message travels to the frontend as-is |
+| `cancelled` | registry says the user cancelled | Fixed "Descarga cancelada" message; the queue ignores results of cancelled/paused items |
 
 Contract invariant: an `auth` failure returns as a RESOLVED `DownloadResult` with
 `errorKind: 'auth'` (not a rejected promise) — the queue's pause/silent-reconnect/resume
-semantics depend on it. Preview has an explicit TODO to classify auth there too — do NOT
-change that contract until the frontend branches on it.
+semantics depend on it.
+
+`analyze_urls` never rejects per URL either: a failed URL comes back as an id-less
+`VideoMeta` whose `availability` is `"error: <ERROR line>"` or, when `classify_error`
+says auth, `"error:auth: <ERROR line>"` (legacy `VideoMeta` gets no new field; the class
+travels in the prefix — parsed by `src/shared/lib/analyze-entry-error.ts`).
+
+Cookies: every yt-dlp run gets a per-run COPY of `cookies.txt` (`YtdlpCmd::cookies` →
+`TempCookies`, deleted when the `YtdlpRun` drops) because yt-dlp rewrites the `--cookies`
+file on exit and would clobber a freshly renewed session. Keep the `YtdlpRun` alive until
+the process has exited.
 
 Documented `.unwrap()` exception: `paths::app_dir` in release falls back to temp with an
 `eprintln!` instead of panicking.
@@ -135,8 +146,8 @@ vanilla-TS UI in the React cutover (the React ones live in the frontend skill's 
 
 | # | Decision | Why (the code's real rationale) |
 |---|---|---|
-| D2 | **DownloadRegistry as Tauri State (no statics)** | Replaces 3 statics with double bookkeeping. Closes the cancel/spawn race: `cancel()` marks+kills and `set_pid()` kills if already cancelled, all under THE SAME lock — "either cancel sees the PID, or spawn sees the cancel" (core/process.rs). |
-| D3 | **`error_kind: Option<String>` ("auth"\|"cache"\|"other") instead of thiserror/enums** | At this scale there is ONE consumer (the queue) branching into 3 cases, and the error travels to the frontend as a String anyway. `preview/service.rs` leaves an explicit TODO: unify into `{message, kind}` ONLY when the preview frontend branches by kind. |
+| D2 | **DownloadRegistry as Tauri State (no statics)** | Replaces 3 statics with double bookkeeping. Closes the cancel/spawn race: `cancel()` marks+kills and `set_pid()` kills if already cancelled, all under THE SAME lock — "either cancel sees the PID, or spawn sees the cancel" (core/process.rs). Entries are keyed by the frontend's run id (`<item>:<runSeq>`, `start_download`/`cancel_download` param `runId`), registered in the command before `spawn_blocking`; a cancel for an unknown id leaves a tombstone that its own `begin()` consumes, so it can never hit another run. |
+| D3 | **`error_kind: Option<String>` ("auth"\|"cache"\|"other"\|"cancelled") instead of thiserror/enums** | The error travels to the frontend as a String anyway. Preview reuses the same classifier and reports the class through the `availability` prefix (see `error_kind` binding) so legacy `VideoMeta` stays untouched. |
 | D4 | **Avatar as a base64 data URL** | The webview cannot load `yt3.ggpht.com` on its own (origin/referer); the backend downloads the image and injects it as `data:` with fallback to the raw URL (session/service.rs). |
 | D5 | **PINNED dependency versions** | yt-dlp `2026.03.17`, deno `v2.9.1`, ffmpeg 7.1 series — concrete tags, not `releases/latest`: "so the app doesn't break when a new version changes behavior we haven't tested. Update deliberately" (setup/service.rs). |
 | D6 | **`--encoding utf-8` ALWAYS (in `YtdlpCmd::build()`)** | When writing to a pipe on Windows, the yt-dlp exe drops characters outside the codepage (Japanese titles): paths/JSON would arrive degraded and not match the real files (core/ytdlp.rs). |

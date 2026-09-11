@@ -1,6 +1,7 @@
-# Stash
+# YouTube Downloader
 
-Stash is a desktop YouTube downloader (videos, playlists, subscriptions) built on yt-dlp/ffmpeg,
+YouTube Downloader (formerly "Stash"; internal keys like `stash.*` in localStorage and the
+`shadow-stash` token keep the old name on purpose) is a desktop YouTube downloader (videos, playlists, subscriptions) built on yt-dlp/ffmpeg,
 with session login, a download queue, history library, and a bilingual (es/en) UI.
 
 ## Stack

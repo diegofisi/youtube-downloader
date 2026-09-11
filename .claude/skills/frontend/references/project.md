@@ -1,14 +1,14 @@
-# Project binding — Stash
+# Project binding — YouTube Downloader
 
-> **Project binding — Stash. Replace or delete this file when reusing the
+> **Project binding — YouTube Downloader. Replace or delete this file when reusing the
 > skill in another project.** Everything project-specific lives here; the
 > other reference files are project-agnostic doctrine.
 
-Stash is a **single-user Tauri 2 desktop app** (YouTube downloader on
+YouTube Downloader is a **single-user Tauri 2 desktop app** (YouTube downloader on
 yt-dlp/ffmpeg): React 19 + TS + Tailwind + Shadcn + Zustand + React Query on
 the frontend, Rust vertical slices on the backend. All the "When the backend is
 Tauri (desktop)" sections in the doctrine files apply. `web-app-patterns.md`
-does NOT apply to Stash code — ever.
+does NOT apply to YouTube Downloader code — ever.
 
 Backend command contract: see the sibling `backend` skill
 (`../backend/references/`).
@@ -44,7 +44,7 @@ fail lint.
 | Facade | Exports | Contract |
 |---|---|---|
 | `@/features/queue` | `useQueueStore` + `EnqueueItem` | enqueue contract |
-| `@/features/session` | status/account/login/logout/reconnect hooks | session contract |
+| `@/features/session` | status/account/login/logout/reconnect hooks + `SessionAuthError`/`isSessionAuthError`, `runWithSessionRetry`, `useSilentReconnectOnExpiry` | session contract: adapters over `analyze_urls` throw `SessionAuthError` for `error:auth:` entries and wrap the fetch in `runWithSessionRetry` (one silent reconnect, cooldown after failure) |
 | `@/features/download` | `useDownloadPrefill` | prefill contract |
 
 ## Command decision table (all 21 commands)
@@ -88,9 +88,9 @@ Commands are registered in `src-tauri/src/main.rs` `generate_handler![]`.
 Do not poll for anything an event reports. Sole poll: `['session', 'status']`
 keeps `refetchInterval: 10 * 60 * 1000` (cookie expiry has no event).
 
-## Queue store — Stash specifics
+## Queue store — YouTube Downloader specifics
 
-The doctrine spec is `state.md` → Live-process stores. Stash's
+The doctrine spec is `state.md` → Live-process stores. YouTube Downloader's
 `src/features/queue/stores/useQueueStore.ts` ported the vanilla framework-
 agnostic `queue.state.ts` module verbatim; preserve exactly:
 
@@ -100,7 +100,7 @@ agnostic `queue.state.ts` module verbatim; preserve exactly:
 - `runSeq` guard: stale settlements (fast pause→resume) are ignored.
 - Resume keeps `progress` (yt-dlp continues the `.part` file); reset only on `retry`.
 - `errorKind === 'auth'`: pause item + all queued (`pausedByAuth`), then silent reconnect; `authReconnectInFlight` single-flight (one attempt no matter how many items fail).
-- Actions: `pause/resume/retry/cancel/remove/folder`; pause/cancel call `cancel_download`; folder resolves `filePath` dir → `folder` → `get_download_folder`.
+- Actions: `pause/resume/retry/cancel/remove/folder`; pause/cancel call `cancel_download` with the run id (`<item>:<runSeq>`) and only for Downloading/Merging items; folder resolves `filePath` dir → `folder` → `get_download_folder`.
 - `move(id, dir)`, `retryAllFailed()`, `clearFinished()` (removes only `done`/`canceled`).
 - Sidebar badge: `selectActiveCount = (s) => s.items.filter(i => ['downloading','queued','paused','merging'].includes(i.status)).length`.
 - On completion: store calls `add_history` (plain invoke, try/catch — history failure must not break the flow) then invalidates `['library']`.
@@ -137,7 +137,7 @@ export const AppPath = {
 `/` and any unknown path redirect to `/descargar`. Hash router, one `AppShell`
 (Titlebar + Sidebar + Outlet) in `src/shared/routes/`. The onboarding/setup
 gate is a shell-level blocking dialog (gated on `check_dependencies` +
-`stash-onboarded`), not a route. Titlebar label: "Stash".
+`stash-onboarded`), not a route. Titlebar label: "YouTube Downloader".
 
 ## Forms inventory
 
@@ -148,7 +148,7 @@ gate is a shell-level blocking dialog (gated on `check_dependencies` +
 | Search box | `search/` | Single input — `useState`, no RHF/Zod. |
 | URL paste (Descargar) | `download/helpers/parse-urls.ts` | Textarea — not an RHF form; parsing/dedupe helper, feedback via analysis results. |
 
-## Stash conventions
+## YouTube Downloader conventions
 
 - **i18n**: typed message object — `t.search.emptyTitle()` / `t.queue.subtitle({ active, done })` from `shared/lib/messages/t.ts`; all languages live in `shared/lib/messages/{es,en}.ts` (typed by `messages/keys.ts`); engine `translate()` in `shared/lib/i18n.ts`. Semantic keys namespaced by feature (`common.*`/`shell.*` for shared). ICU-lite templates handle `{name}` + `{n, plural, …}`. Language change re-renders live (app root keyed by `lang`); `setLang` persists to `stash.lang`. See "Frontend system updates" below. Never port `data-en`/`data-en-ph`/`data-en-title` attributes.
 - **Backend error strings**: Rust commands return `Err(String)` product copy in Spanish (no backend i18n yet) — show as the toast body (contract: backend skill, error-handling reference).
